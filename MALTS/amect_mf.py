@@ -9,12 +9,12 @@ from utils import get_match_groups, get_CATES, convert_idx
 class Amect_mf:
     def __init__(self, outcome, treatment, data, n_splits=5, n_repeats=1, random_state=0):
 
-        self.covariates = [c for c in data.columns if c not in [outcome, treatment, 'Y_new']]
+        self.covariates = [c for c in data.columns if c not in [outcome, treatment]]
         self.outcome = outcome
         self.treatment = treatment
         self.p = len(self.covariates)
 
-        self.col_order = [*self.covariates, self.treatment, self.outcome, 'Y_new']
+        self.col_order = [*self.covariates, self.treatment, self.outcome]
         self.data = data[self.col_order].reset_index(drop=True)
 
         skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
@@ -32,7 +32,7 @@ class Amect_mf:
         for est_idx, train_idx in self.gen_skf:
             df_train = self.data.iloc[train_idx]
 
-            m = Amect(outcome=self.outcome, treatment=self.treatment, data=df_train.drop(columns=['Y_new']))
+            m = Amect(outcome=self.outcome, treatment=self.treatment, data=df_train)
             m.fit(params=params, prune=prune)
             self.M_C_list.append(m.M_C)
             self.M_T_list.append(m.M_T)
