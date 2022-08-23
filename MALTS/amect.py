@@ -7,6 +7,7 @@ Created on Sat May 14 2022
 """
 import numpy as np
 import sklearn.linear_model as linear
+import sklearn.ensemble as ensemble
 from sklearn.preprocessing import StandardScaler
 from utils import get_match_groups, get_CATES
 
@@ -80,8 +81,12 @@ class Amect:
             params = {}
         M_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
         M_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
+        # M_C = ensemble.AdaBoostRegressor().fit(self.X[:self.T_split], self.Y_C)
+        # M_T = ensemble.AdaBoostRegressor().fit(self.X[self.T_split:], self.Y_T)
         M_C_hat = np.abs(M_C.coef_)
         M_T_hat = np.abs(M_T.coef_)
+        # M_C_hat = np.abs(M_C.feature_importances_)
+        # M_T_hat = np.abs(M_T.feature_importances_)
         M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
         M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
         if prune:

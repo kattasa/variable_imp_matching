@@ -6,7 +6,7 @@ from sklearn.model_selection import KFold
 from sklearn.linear_model import LassoCV
 
 from datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction, dgp_exp_log_interaction,\
-    dgp_friedman, data_generation_dense_mixed_endo
+    dgp_friedman, data_generation_dense_mixed_endo, dgp_sine, dgp_non_linear_mixed, dgp_drop_off
 
 IHDP_FOLDER = '/Users/qlanners/projects/AME-for-Continuous-Exposure/datagen/ihdp'
 
@@ -28,6 +28,15 @@ def augment_df(df, x_cols):
 
 
 def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=None, augment=False):
+    if dgp == 'sine':
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_sine(n_samples, n_imp, n_unimp)
+        discrete = []
+    if dgp == 'non_linear_mixed':
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_non_linear_mixed(n_samples, n_imp, n_unimp)
+        discrete = []
+    if dgp == 'drop_off':
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_drop_off(n_samples, n_imp, n_unimp)
+        discrete = []
     if dgp == 'poly_no_interaction':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_poly_no_interaction(n_samples, n_imp, n_unimp)
         discrete = []
@@ -47,6 +56,9 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
     df = pd.DataFrame(np.concatenate([X, Y, T, Y0, Y1, TE, Y0_true, Y1_true], axis=1))
     x_cols = [f'X{i}' for i in range(X.shape[1])]
     df.columns = [*x_cols, 'Y', 'T', 'Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true']
+    ss = StandardScaler().fit(df['X0'].to_numpy().reshape(-1, 1))
+    print(ss.transform(np.array([3]).reshape(1, -1)))
+
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 
     if augment:

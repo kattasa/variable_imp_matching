@@ -32,6 +32,9 @@ datasets = [
     'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
+    # 'sine',
+    # 'non_linear_mixed',
+    # 'drop_off',
     # 'poly_no_interaction',
     # 'poly_interaction',
     # 'exp_log_interaction',
@@ -41,23 +44,22 @@ datasets = [
 ]
 
 malts_methods = ['mean', 'linear']
-admalts_methods = ['lasso']
-prognostic_methods = []
+prognostic_methods = ['lasso']
 methods = [
     # 'malts',
-    # 'propensity',
-    # 'prognostic',
+    'propensity',
+    'prognostic',
     # 'genmatch',
-    # 'bart',
-    # 'causal_forest'
+    'bart',
+    'causal_forest'
 ]
 
 num_samples = 2500
 n_splits = 5
 n_repeats = 1
 k_est_mean = 15
-k_est_linear = 50
-augment = False
+k_est_linear = 60
+augment = True
 
 print_progress = True
 
@@ -75,8 +77,8 @@ for data in datasets:
     for iter in range(0, iters):
         total_time = time.time()
 
-        nci = 15
-        ncu = 25
+        nci = 10
+        ncu = 20
         ndi = 0
         ndu = 0
         print(f'Imp: {nci}\nUnimp: {ncu}')
@@ -95,6 +97,10 @@ for data in datasets:
         start = time.time()
         ad_m = Amect_mf(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=n_repeats)
         ad_m.fit()
+        print('M_C')
+        print(ad_m.M_C_list)
+        print('M_T')
+        print(ad_m.M_T_list)
         print(f'MC Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_C_list]}')
         print(f'MT Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_T_list]}')
         for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
@@ -102,11 +108,11 @@ for data in datasets:
             times[f'AdMALTS Lasso {e_method[0]}'] = time.time() - start
             cate_df = ad_m.cate_df
             cate_df['true.CATE'] = df_true['TE'].to_numpy()
-            cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+            cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/np.abs(cate_df['true.CATE']).mean())
             cate_df['Method'] = [f'AdMALTS Lasso {e_method[0]}' for i in range(cate_df.shape[0])]
             df_err_admalts = pd.DataFrame()
             df_err_admalts['Method'] = [f'AdMALTS Lasso {e_method[0]}' for i in range(cate_df.shape[0])]
-            df_err_admalts['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+            df_err_admalts['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/np.abs(cate_df['true.CATE']).mean())
             df_err_admalts['Iter'] = iter
             df_err = df_err.append(df_err_admalts.copy(deep=True))
             if print_progress:
@@ -120,11 +126,11 @@ for data in datasets:
                 times[f'Augmented AdMALTS Lasso {e_method[0]}'] = time.time() - start
                 cate_df = ad_m.cate_df
                 cate_df['true.CATE'] = df_true['TE'].to_numpy()
-                cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+                cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/np.abs(cate_df['true.CATE']).mean())
                 cate_df['Method'] = [f'Augmented AdMALTS Lasso {e_method[0]}' for i in range(cate_df.shape[0])]
                 df_err_admalts = pd.DataFrame()
                 df_err_admalts['Method'] = [f'Augmented AdMALTS Lasso {e_method[0]}' for i in range(cate_df.shape[0])]
-                df_err_admalts['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+                df_err_admalts['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/np.abs(cate_df['true.CATE']).mean())
                 df_err_admalts['Iter'] = iter
                 df_err = df_err.append(df_err_admalts.copy(deep=True))
                 if print_progress:
@@ -144,12 +150,12 @@ for data in datasets:
                 cate_df = m.CATE_df
                 cate_df['true.CATE'] = df_true['TE'].to_numpy()
                 cate_df['Relative Error (%)'] = np.abs(
-                    (cate_df['avg.CATE'] - cate_df['true.CATE']) / cate_df['true.CATE'].mean())
+                    (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
                 cate_df['Method'] = [f'MALTS {e_method[0]}' for i in range(cate_df.shape[0])]
                 df_err_malts = pd.DataFrame()
                 df_err_malts['Method'] = [f'MALTS {e_method[0]}' for i in range(cate_df.shape[0])]
                 df_err_malts['Relative Error (%)'] = np.abs(
-                    (cate_df['avg.CATE'] - cate_df['true.CATE']) / cate_df['true.CATE'].mean())
+                    (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
                 df_err_malts['Iter'] = iter
                 df_err = df_err.append(df_err_malts)
                 if print_progress:
@@ -159,12 +165,12 @@ for data in datasets:
                     cate_df = m.augmented_CATE_df
                     cate_df['true.CATE'] = df_true['TE'].to_numpy()
                     cate_df['Relative Error (%)'] = np.abs(
-                        (cate_df['avg.CATE'] - cate_df['true.CATE']) / cate_df['true.CATE'].mean())
+                        (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
                     cate_df['Method'] = [f'Augmented MALTS {e_method[0]}' for i in range(cate_df.shape[0])]
                     df_err_malts = pd.DataFrame()
                     df_err_malts['Method'] = [f'Augmented MALTS {e_method[0]}' for i in range(cate_df.shape[0])]
                     df_err_malts['Relative Error (%)'] = np.abs(
-                        (cate_df['avg.CATE'] - cate_df['true.CATE']) / cate_df['true.CATE'].mean())
+                        (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
                     df_err_malts['Iter'] = iter
                     df_err = df_err.append(df_err_malts)
                     if print_progress:
@@ -176,7 +182,7 @@ for data in datasets:
             times['propensity'] = time.time() - start
             df_err_psnn = pd.DataFrame()
             df_err_psnn['Method'] = ['Propensity Score' for i in range(t_psnn.shape[0])]
-            df_err_psnn['Relative Error (%)'] = np.abs((t_psnn['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
+            df_err_psnn['Relative Error (%)'] = np.abs((t_psnn['CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
             df_err_psnn['Iter'] = iter
             df_err = df_err.append(df_err_psnn)
             if print_progress:
@@ -188,7 +194,7 @@ for data in datasets:
             times['genmatch'] = time.time() - start
             df_err_gen = pd.DataFrame()
             df_err_gen['Method'] = ['GenMatch' for i in range(t_gen.shape[0])]
-            df_err_gen['Relative Error (%)'] = np.abs((t_gen['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
+            df_err_gen['Relative Error (%)'] = np.abs((t_gen['CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
             df_err_gen['Iter'] = iter
             df_err = df_err.append(df_err_gen)
             if print_progress:
@@ -198,13 +204,13 @@ for data in datasets:
             for prog_method in prognostic_methods:
                 for e_method in ['smooth']:
                     start = time.time()
-                    cate_est_prog, prog_mgs = prognostic.prognostic_cv('Y', 'T', df_data.drop(columns=['Y_new']),
-                                                                       method=prog_method, k_est=k_est_mean,
-                                                                       est_method=e_method, n_splits=n_splits)
+                    cate_est_prog, prog_mgs = prognostic.prognostic_cv('Y', 'T', df_data, method=prog_method,
+                                                                       k_est=k_est_mean, est_method=e_method,
+                                                                       n_splits=n_splits)
                     times[f'prognostic_{prog_method}'] = time.time() - start
                     df_err_prog = pd.DataFrame()
                     df_err_prog['Method'] = [f'Prognostic Score {prog_method}' for i in range(cate_est_prog.shape[0])]
-                    df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
+                    df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
                     df_err_prog['Iter'] = iter
                     df_err = df_err.append(df_err_prog)
                     if print_progress:
@@ -212,12 +218,12 @@ for data in datasets:
 
         if 'bart' in methods:
             start = time.time()
-            cate_est_bart = bart.bart('Y', 'T', df_data.drop(columns=['Y_new']), n_splits=2, method='new')
+            cate_est_bart = bart.bart('Y', 'T', df_data, n_splits=2, method='new')
             times[f'BART'] = time.time() - start
             df_err_bart = pd.DataFrame()
             df_err_bart['Method'] = [f'BART' for i in range(cate_est_bart.shape[0])]
             df_err_bart['Relative Error (%)'] = np.abs(
-                (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / df_true['TE'].mean())
+                (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
             df_err_bart['Iter'] = iter
             df_err = df_err.append(df_err_bart)
             if print_progress:
@@ -225,11 +231,11 @@ for data in datasets:
 
         if 'causal_forest' in methods:
             start = time.time()
-            cate_est_cf = causalforest.causalforest('Y', 'T', df_data.drop(columns=['Y_new']), n_splits=2)
+            cate_est_cf = causalforest.causalforest('Y', 'T', df_data, n_splits=2)
             times['causal_forest'] = time.time() - start
             df_err_cf = pd.DataFrame()
             df_err_cf['Method'] = ['Causal Forest' for i in range(cate_est_cf.shape[0])]
-            df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
+            df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
             df_err_cf['Iter'] = iter
             df_err = df_err.append(df_err_cf)
             if print_progress:
