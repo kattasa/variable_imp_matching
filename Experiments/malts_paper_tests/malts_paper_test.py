@@ -26,7 +26,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# np.random.seed(0)
+np.random.seed(0)
 
 datasets = [
     'dense_continuous',
@@ -43,15 +43,15 @@ datasets = [
     # 'acic'
 ]
 
-malts_methods = ['mean', 'linear']
+malts_methods = ['mean']
 prognostic_methods = ['lasso']
 methods = [
-    # 'malts',
+    'malts',
     # 'propensity',
     'prognostic',
     # 'genmatch',
-    # 'bart',
-    # 'causal_forest'
+    'bart',
+    'causal_forest'
 ]
 
 num_samples = 500
@@ -96,6 +96,7 @@ for data in datasets:
 
         start = time.time()
         ad_m = Amect_mf(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=n_repeats)
+        split_strategy = ad_m.gen_skf
         ad_m.fit()
         print('M_C')
         print(ad_m.M_C_list)
@@ -140,12 +141,9 @@ for data in datasets:
             est_methods = [[m, k_est_mean if m == 'mean' else k_est_linear] for m in malts_methods]
             for e_method in est_methods:
                 start = time.time()
-                if augment:
-                    m = pymalts.malts_mf('Y', 'T', data=df_augmented, discrete=discrete, k_tr=15, k_est=e_method[1],
-                                         n_splits=n_splits, estimator=e_method[0], smooth_cate=False, augment=True)
-                else:
-                    m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=e_method[1],
-                                         n_splits=n_splits, estimator=e_method[0], smooth_cate=False, augment=False)
+                m = pymalts.malts_mf('Y', 'T', data=df_augmented, discrete=discrete, k_tr=15, k_est=e_method[1],
+                                     n_splits=n_splits, estimator=e_method[0], smooth_cate=False,
+                                     gen_skf=split_strategy)
                 times['MALTS'] = time.time() - start
                 cate_df = m.CATE_df
                 cate_df['true.CATE'] = df_true['TE'].to_numpy()
@@ -160,21 +158,6 @@ for data in datasets:
                 df_err = df_err.append(df_err_malts)
                 if print_progress:
                     print(f'MALTS {e_method[0]} complete: {time.time() - start}')
-                # Augmented MALTS
-                if augment:
-                    cate_df = m.augmented_CATE_df
-                    cate_df['true.CATE'] = df_true['TE'].to_numpy()
-                    cate_df['Relative Error (%)'] = np.abs(
-                        (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
-                    cate_df['Method'] = [f'Augmented MALTS {e_method[0]}' for i in range(cate_df.shape[0])]
-                    df_err_malts = pd.DataFrame()
-                    df_err_malts['Method'] = [f'Augmented MALTS {e_method[0]}' for i in range(cate_df.shape[0])]
-                    df_err_malts['Relative Error (%)'] = np.abs(
-                        (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
-                    df_err_malts['Iter'] = iter
-                    df_err = df_err.append(df_err_malts)
-                    if print_progress:
-                        print(f'Augmented MALTS {e_method[0]} complete: {time.time() - start}')
 
         if 'propensity' in methods:
             start = time.time()
@@ -204,9 +187,8 @@ for data in datasets:
             for prog_method in prognostic_methods:
                 for e_method in ['smooth']:
                     start = time.time()
-                    cate_est_prog, prog_mgs = prognostic.prognostic_cv('Y', 'T', df_data, method=prog_method,
-                                                                       k_est=k_est_mean,
-                                                                       n_splits=n_splits)
+                    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_data, method=prog_method,
+                                                                   k_est=k_est_mean, gen_skf=split_strategy)
                     times[f'prognostic_{prog_method}'] = time.time() - start
                     df_err_prog = pd.DataFrame()
                     df_err_prog['Method'] = [f'Prognostic Score {prog_method}' for i in range(cate_est_prog.shape[0])]
@@ -218,7 +200,7 @@ for data in datasets:
 
         if 'bart' in methods:
             start = time.time()
-            cate_est_bart = bart.bart('Y', 'T', df_data, n_splits=2, method='new')
+            cate_est_bart = bart.bart('Y', 'T', df_data, method='new', gen_skf=split_strategy)
             times[f'BART'] = time.time() - start
             df_err_bart = pd.DataFrame()
             df_err_bart['Method'] = [f'BART' for i in range(cate_est_bart.shape[0])]
@@ -231,7 +213,7 @@ for data in datasets:
 
         if 'causal_forest' in methods:
             start = time.time()
-            cate_est_cf = causalforest.causalforest('Y', 'T', df_data, n_splits=2)
+            cate_est_cf = causalforest.causalforest('Y', 'T', df_data, gen_skf=split_strategy)
             times['causal_forest'] = time.time() - start
             df_err_cf = pd.DataFrame()
             df_err_cf['Method'] = ['Causal Forest' for i in range(cate_est_cf.shape[0])]

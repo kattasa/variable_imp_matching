@@ -24,9 +24,10 @@ utils = importr('utils')
 dbarts = importr('dbarts')
 
 
-def bart(outcome, treatment, data, n_splits, result='brief', method='old'):
-    skf = StratifiedKFold(n_splits=n_splits)
-    gen_skf = skf.split(data, data[treatment])
+def bart(outcome, treatment, data, n_splits=2, result='brief', method='new', gen_skf=None):
+    if gen_skf is None:
+        skf = StratifiedKFold(n_splits=n_splits)
+        gen_skf = skf.split(data, data[treatment])
     cate_est = pd.DataFrame()
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]

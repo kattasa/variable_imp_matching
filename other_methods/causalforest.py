@@ -27,9 +27,10 @@ base = importr('base')
 grf = importr('grf')
 
 
-def causalforest(outcome, treatment, data, n_splits=5, result='brief'):
-    skf = StratifiedKFold(n_splits=n_splits)
-    gen_skf = skf.split(data, data[treatment])
+def causalforest(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
+    if gen_skf is None:
+        skf = StratifiedKFold(n_splits=n_splits)
+        gen_skf = skf.split(data, data[treatment])
     cate_est = pd.DataFrame()
     covariates = set(data.columns) - set([outcome, treatment])
     for est_idx, train_idx in gen_skf:

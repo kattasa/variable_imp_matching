@@ -48,10 +48,10 @@ class prognostic:
         return df_mg, c_mg, t_mg
 
 
-def prognostic_cv(outcome, treatment, data, method, k_est=1, n_splits=5):
-    np.random.seed(0)
-    skf = StratifiedKFold(n_splits=n_splits)
-    gen_skf = skf.split(data, data[treatment])
+def prognostic_cv(outcome, treatment, data, method, k_est=1, n_splits=5, gen_skf=None):
+    if gen_skf is None:
+        skf = StratifiedKFold(n_splits=n_splits)
+        gen_skf = skf.split(data, data[treatment])
     cate_est = pd.DataFrame()
     control_mgs = []
     treatment_mgs = []
@@ -66,4 +66,4 @@ def prognostic_cv(outcome, treatment, data, method, k_est=1, n_splits=5):
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
-    return cate_est, all_mgs
+    return cate_est, control_mgs, treatment_mgs
