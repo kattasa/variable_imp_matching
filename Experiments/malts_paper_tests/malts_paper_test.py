@@ -47,15 +47,15 @@ malts_methods = ['mean', 'linear']
 prognostic_methods = ['lasso']
 methods = [
     # 'malts',
-    'propensity',
+    # 'propensity',
     'prognostic',
     # 'genmatch',
-    'bart',
-    'causal_forest'
+    # 'bart',
+    # 'causal_forest'
 ]
 
-num_samples = 2500
-n_splits = 5
+num_samples = 500
+n_splits = 2
 n_repeats = 1
 k_est_mean = 15
 k_est_linear = 60
@@ -205,7 +205,7 @@ for data in datasets:
                 for e_method in ['smooth']:
                     start = time.time()
                     cate_est_prog, prog_mgs = prognostic.prognostic_cv('Y', 'T', df_data, method=prog_method,
-                                                                       k_est=k_est_mean, est_method=e_method,
+                                                                       k_est=k_est_mean,
                                                                        n_splits=n_splits)
                     times[f'prognostic_{prog_method}'] = time.time() - start
                     df_err_prog = pd.DataFrame()
