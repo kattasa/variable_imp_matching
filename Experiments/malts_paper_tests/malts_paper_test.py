@@ -29,11 +29,11 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 datasets = [
-    'dense_continuous',
+    # 'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'sine',
-    # 'non_linear_mixed',
+    'non_linear_mixed',
     # 'drop_off',
     # 'poly_no_interaction',
     # 'poly_interaction',
@@ -44,9 +44,9 @@ datasets = [
 ]
 
 malts_methods = ['mean']
-prognostic_methods = ['lasso']
+prognostic_methods = ['lasso', 'rf']
 methods = [
-    'malts',
+    # 'malts',
     # 'propensity',
     'prognostic',
     # 'genmatch',
@@ -54,7 +54,7 @@ methods = [
     'causal_forest'
 ]
 
-num_samples = 500
+num_samples = 1000
 n_splits = 2
 n_repeats = 1
 k_est_mean = 15
@@ -84,10 +84,7 @@ for data in datasets:
         print(f'Imp: {nci}\nUnimp: {ncu}')
 
         df_data, df_true, discrete, config = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
-                                                      unimp_d=ndu, augment=augment)
-        if augment:
-            df_augmented = df_data.copy(deep=True)
-            df_data = df_data.drop(columns=['Y_new'])
+                                                      unimp_d=ndu, augment=False)
 
         with open(f'{save_folder}/config.txt', 'w') as f:
             json.dump(config, f, indent=2)
@@ -105,7 +102,7 @@ for data in datasets:
         print(f'MC Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_C_list]}')
         print(f'MT Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_T_list]}')
         for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
-            ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], outcome='Y')
+            ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], augmented=False)
             times[f'AdMALTS Lasso {e_method[0]}'] = time.time() - start
             cate_df = ad_m.cate_df
             cate_df['true.CATE'] = df_true['TE'].to_numpy()
@@ -120,10 +117,8 @@ for data in datasets:
                 print(f'AdMALTS {e_method[0]} method complete: {time.time() - start}')
         # Augmented AdMALTS
         if augment:
-            ad_m.col_order = [*ad_m.covariates, ad_m.treatment, ad_m.outcome, 'Y_new']
-            ad_m.data = df_augmented[ad_m.col_order].reset_index(drop=True)
             for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
-                ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], outcome='Y_new')
+                ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], augmented=True)
                 times[f'Augmented AdMALTS Lasso {e_method[0]}'] = time.time() - start
                 cate_df = ad_m.cate_df
                 cate_df['true.CATE'] = df_true['TE'].to_numpy()
@@ -141,7 +136,7 @@ for data in datasets:
             est_methods = [[m, k_est_mean if m == 'mean' else k_est_linear] for m in malts_methods]
             for e_method in est_methods:
                 start = time.time()
-                m = pymalts.malts_mf('Y', 'T', data=df_augmented, discrete=discrete, k_tr=15, k_est=e_method[1],
+                m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=e_method[1],
                                      n_splits=n_splits, estimator=e_method[0], smooth_cate=False,
                                      gen_skf=split_strategy)
                 times['MALTS'] = time.time() - start

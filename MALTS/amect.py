@@ -73,18 +73,20 @@ class Amect:
 
         self.X = StandardScaler().fit_transform(data[self.covariates].to_numpy())
 
+        self.model_C = None
+        self.model_T = None
         self.M_C = None
         self.M_T = None
 
     def fit(self, params=None, prune=0.01):
         if params is None:
             params = {}
-        M_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
-        M_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
+        self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
+        self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
         # M_C = ensemble.AdaBoostRegressor().fit(self.X[:self.T_split], self.Y_C)
         # M_T = ensemble.AdaBoostRegressor().fit(self.X[self.T_split:], self.Y_T)
-        M_C_hat = np.abs(M_C.coef_)
-        M_T_hat = np.abs(M_T.coef_)
+        M_C_hat = np.abs(self.model_C.coef_)
+        M_T_hat = np.abs(self.model_T.coef_)
         # M_C_hat = np.abs(M_C.feature_importances_)
         # M_T_hat = np.abs(M_T.feature_importances_)
         M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
@@ -108,9 +110,11 @@ class Amect:
         return get_match_groups(df_estimation, k, self.covariates, self.treatment, M_C=self.M_C, M_T=self.M_T,
                                 return_original_idx=return_original_idx)
 
-    def CATE(self, df_estimation, control_match_groups=None, treatment_match_groups=None, k=10, method='mean'):
+    def CATE(self, df_estimation, control_match_groups=None, treatment_match_groups=None, k=10, method='mean',
+             augmented=True):
         if (control_match_groups is None) or (treatment_match_groups is None):
             control_match_groups, treatment_match_groups, _, _ = self.get_matched_groups(df_estimation=df_estimation,
                                                                                          k=k, return_original_idx=False)
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
-                         self.covariates, self.outcome, self.M_C, self.M_T)
+                         self.covariates, self.outcome, self.model_C, self.model_T, self.M_C, self.M_T,
+                         augmented=augmented)

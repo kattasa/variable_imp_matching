@@ -19,6 +19,8 @@ class Amect_mf:
 
         skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
         self.gen_skf = list(skf.split(data, data[treatment]))
+        self.model_C_list = []
+        self.model_T_list = []
         self.M_C_list = []
         self.M_T_list = []
         self.col_orders = []
@@ -34,11 +36,13 @@ class Amect_mf:
 
             m = Amect(outcome=self.outcome, treatment=self.treatment, data=df_train)
             m.fit(params=params, prune=prune)
+            self.model_C_list.append(m.model_C)
+            self.model_T_list.append(m.model_T)
             self.M_C_list.append(m.M_C)
             self.M_T_list.append(m.M_T)
             self.col_orders.append(m.col_order)
 
-    def CATE(self, k=80, cate_methods=['linear'], outcome=None, return_distance=False):
+    def CATE(self, k=80, cate_methods=['linear'], augmented=True, outcome=None, return_distance=False):
         if outcome is None:
             outcome = self.outcome
         self.C_MG_list = []
@@ -60,7 +64,9 @@ class Amect_mf:
             cates = []
             for method in cate_methods:
                 cates.append(get_CATES(df_estimation, control_mg, treatment_mg, method, self.covariates, outcome,
-                                       self.M_C_list[i], self.M_T_list[i], check_est_df=False))
+                                       self.model_C_list[i], self.model_T_list[i], self.M_C_list[i], self.M_T_list[i],
+                                       augmented=augmented, check_est_df=False)
+                             )
 
             self.C_MG_list.append(convert_idx(control_mg, orig_idx))
             self.T_MG_list.append(convert_idx(treatment_mg, orig_idx))

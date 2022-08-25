@@ -35,35 +35,46 @@ def convert_idx(mg, idx):
     return pd.DataFrame(idx[mg.to_numpy()], index=idx)
 
 
-def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, MC, MT, check_est_df=True):
+def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, model_C, model_T, MC, MT,
+              augmented=False, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
     df_estimation, old_idx = check_mg_indices(df_estimation, control_mg.shape[0], treatment_mg.shape[0])
+    if augmented:
+        control_preds = model_C.predict(df_estimation[covariates])
+        treatment_preds = model_T.predict(df_estimation[covariates])
+        model_cates = treatment_preds - control_preds
     if method == 'mean':
-        cates = df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()].mean(axis=1) - \
-                df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
-    if method == 'linear':
-        control_mg = df_estimation[covariates + [outcome]].to_numpy()[control_mg.reset_index().to_numpy()]
-        treatment_mg = df_estimation[covariates + [outcome]].to_numpy()[treatment_mg.reset_index().to_numpy()]
-        cates = np.array([cate_linear_pred(treatment_mg[i, :, :]) for i in range(treatment_mg.shape[0])]) - \
-                np.array([cate_linear_pred(control_mg[i, :, :]) for i in range(control_mg.shape[0])])
-    if method == 'linear_pruned':
-        control_mg = df_estimation[np.append(np.array(covariates)[MC > 0], outcome)].to_numpy()[control_mg.reset_index().to_numpy()]
-        treatment_mg = df_estimation[np.append(np.array(covariates)[MT > 0], outcome)].to_numpy()[treatment_mg.reset_index().to_numpy()]
-        cates = np.array([cate_linear_pred(treatment_mg[i, :, :]) for i in range(treatment_mg.shape[0])]) - \
-                np.array([cate_linear_pred(control_mg[i, :, :]) for i in range(control_mg.shape[0])])
-    if method == 'rf':
-        control_mg = df_estimation[covariates + [outcome]].to_numpy()[control_mg.reset_index().to_numpy()]
-        treatment_mg = df_estimation[covariates + [outcome]].to_numpy()[treatment_mg.reset_index().to_numpy()]
-        cates = np.array([cate_rf_pred(treatment_mg[i, :, :]) for i in range(treatment_mg.shape[0])]) - \
-                np.array([cate_rf_pred(control_mg[i, :, :]) for i in range(control_mg.shape[0])])
-    if method == 'rf_pruned':
-        control_mg = df_estimation[np.append(np.array(covariates)[MC > 0], outcome)].to_numpy()[control_mg.reset_index().to_numpy()]
-        treatment_mg = df_estimation[np.append(np.array(covariates)[MT > 0], outcome)].to_numpy()[treatment_mg.reset_index().to_numpy()]
-        cates = np.array([cate_rf_pred(treatment_mg[i, :, :]) for i in range(treatment_mg.shape[0])]) - \
-                np.array([cate_rf_pred(control_mg[i, :, :]) for i in range(control_mg.shape[0])])
-    cates = pd.Series(cates, index=old_idx, name=f'CATE_{method}')
-    return cates
+        if augmented:
+            mg_cates = (df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()] - treatment_preds[:, None]).mean(
+                axis=1) - (df_estimation[outcome].to_numpy()[control_mg.to_numpy()] - control_preds[:, None]).mean(
+                axis=1)
+        else:
+            mg_cates = df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()].mean(axis=1) - \
+                       df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
+    else:
+        if 'pruned' in method:
+            control_mg = df_estimation[np.append(np.array(covariates)[MC > 0], outcome)].to_numpy()[
+                control_mg.reset_index().to_numpy()]
+            treatment_mg = df_estimation[np.append(np.array(covariates)[MT > 0], outcome)].to_numpy()[
+                treatment_mg.reset_index().to_numpy()]
+        else:
+            control_mg = df_estimation[covariates + [outcome]].to_numpy()[control_mg.reset_index().to_numpy()]
+            treatment_mg = df_estimation[covariates + [outcome]].to_numpy()[treatment_mg.reset_index().to_numpy()]
+        if augmented:
+            control_mg[:, :, -1] -= control_preds[:, None]
+            treatment_mg[:, :, -1] -= treatment_preds[:, None]
+        if 'linear' in method:
+            mg_cates = np.array([cate_linear_pred(treatment_mg[i, :, :]) for i in range(treatment_mg.shape[0])]) - \
+                       np.array([cate_linear_pred(control_mg[i, :, :]) for i in range(control_mg.shape[0])])
+        elif 'rf' in method:
+            mg_cates = np.array([cate_rf_pred(treatment_mg[i, :, :]) for i in range(treatment_mg.shape[0])]) - \
+                       np.array([cate_rf_pred(control_mg[i, :, :]) for i in range(control_mg.shape[0])])
+    if augmented:
+        cates = model_cates + mg_cates
+    else:
+        cates = mg_cates
+    return pd.Series(cates, index=old_idx, name=f'CATE_{method}')
 
 
 def cate_linear_pred(a):
