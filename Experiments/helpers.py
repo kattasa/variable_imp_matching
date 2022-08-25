@@ -16,11 +16,10 @@ def create_folder(data, print_progress=True):
     return save_folder
 
 
-def get_data(data, num_samples, config, imp_c=None, imp_d=None, unimp_c=None, unimp_d=None, n_train=0, augment=False):
+def get_data(data, num_samples, config, imp_c=None, imp_d=None, unimp_c=None, unimp_d=None, n_train=0):
     if 'dense' in data:
         df_train, df_data, df_true, x_cols, discrete = dgp_dense_mixed_endo_df(num_samples, imp_c, imp_d, unimp_c,
-                                                                               unimp_d, n_train=n_train,
-                                                                               augment=augment)
+                                                                               unimp_d, n_train=n_train)
     elif data == 'acic':
         acic_file = 8
         df_train, df_data, df_true, x_cols, discrete = dgp_acic_df(acic_file, n_train=n_train)
@@ -32,8 +31,7 @@ def get_data(data, num_samples, config, imp_c=None, imp_d=None, unimp_c=None, un
         config['ihdp_file'] = ihdp_file
     else:
         df_train, df_data, df_true, x_cols, discrete = dgp_df(dgp=data, n_samples=num_samples,
-                                                              n_imp=imp_c, n_unimp=unimp_c, n_train=n_train,
-                                                              augment=augment)
+                                                              n_imp=imp_c, n_unimp=unimp_c, n_train=n_train)
 
     config['num_samples'] = df_train.shape[0] + df_data.shape[0]
     config['n_train'] = n_train

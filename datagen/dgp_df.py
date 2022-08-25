@@ -14,20 +14,7 @@ ACIC_FOLDER = '/Users/qlanners/projects/AME-for-Continuous-Exposure/datagen/acic
 ACIC_FILE = 'highDim_testdataset[IDX].csv'
 
 
-def augment_df(df, x_cols):
-    skf = KFold(n_splits=2).split(df, df['T'])
-    new_y0s = []
-    new_y1s = []
-    for e_idx, t_idx in skf:
-        m = LassoCV().fit(df.iloc[t_idx][df.iloc[t_idx]['T'] == 0][x_cols], df.iloc[t_idx][df.iloc[t_idx]['T'] == 0]['Y'])
-        new_y0s.append(df.iloc[e_idx][df.iloc[e_idx]['T'] == 0]['Y'] - m.predict(df.iloc[e_idx][df.iloc[e_idx]['T'] == 0][x_cols]))
-        new_y1s.append(df.iloc[e_idx][df.iloc[e_idx]['T'] == 1]['Y'] - m.predict(df.iloc[e_idx][df.iloc[e_idx]['T'] == 1][x_cols]))
-
-    df['Y_new'] = pd.concat(new_y0s + new_y1s).sort_index()
-    return df
-
-
-def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=None, augment=False):
+def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=None):
     if dgp == 'sine':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_sine(n_samples, n_imp, n_unimp)
         discrete = []
@@ -61,8 +48,6 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
 
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 
-    if augment:
-        df = augment_df(df, x_cols)
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
@@ -70,7 +55,7 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
 
 
-def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, perc_train=None, n_train=None, augment=False):
+def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, perc_train=None, n_train=None):
     df, df_true, discrete = data_generation_dense_mixed_endo(num_samples=n, num_cont_imp=nci, num_disc_imp=ndi,
                                                              num_cont_unimp=ncu, num_disc_unimp=ndu)
     x_cols = [c for c in df.columns if 'X' in c]
@@ -80,8 +65,7 @@ def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, perc_train=None, n_train=None
     else:
         train_idx = n_train
     df = df.join(df_true)
-    if augment:
-        df = augment_df(df, x_cols)
+
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
@@ -89,7 +73,7 @@ def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, perc_train=None, n_train=None
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
 
 
-def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672, augment=False):
+def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672):
     x_cols = [f'X{i}' for i in range(25)]
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)
@@ -117,8 +101,7 @@ def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672, augment=False):
     this_df['Y1'] = this_y1
     this_df['TE'] = this_y1 - this_y0
     df = this_df
-    if augment:
-        df = augment_df(df, x_cols)
+
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['Y0', 'Y1', 'TE'])
     df_true = df.copy(deep=True)[train_idx:]
@@ -126,7 +109,7 @@ def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672, augment=False):
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
 
 
-def dgp_acic_df(dataset_idx, perc_train=None, n_train=None, augment=False):
+def dgp_acic_df(dataset_idx, perc_train=None, n_train=None):
     df = pd.read_csv(f'{ACIC_FOLDER}/{ACIC_FILE.replace("[IDX]", str(dataset_idx))}')
     df_cf = pd.read_csv(f'{ACIC_FOLDER}/{ACIC_FILE.replace("[IDX]", str(dataset_idx) + "_cf")}')
     x_cols = []
@@ -146,9 +129,6 @@ def dgp_acic_df(dataset_idx, perc_train=None, n_train=None, augment=False):
     df_cf = df_cf.rename(columns={'ATE': 'TE', 'EY1': 'Y1_true', 'EY0': 'Y0_true'})
     df = pd.concat([df, df_cf], axis=1)
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
-
-    if augment:
-        df = augment_df(df, x_cols)
 
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])

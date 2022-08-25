@@ -84,7 +84,7 @@ for data in datasets:
         print(f'Imp: {nci}\nUnimp: {ncu}')
 
         df_data, df_true, discrete, config = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
-                                                      unimp_d=ndu, augment=False)
+                                                      unimp_d=ndu)
 
         with open(f'{save_folder}/config.txt', 'w') as f:
             json.dump(config, f, indent=2)
