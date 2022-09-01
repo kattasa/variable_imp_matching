@@ -126,7 +126,9 @@ def dgp_acic_df(dataset_idx, perc_train=None, n_train=None):
         train_idx = int(df.shape[0]*perc_train)
     else:
         train_idx = n_train
-    df_cf = df_cf.rename(columns={'ATE': 'TE', 'EY1': 'Y1_true', 'EY0': 'Y0_true'})
+    df_cf = df_cf.drop(columns=['ATE'])
+    df_cf = df_cf.rename(columns={'EY1': 'Y1_true', 'EY0': 'Y0_true'})
+    df_cf['TE'] = df_cf['Y1_true'] - df_cf['Y0_true']
     df = pd.concat([df, df_cf], axis=1)
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 

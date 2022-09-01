@@ -33,28 +33,28 @@ datasets = [
     # 'dense_discrete',
     # 'dense_mixed',
     # 'sine',
-    'non_linear_mixed',
+    # 'non_linear_mixed',
     # 'drop_off',
     # 'poly_no_interaction',
     # 'poly_interaction',
     # 'exp_log_interaction',
     # 'friedman',
     # 'ihdp',
-    # 'acic'
+    'acic'
 ]
 
-malts_methods = ['mean']
+malts_methods = ['mean', 'linear']
 prognostic_methods = ['lasso', 'rf']
 methods = [
     # 'malts',
-    # 'propensity',
+    'propensity',
     'prognostic',
     # 'genmatch',
     'bart',
     'causal_forest'
 ]
 
-num_samples = 1000
+num_samples = 2500
 n_splits = 2
 n_repeats = 1
 k_est_mean = 15
@@ -64,7 +64,7 @@ augment = True
 print_progress = True
 
 iters = 1
-iter_name = 'Unimportant Covariates (log_2)'
+iter_name = 'ACIC'
 
 for data in datasets:
     save_folder = create_folder(data, print_progress)
@@ -96,9 +96,11 @@ for data in datasets:
         split_strategy = ad_m.gen_skf
         ad_m.fit()
         print('M_C')
-        print(ad_m.M_C_list)
+        print([np.argsort(-z)[:np.sum(z != 0)] for z in ad_m.M_C_list])
+        print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_C_list])
         print('M_T')
-        print(ad_m.M_T_list)
+        print([np.argsort(-z)[:np.sum(z != 0)] for z in ad_m.M_T_list])
+        print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_T_list])
         print(f'MC Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_C_list]}')
         print(f'MT Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_T_list]}')
         for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
