@@ -1,0 +1,13 @@
+{
+  "n_splits": 5,
+  "n_repeats": 1,
+  "k_est_mean": 15,
+  "k_est_linear": 50,
+  "acic_file": 8,
+  "num_samples": 2000,
+  "n_train": 0,
+  "imp_c": 15,
+  "imp_d": 0,
+  "unimp_c": 25,
+  "unimp_d": 0
+}

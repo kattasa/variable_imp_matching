@@ -47,18 +47,18 @@ malts_methods = ['mean', 'linear']
 prognostic_methods = ['lasso', 'rf']
 methods = [
     # 'malts',
-    'propensity',
+    # 'propensity',
     'prognostic',
     # 'genmatch',
-    'bart',
-    'causal_forest'
+    # 'bart',
+    # 'causal_forest'
 ]
 
 num_samples = 2500
-n_splits = 2
+n_splits = 5
 n_repeats = 1
 k_est_mean = 15
-k_est_linear = 60
+k_est_linear = 50
 augment = True
 
 print_progress = True
@@ -77,8 +77,8 @@ for data in datasets:
     for iter in range(0, iters):
         total_time = time.time()
 
-        nci = 10
-        ncu = 20
+        nci = 15
+        ncu = 25
         ndi = 0
         ndu = 0
         print(f'Imp: {nci}\nUnimp: {ncu}')
@@ -104,6 +104,7 @@ for data in datasets:
         print(f'MC Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_C_list]}')
         print(f'MT Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_T_list]}')
         for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
+        # for e_method in [['mean', k_est_mean]]:
             ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], augmented=False)
             times[f'AdMALTS Lasso {e_method[0]}'] = time.time() - start
             cate_df = ad_m.cate_df
@@ -120,6 +121,7 @@ for data in datasets:
         # Augmented AdMALTS
         if augment:
             for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
+            # for e_method in [['mean', k_est_mean]]:
                 ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], augmented=True)
                 times[f'Augmented AdMALTS Lasso {e_method[0]}'] = time.time() - start
                 cate_df = ad_m.cate_df

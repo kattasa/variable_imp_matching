@@ -77,16 +77,17 @@ class Amect:
         self.model_T = None
         self.M_C = None
         self.M_T = None
+        self.model_prop_score = None
 
     def fit(self, params=None, prune=0.01):
         if params is None:
             params = {}
         self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
         self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
-        # self.model_C = ensemble.AdaBoostRegressor().fit(self.X[:self.T_split], self.Y_C)
-        # self.model_T = ensemble.AdaBoostRegressor().fit(self.X[self.T_split:], self.Y_T)
         M_C_hat = np.abs(self.model_C.coef_)
         M_T_hat = np.abs(self.model_T.coef_)
+        self.model_C = ensemble.AdaBoostRegressor().fit(self.X[:self.T_split], self.Y_C)
+        self.model_T = ensemble.AdaBoostRegressor().fit(self.X[self.T_split:], self.Y_T)
         # M_C_hat = np.abs(self.model_C.feature_importances_)
         # M_T_hat = np.abs(self.model_T.feature_importances_)
         M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
@@ -98,6 +99,7 @@ class Amect:
             M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
         self.M_C = M_C_hat
         self.M_T = M_T_hat
+        self.model_prop_score = linear.LogisticRegression().fit(self.X, self.T)
 
     def get_matched_groups(self, df_estimation, k=10, return_original_idx=False):
         """Get the match groups for a given
