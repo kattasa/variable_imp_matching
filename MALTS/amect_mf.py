@@ -65,7 +65,7 @@ class Amect_mf:
 
             cates = []
             for method in cate_methods:
-                cates.append(get_CATES(df_estimation, control_mg, treatment_mg, control_dist, treatment_dist, method, self.covariates, outcome,
+                cates.append(get_CATES(df_estimation, control_mg, treatment_mg, method, self.covariates, outcome,
                                        self.model_C_list[i], self.model_T_list[i], self.M_C_list[i], self.M_T_list[i],
                                        self.model_prop_score_list[i], augmented=augmented, check_est_df=False)
                              )

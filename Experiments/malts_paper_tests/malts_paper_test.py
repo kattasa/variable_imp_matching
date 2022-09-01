@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'sine',

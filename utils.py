@@ -35,7 +35,7 @@ def convert_idx(mg, idx):
     return pd.DataFrame(idx[mg.to_numpy()], index=idx)
 
 
-def get_CATES(df_estimation, control_mg, treatment_mg, control_dist, treatment_dist, method, covariates, outcome, model_C, model_T, MC, MT,
+def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, model_C, model_T, MC, MT,
               model_prop_score=None, augmented=False, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
@@ -43,7 +43,7 @@ def get_CATES(df_estimation, control_mg, treatment_mg, control_dist, treatment_d
     treatment_prop_weights = np.array([None] * df_estimation.shape[0])
     control_prop_weights = np.array([None]*df_estimation.shape[0])
     if augmented:
-        model_prop_score = LogisticRegression().fit(df_estimation[covariates], df_estimation['T'])
+        # model_prop_score = LogisticRegression().fit(df_estimation[covariates], df_estimation['T'])
         control_preds = model_C.predict(df_estimation[covariates])
         treatment_preds = model_T.predict(df_estimation[covariates])
         prop_scores = model_prop_score.predict_proba(df_estimation[covariates])[:, 1]
