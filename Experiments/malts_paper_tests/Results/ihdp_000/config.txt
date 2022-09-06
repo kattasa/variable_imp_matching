@@ -1,0 +1,13 @@
+{
+  "n_splits": 2,
+  "n_repeats": 1,
+  "k_est_mean": 15,
+  "k_est_linear": 50,
+  "ihdp_file": 100,
+  "num_samples": 747,
+  "n_train": 0,
+  "imp_c": 15,
+  "imp_d": 0,
+  "unimp_c": 25,
+  "unimp_d": 0
+}

@@ -1,9 +1,12 @@
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RepeatedStratifiedKFold
 
 from MALTS.amect import Amect
 
 from utils import get_match_groups, get_CATES, convert_idx
+
+from other_methods import bart
 
 
 class Amect_mf:
@@ -18,6 +21,7 @@ class Amect_mf:
         self.data = data[self.col_order].reset_index(drop=True)
 
         skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
+        self.propensity_model = None
         self.gen_skf = list(skf.split(data, data[treatment]))
         self.model_C_list = []
         self.model_T_list = []
@@ -41,12 +45,19 @@ class Amect_mf:
             self.model_T_list.append(m.model_T)
             self.M_C_list.append(m.M_C)
             self.M_T_list.append(m.M_T)
-            self.model_prop_score_list.append(m.model_prop_score)
             self.col_orders.append(m.col_order)
 
-    def CATE(self, k=80, cate_methods=['linear'], augmented=True, outcome=None, return_distance=False):
+    def CATE(self, k=80, cate_methods=['linear'], augmented=True, outcome=None, treatment=None, return_distance=False):
         if outcome is None:
             outcome = self.outcome
+        if treatment is None:
+            treatment = self.treatment
+        if augmented:
+            self.propensity_model = LogisticRegression().fit(self.data[self.covariates], self.data[self.treatment])
+        if 'bart' in cate_methods:
+            model_preds = bart.bart('Y', 'T', self.data, method='new', gen_skf=self.gen_skf, result='full')
+            control_preds = model_preds[1]['avg.Y0']
+            treatment_preds = model_preds[2]['avg.Y1']
         self.C_MG_list = []
         self.T_MG_list = []
         self.C_MG_distance = []
@@ -65,9 +76,17 @@ class Amect_mf:
 
             cates = []
             for method in cate_methods:
+                if method == 'bart':
+                    this_control_preds = control_preds.iloc[est_idx].to_numpy()
+                    this_treatment_preds = treatment_preds.iloc[est_idx].to_numpy()
+                else:
+                    this_control_preds = None
+                    this_treatment_preds = None
                 cates.append(get_CATES(df_estimation, control_mg, treatment_mg, method, self.covariates, outcome,
-                                       self.model_C_list[i], self.model_T_list[i], self.M_C_list[i], self.M_T_list[i],
-                                       self.model_prop_score_list[i], augmented=augmented, check_est_df=False)
+                                       treatment, self.model_C_list[i], self.model_T_list[i], self.M_C_list[i],
+                                       self.M_T_list[i], augmented=augmented, propensity_model=self.propensity_model,
+                                       control_preds=this_control_preds, treatment_preds=this_treatment_preds,
+                                       check_est_df=False)
                              )
 
             self.C_MG_list.append(convert_idx(control_mg, orig_idx))

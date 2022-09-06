@@ -29,6 +29,8 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', method='new', gen
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
     cate_est = pd.DataFrame()
+    treatment_preds = pd.DataFrame()
+    control_preds = pd.DataFrame()
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
@@ -51,12 +53,22 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', method='new', gen
         y_t_hat_bart = np.array(bart_res_t[7])
         t_hat_bart = np.array(y_t_hat_bart - y_c_hat_bart)
         if method == 'old':
-            cate_est_i = pd.DataFrame(t_hat_bart, index=df_train.index, columns=['CATE'])
+            this_index = df_train.index
         elif method == 'new':
-            cate_est_i = pd.DataFrame(t_hat_bart, index=df_est.index, columns=['CATE'])
+            this_index = df_est.index
+        control_preds_i = pd.DataFrame(y_c_hat_bart, index=this_index, columns=['Y0'])
+        treatment_preds_i = pd.DataFrame(y_t_hat_bart, index=this_index, columns=['Y1'])
+        cate_est_i = pd.DataFrame(t_hat_bart, index=this_index, columns=['CATE'])
+
+        control_preds = pd.concat([control_preds, control_preds_i], join='outer', axis=1)
+        treatment_preds = pd.concat([treatment_preds, treatment_preds_i], join='outer', axis=1)
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
+    control_preds['avg.Y0'] = control_preds.mean(axis=1)
+    control_preds['std.Y0'] = control_preds.std(axis=1)
+    treatment_preds['avg.Y1'] = treatment_preds.mean(axis=1)
+    treatment_preds['std.Y1'] = treatment_preds.std(axis=1)
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
     if result == 'full':
-        return cate_est, bart_res_c, bart_res_t
+        return cate_est, control_preds, treatment_preds
     return cate_est

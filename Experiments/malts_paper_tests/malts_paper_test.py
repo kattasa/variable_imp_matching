@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 datasets = [
-    'dense_continuous',
+    # 'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'sine',
@@ -38,11 +38,12 @@ datasets = [
     # 'poly_no_interaction',
     # 'poly_interaction',
     # 'exp_log_interaction',
-    # 'friedman',
+    'friedman',
     # 'ihdp',
-    'acic'
+    # 'acic'
 ]
 
+admalts_prune = 0.01
 malts_methods = ['mean', 'linear']
 prognostic_methods = ['lasso', 'rf']
 methods = [
@@ -54,20 +55,28 @@ methods = [
     # 'causal_forest'
 ]
 
-num_samples = 2500
-n_splits = 5
+num_samples = 2505
+# n_splits = 10
 n_repeats = 1
 k_est_mean = 15
-k_est_linear = 50
+k_est_linear = 60
 augment = True
 
 print_progress = True
 
 iters = 1
-iter_name = 'ACIC'
+iter_in_title = False
 
 for data in datasets:
+    plot_name = f"{data.replace('_', ' ').title()} DGP"
     save_folder = create_folder(data, print_progress)
+
+    if data == 'ihdp':
+        n_splits = 2
+    elif data == 'acic':
+        n_splits = 4
+    else:
+        n_splits = 5
 
     config = {'n_splits': n_splits, 'n_repeats': n_repeats, 'k_est_mean': k_est_mean, 'k_est_linear': k_est_linear}
 
@@ -77,11 +86,27 @@ for data in datasets:
     for iter in range(0, iters):
         total_time = time.time()
 
-        nci = 15
-        ncu = 25
-        ndi = 0
-        ndu = 0
-        print(f'Imp: {nci}\nUnimp: {ncu}')
+        if data == 'dense_continuous':
+            nci = 15
+            ncu = 25
+            ndi = 0
+            ndu = 0
+        elif data == 'dense_discrete':
+            nci = 0
+            ncu = 0
+            ndi = 15 * 10
+            ndu = 10 * 10
+        elif data == 'dense_mixed':
+            nci = 5 * 10
+            ncu = 10 * 10
+            ndi = 15 * 10
+            ndu = 10 * 10
+        else:
+            nci = 15
+            ncu = 25
+            ndi = 0
+            ndu = 0
+        print(f'Imp continuous: {nci}\nImp discrete: {ndi}\nUnimp continuous: {ncu}\nUnimp discrete: {ndu}')
 
         df_data, df_true, discrete, config = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
                                                       unimp_d=ndu)
@@ -94,7 +119,7 @@ for data in datasets:
         start = time.time()
         ad_m = Amect_mf(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=n_repeats)
         split_strategy = ad_m.gen_skf
-        ad_m.fit()
+        ad_m.fit(prune=admalts_prune)
         print('M_C')
         print([np.argsort(-z)[:np.sum(z != 0)] for z in ad_m.M_C_list])
         print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_C_list])
@@ -103,8 +128,8 @@ for data in datasets:
         print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_T_list])
         print(f'MC Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_C_list]}')
         print(f'MT Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_T_list]}')
-        for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
-        # for e_method in [['mean', k_est_mean]]:
+        # for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
+        for e_method in [['linear_pruned', k_est_linear]]:
             ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], augmented=False)
             times[f'AdMALTS Lasso {e_method[0]}'] = time.time() - start
             cate_df = ad_m.cate_df
@@ -120,8 +145,7 @@ for data in datasets:
                 print(f'AdMALTS {e_method[0]} method complete: {time.time() - start}')
         # Augmented AdMALTS
         if augment:
-            for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear]]:
-            # for e_method in [['mean', k_est_mean]]:
+            for e_method in [['mean', k_est_mean], ['linear_pruned', k_est_linear], ['bart', k_est_linear]]:
                 ad_m.CATE(k=e_method[1], cate_methods=[e_method[0]], augmented=True)
                 times[f'Augmented AdMALTS Lasso {e_method[0]}'] = time.time() - start
                 cate_df = ad_m.cate_df
@@ -229,7 +253,10 @@ for data in datasets:
         sns.set(font_scale=6)
         fig, ax = plt.subplots(figsize=(40, 50))
         sns.boxenplot(x='Method', y='Relative Error (%)', data=df_err[df_err['Iter'] == iter])
-        plt.title(f'CATE Errors for {iter_name} = {iter}')
+        if iter_in_title:
+            plt.title(f'CATE Errors for {plot_name} = {iter}')
+        else:
+            plt.title(f'CATE Errors for {plot_name}')
         plt.xticks(rotation=65, horizontalalignment='right')
         ax.yaxis.set_major_formatter(ticker.PercentFormatter())
         plt.tight_layout()
@@ -246,8 +273,8 @@ for data in datasets:
     sns.set_style("darkgrid")
     sns.set(font_scale=6)
     fig, ax = plt.subplots(figsize=(40, 50))
-    df_err = df_err.rename(columns={'Iter': iter_name})
-    pp = sns.pointplot(data=df_err.reset_index(drop=True), x=iter_name, y='Relative Error (%)', hue='Method', ci='sd',
+    df_err = df_err.rename(columns={'Iter': 'Iteration'})
+    pp = sns.pointplot(data=df_err.reset_index(drop=True), x='Iteration', y='Relative Error (%)', hue='Method', ci='sd',
                        dodge=True, scale=5)
     plt.setp(pp.get_legend().get_texts(), fontsize='50')
     plt.setp(pp.get_legend().get_title(), fontsize='60')
@@ -262,7 +289,7 @@ for data in datasets:
         text_width = (text.get_window_extent(fig.canvas.get_renderer()).transformed(ax.transData.inverted()).width)
         if np.isfinite(text_width):
             ax.set_xlim(ax.get_xlim()[0], text.xy[0] + text_width * 1.05)
-    plt.title(f'CATE Error vs {iter_name}')
+    plt.title(f'CATE Error for {plot_name} for {iters} iterations')
     # plt.xticks(rotation=65, horizontalalignment='right')
     ax.yaxis.set_major_formatter(ticker.PercentFormatter())
     plt.tight_layout()

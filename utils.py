@@ -35,47 +35,65 @@ def convert_idx(mg, idx):
     return pd.DataFrame(idx[mg.to_numpy()], index=idx)
 
 
-def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, model_C, model_T, MC, MT,
-              model_prop_score=None, augmented=False, check_est_df=True):
+def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, treatment, model_C, model_T, MC, MT,
+              augmented=False, propensity_model=None, control_preds=None, treatment_preds=None, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
     df_estimation, old_idx = check_mg_indices(df_estimation, control_mg.shape[0], treatment_mg.shape[0])
-    treatment_prop_weights = np.array([None] * df_estimation.shape[0])
-    control_prop_weights = np.array([None]*df_estimation.shape[0])
     if augmented:
-        # model_prop_score = LogisticRegression().fit(df_estimation[covariates], df_estimation['T'])
-        control_preds = model_C.predict(df_estimation[covariates])
-        treatment_preds = model_T.predict(df_estimation[covariates])
-        prop_scores = model_prop_score.predict_proba(df_estimation[covariates])[:, 1]
-        treatment_prop_weights = (1 / prop_scores)[treatment_mg.to_numpy()] * (1 / (1 / prop_scores)[treatment_mg.to_numpy()].sum(axis=1))[:, None]
-        control_prop_weights = (1 / (1 - prop_scores))[control_mg.to_numpy()] * (1 / (1 / (1 - prop_scores))[control_mg.to_numpy()].sum(axis=1))[:, None]
+        if control_preds is None:
+            control_preds = model_C.predict(df_estimation[covariates])
+        if treatment_preds is None:
+            treatment_preds = model_T.predict(df_estimation[covariates])
+    if method == 'model':
         model_cates = treatment_preds - control_preds
-    if method == 'mean':
+        mg_cates = np.zeros(model_cates.shape)
+    elif method == 'mean':
         if augmented:
-            mg_cates = ((df_estimation[outcome].to_numpy() - treatment_preds)[treatment_mg.to_numpy()] * treatment_prop_weights).sum(axis=1) -\
-                       ((df_estimation[outcome].to_numpy() - control_preds)[control_mg.to_numpy()] * control_prop_weights).sum(axis=1)
+            model_cates = treatment_preds[treatment_mg.to_numpy()].mean(axis=1) - control_preds[
+                control_mg.to_numpy()].mean(axis=1)
+
+            if propensity_model is None:
+                propensity_model = LogisticRegression().fit(df_estimation[covariates], df_estimation[treatment])
+            prop_scores = propensity_model.predict_proba(df_estimation[covariates])[:, 1]
+            treatment_prop_weights = (1 / prop_scores)[treatment_mg.to_numpy()] * (1 / (1 / prop_scores)[
+                treatment_mg.to_numpy()].sum(axis=1))[:, None]
+            control_prop_weights = (1 / (1 - prop_scores))[control_mg.to_numpy()] * (1 / (1 / (1 - prop_scores))[
+                control_mg.to_numpy()].sum(axis=1))[:, None]
+
+            mg_cates = ((df_estimation[outcome].to_numpy() - treatment_preds)[
+                            treatment_mg.to_numpy()] * treatment_prop_weights).sum(axis=1) - \
+                       ((df_estimation[outcome].to_numpy() - control_preds)[
+                            control_mg.to_numpy()] * control_prop_weights).sum(axis=1)
         else:
             mg_cates = df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()].mean(axis=1) - \
                     df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
     else:
         if 'pruned' in method:
-            control_mg = df_estimation[np.append(np.array(covariates)[MC > 0], outcome)].to_numpy()[
-                control_mg.reset_index().to_numpy()]
-            treatment_mg = df_estimation[np.append(np.array(covariates)[MT > 0], outcome)].to_numpy()[
-                treatment_mg.reset_index().to_numpy()]
+            control_covs = list(np.array(covariates)[MC > 0])
+            treatment_covs = list(np.array(covariates)[MT > 0])
         else:
-            control_mg = df_estimation[covariates + [outcome]].to_numpy()[control_mg.reset_index().to_numpy()]
-            treatment_mg = df_estimation[covariates + [outcome]].to_numpy()[treatment_mg.reset_index().to_numpy()]
+            control_covs = covariates
+            treatment_covs = covariates
         if augmented:
-
-            control_mg[:, :, -1] -= control_preds[:, None]
-            treatment_mg[:, :, -1] -= treatment_preds[:, None]
+            model_cates = treatment_preds - control_preds
+            control_mg = np.concatenate([df_estimation[control_covs].to_numpy(),
+                                         (df_estimation[outcome].to_numpy() - control_preds).reshape(-1, 1)],
+                                        axis=1)[control_mg.reset_index().to_numpy()]
+            treatment_mg = np.concatenate([df_estimation[treatment_covs].to_numpy(),
+                                           (df_estimation[outcome].to_numpy() - treatment_preds).reshape(-1, 1)],
+                                          axis=1)[treatment_mg.reset_index().to_numpy()]
+        else:
+            control_mg = df_estimation[control_covs + [outcome]].to_numpy()[control_mg.reset_index().to_numpy()]
+            treatment_mg = df_estimation[treatment_covs + [outcome]].to_numpy()[treatment_mg.reset_index().to_numpy()]
         if 'linear' in method:
-            mg_cates = np.array([cate_linear_pred(treatment_mg[i, :, :], treatment_prop_weights[i]) for i in range(treatment_mg.shape[0])]) - \
-                       np.array([cate_linear_pred(control_mg[i, :, :], control_prop_weights[i]) for i in range(control_mg.shape[0])])
+            model_type = 'linear'
         elif 'rf' in method:
-            mg_cates = np.array([cate_rf_pred(treatment_mg[i, :, :], treatment_prop_weights[i]) for i in range(treatment_mg.shape[0])]) - \
-                       np.array([cate_rf_pred(control_mg[i, :, :], control_prop_weights[i]) for i in range(control_mg.shape[0])])
+            model_type = 'rf'
+        else:
+            model_type = 'linear'
+        mg_cates = np.array([cate_model_pred(treatment_mg[i, :, :], model_type) for i in range(treatment_mg.shape[0])]) - \
+                   np.array([cate_model_pred(control_mg[i, :, :], model_type) for i in range(control_mg.shape[0])])
     if augmented:
         cates = model_cates + mg_cates
     else:
@@ -83,12 +101,12 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
     return pd.Series(cates, index=old_idx, name=f'CATE_{method}')
 
 
-def cate_linear_pred(a, sample_weight=None):
-    return RidgeCV().fit(a[1:, :-1], a[1:, -1], sample_weight=None).predict(a[0, :-1].reshape(1, -1))[0]
-
-
-def cate_rf_pred(a, sample_weight=None):
-    return RFR().fit(a[1:, :-1], a[1:, -1], sample_weight=sample_weight).predict(a[0, :-1].reshape(1, -1))[0]
+def cate_model_pred(a, model_type='linear'):
+    if model_type == 'linear':
+        m = RidgeCV().fit(a[1:, :-1], a[1:, -1])
+    elif model_type == 'rf':
+        m = RFR().fit(a[1:, :-1], a[1:, -1])
+    return m.predict(a[0, :-1].reshape(1, -1))[0]
 
 
 def check_df_estimation(df_cols, necessary_cols):
