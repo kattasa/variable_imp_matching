@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
-folder = 'Results/dense_continuous_001'
+folder = 'Results/dense_continuous_000'
 iters = 5
 
 title = f'dense_continuous CATE Errors as number of irrelevant covariates increases\n(# relevant covariates is always 8)'

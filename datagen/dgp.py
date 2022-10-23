@@ -10,6 +10,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import scipy
+from sklearn import preprocessing
 
 
 def construct_sec_order(arr):
@@ -46,6 +47,9 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     num_cov_dense = num_cont_imp + num_disc_imp
     dense_bs_sign = np.random.choice([-1, 1], num_cov_dense)
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]
+    print('Order')
+    print(np.argsort(-np.abs(dense_bs)))
+    print([dense_bs[i] for i in np.argsort(-np.abs(dense_bs))])
 
     treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
     treatment_effect = np.dot(x, treatment_eff_coef)
@@ -92,62 +96,84 @@ def dgp_friedman(n):
 
 
 def dgp_sine(n_samples, n_imp, n_unimp):
-    x_imp = np.random.normal(0, 0.8, size=(n_samples, n_imp))
-    # x_imp = np.random.exponential(0.5, size=(n_samples, n_imp))
-    t = np.random.binomial(1, 0.5, size=(n_samples,))
-    eff_sign = np.random.choice([-1, 1], n_imp)
-    y0 = np.sum(eff_sign*np.sin(x_imp), axis=1) + np.sum(eff_sign*np.sin(2*x_imp), axis=1) + 1
-    y1 = np.sum(eff_sign*np.sin(x_imp), axis=1) + np.sum(eff_sign*np.sin(2*x_imp), axis=1) + \
-         np.sum(eff_sign*np.sin(3*x_imp), axis=1) + 1
+    x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
+    dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 1.5, size=(n_imp,))
+    dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1, )
+    u = np.matmul(x_imp, dense_bs)
+    y0 = np.sin(u) + np.sin(2*u) + np.sin(3*u) + np.sin(4*u) + 1
+    y1 = np.sin(u) + np.sin(2*u) + np.sin(3*u) + np.sin(4*u) + np.sin(5*u) + 1
     y0_errors = np.random.normal(0, 0.04, size=n_samples)
     y1_errors = np.random.normal(0, 0.04, size=n_samples)
     te = y1 - y0
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
+    t_errors = np.random.normal(0, 1, (n_samples,))
+    t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] - 0.5 + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 1.5, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
-    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
+    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
+           (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
+
+
+def dgp_polynomials(n_samples, n_imp, n_unimp):
+    x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
+    dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 1.5, size=(n_imp,))
+    dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1,)
+    u = np.matmul(x_imp, dense_bs)
+    y0 = u**3 + u**4 + 1
+    y1 = u**3 + u**4 + u**5 + 1
+    y0_errors = np.random.normal(0, 0.04, size=n_samples)
+    y1_errors = np.random.normal(0, 0.04, size=n_samples)
+    te = y1 - y0
+    y0 = y0 + y0_errors
+    y1 = y1 + y1_errors
+    t_errors = np.random.normal(0, 1, (n_samples,))
+    t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] - 0.5 + t_errors) > 0.5).astype(int)
+    y = (y0 * (1 - t)) + (y1 * t)
+    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
+    X = np.concatenate([x_imp, x_unimp], axis=1)
+    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
+           (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
 def dgp_non_linear_mixed(n_samples, n_imp, n_unimp):
-    x_imp = np.random.normal(0, 0.8, size=(n_samples, n_imp))
-    t_imp = np.random.binomial(1, 0.5, size=(n_imp,))
-    t = np.random.binomial(1, 0.5, size=(n_samples,))
-    eff_sign = np.random.choice([-1, 1], n_imp)
-    t_eff_sign = np.random.choice([-1, 1], n_imp)
-    y0 = np.sum(eff_sign * np.cos(x_imp), axis=1) + np.sum(eff_sign*(1/(1+np.exp(-x_imp))), axis=1) - 2
-    y1 = np.sum(eff_sign * np.cos(x_imp), axis=1) + np.sum(eff_sign*(1/(1+np.exp(-x_imp))), axis=1) - \
-         np.sum(t_imp*t_eff_sign*(x_imp**3), axis=1) - 2
+    x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
+    dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 1.5, size=(n_imp,))
+    dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1, )
+    u = np.matmul(x_imp, dense_bs)
+    y0 = np.cos(u) + (1/(1+np.exp(-u))) - 2
+    y1 = np.cos(u) + (1/(1+np.exp(-u))) - (u**3) - 2
     y0_errors = np.random.normal(0, 0.04, size=n_samples)
     y1_errors = np.random.normal(0, 0.04, size=n_samples)
     te = y1 - y0
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
+    t_errors = np.random.normal(0, 1, (n_samples,))
+    t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] - 0.5 + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 1.5, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
-def dgp_drop_off(n_samples, n_imp, n_unimp):
-    x_imp = np.random.exponential(1, size=(n_samples, n_imp))
-    t = np.random.binomial(1, 0.5, size=(n_samples,))
-    eff_sign = np.random.choice([-1, 1], n_imp-1)
-    eff_weight = np.random.normal(eff_sign*5, 2)
-    print(eff_weight)
-    dropoff_weight = 5
-    dropoff = np.vectorize(lambda x: dropoff_weight*x if x <= 3 else max(dropoff_weight*3-((x-2)**4), -10*n_imp))
-    y0 = dropoff(x_imp[:, 0]) + np.sum(eff_weight*x_imp[:, 1:], axis=1)
-    y1 = dropoff(x_imp[:, 0]) + np.sum(eff_weight*x_imp[:, 1:], axis=1) + 10
-    y0_errors = np.random.normal(0, 0.03, size=n_samples)
-    y1_errors = np.random.normal(0, 0.03, size=n_samples)
+def dgp_test(n_samples, n_imp, n_unimp):
+    x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
+    dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 1.5, size=(n_imp,))
+    dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1, )
+    u = np.matmul(x_imp, dense_bs)
+    y0 = (u+1)**2 - 2*u
+    y1 = (u+1)**2 - 2*u + np.exp(u) + 1
+    y0_errors = np.random.normal(0, 0.04, size=n_samples)
+    y1_errors = np.random.normal(0, 0.04, size=n_samples)
     te = y1 - y0
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
+    t_errors = np.random.normal(0, 1, (n_samples,))
+    t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] - 0.5 + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 1.5, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
@@ -174,35 +200,6 @@ def dgp_poly_no_interaction(n_samples, n_imp, n_unimp):
     x_unimp = np.random.uniform(-2, 2, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
-
-
-# def dgp_poly_interaction(n_samples, n_imp, n_unimp):
-#     x_imp = np.random.uniform(0, 1, size=(n_samples, n_imp)) * np.random.randint(1, 4, size=(n_imp,))
-#     t_imp = np.random.binomial(1, 0.5, size=(n_imp,))
-#     int_y = []
-#     int_te = []
-#     for c in itertools.combinations(range(n_imp), 2):
-#         r = np.random.binomial(1, 0.5, size=(2,))
-#         eff = np.random.choice([-1, 1]) * (x_imp[:, c[0]] * x_imp[:, c[1]])
-#         int_y.append((r[0] * eff).reshape(-1, 1))
-#         int_te.append((r[1] * eff).reshape(-1, 1))
-#     int_y = np.sum(np.concatenate(int_y, axis=1), axis=1)
-#     int_te = np.sum(np.concatenate(int_te, axis=1), axis=1)
-#     t = np.random.binomial(1, 0.5, size=(n_samples,))
-#
-#     eff_sign = np.random.choice([-1, 1], n_imp)
-#     t_eff_sign = np.random.choice([1, 1], n_imp)  # keep everything positive for now to limit issues with small TE values
-#     y0 = np.sum(eff_sign*(x_imp ** 2), axis=1) + int_y
-#     y1 = np.sum(eff_sign*(x_imp ** 2), axis=1) + int_y + np.sum(t_eff_sign*((x_imp * t_imp) ** 2), axis=1) + int_te
-#     y0_errors = np.random.normal(0, 0.03 * np.std(y0), size=n_samples)
-#     y1_errors = np.random.normal(0, 0.03 * np.std(y0), size=n_samples)
-#     te = y1 - y0
-#     y0 = y0 + y0_errors
-#     y1 = y1 + y1_errors
-#     y = (y0 * (1 - t)) + (y1 * t)
-#     x_unimp = np.random.uniform(0, 1, size=(n_samples, n_unimp)) * np.random.randint(1, 4, size=(n_unimp,))
-#     X = np.concatenate([x_imp, x_unimp], axis=1)
-#     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
 def dgp_poly_interaction(n_samples, n_imp, n_unimp):
@@ -235,25 +232,3 @@ def dgp_poly_interaction(n_samples, n_imp, n_unimp):
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
-
-def dgp_exp_log_interaction(n_samples, n_imp, n_unimp):
-    x_imp = np.random.uniform(0, 1, size=(n_samples, n_imp))
-    t_imp = np.random.binomial(1, 0.5, size=(n_imp,))
-    x_imp_te = x_imp[:, [i for i in range(n_imp) if t_imp[i] == 1]]
-    exp_log = np.random.binomial(1, 0.5, size=(n_imp))
-    exp_log_te = np.random.binomial(1, 0.5, size=(x_imp_te.shape[1]))
-    t = np.random.binomial(1, 0.5, size=(n_samples,))
-    eff_sign = np.random.choice([-1, 1], n_imp)
-    t_eff_sign = np.random.choice([1, 1], x_imp_te.shape[1])   # keep everything positive for now to limit issues with small TE values
-    y0 = np.sum(eff_sign*((exp_log * np.exp(x_imp)) + ((1-exp_log) * np.log(x_imp+1))), axis=1)
-    y1 = np.sum(eff_sign*((exp_log * np.exp(x_imp)) + ((1-exp_log) * np.log(x_imp+1))), axis=1) + \
-         np.sum(t_eff_sign*((exp_log_te * np.exp(x_imp_te)) + ((1-exp_log_te) * np.log(x_imp_te+1))), axis=1)
-    y0_errors = np.random.normal(0, 0.03 * np.std(y0), size=n_samples)
-    y1_errors = np.random.normal(0, 0.03 * np.std(y0), size=n_samples)
-    te = y1 - y0
-    y0 = y0 + y0_errors
-    y1 = y1 + y1_errors
-    y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.uniform(0, 1, size=(n_samples, n_unimp))
-    X = np.concatenate([x_imp, x_unimp], axis=1)
-    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)

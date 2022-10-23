@@ -8,6 +8,7 @@ Created on Sat May 14 2022
 import numpy as np
 import sklearn.linear_model as linear
 import sklearn.ensemble as ensemble
+import sklearn.neural_network as nn
 from sklearn.preprocessing import StandardScaler
 from utils import get_match_groups, get_CATES
 from xgboost import XGBRegressor
@@ -79,36 +80,48 @@ class Amect:
         self.M_C = None
         self.M_T = None
 
-    def fit(self, params=None, prune=0.01):
+    def fit(self, params=None):
         if params is None:
             params = {}
         self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
         self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
+        print(f'C score: {self.model_C.score(self.X[:self.T_split], self.Y_C)}')
+        print(f'T score: {self.model_T.score(self.X[self.T_split:], self.Y_T)}')
         M_C_hat = np.abs(self.model_C.coef_)
         M_T_hat = np.abs(self.model_T.coef_)
         if np.all(M_C_hat == 0):
             M_C_hat = np.ones(M_C_hat.shape)
         if np.all(M_T_hat == 0):
             M_T_hat = np.ones(M_T_hat.shape)
-        # self.model_C = XGBRegressor().fit(self.X[:self.T_split], self.Y_C)
-        # self.model_T = XGBRegressor().fit(self.X[self.T_split:], self.Y_T)
-        self.model_C = ensemble.AdaBoostRegressor().fit(self.X[:self.T_split], self.Y_C)
-        self.model_T = ensemble.AdaBoostRegressor().fit(self.X[self.T_split:], self.Y_T)
-        # self.model_C = ensemble.RandomForestRegressor(n_estimators=100).fit(self.X[:self.T_split], self.Y_C)
-        # self.model_T = ensemble.RandomForestRegressor(n_estimators=100).fit(self.X[self.T_split:], self.Y_T)
-        # M_C_hat = np.abs(self.model_C.feature_importances_)
-        # M_T_hat = np.abs(self.model_T.feature_importances_)
         M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
         M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
-        if prune:
-            M_C_hat = np.where(M_C_hat >= (self.p * prune), M_C_hat, 0)
-            M_T_hat = np.where(M_T_hat >= (self.p * prune), M_T_hat, 0)
-            M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
-            M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
-        self.M_C = M_C_hat
-        self.M_T = M_T_hat
+        M_C_hat = (M_C_hat * (self.model_C.score(self.X[:self.T_split], self.Y_C) * self.T_split)) + \
+                   (M_T_hat * (self.model_T.score(self.X[self.T_split:], self.Y_T) * (self.n - self.T_split)))
+        self.M_C = (M_C_hat / np.sum(M_C_hat)) * self.p
+        self.M_T = self.M_C
+        # if params is None:
+        #     params = {}
+        # self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
+        # self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
+        # print(f'C score: {self.model_C.score(self.X[:self.T_split], self.Y_C)}')
+        # print(f'T score: {self.model_T.score(self.X[self.T_split:], self.Y_T)}')
+        # M_C_hat = np.abs(self.model_C.coef_)
+        # M_T_hat = np.abs(self.model_T.coef_)
+        # if np.all(M_C_hat == 0):
+        #     M_C_hat = np.ones(M_C_hat.shape)
+        # if np.all(M_T_hat == 0):
+        #     M_T_hat = np.ones(M_T_hat.shape)
+        # M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
+        # M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
+        # if prune:
+        #     M_C_hat = np.where(M_C_hat >= (self.p * prune), M_C_hat, 0)
+        #     M_T_hat = np.where(M_T_hat >= (self.p * prune), M_T_hat, 0)
+        #     M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
+        #     M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
+        # self.M_C = M_C_hat
+        # self.M_T = M_T_hat
 
-    def get_matched_groups(self, df_estimation, k=10, return_original_idx=False):
+    def get_matched_groups(self, df_estimation, k=10, method='intersection', return_original_idx=False, check_est_df=False):
         """Get the match groups for a given
 
         :param df_estimation:
@@ -117,7 +130,7 @@ class Amect:
         :return:
         """
         return get_match_groups(df_estimation, k, self.covariates, self.treatment, M_C=self.M_C, M_T=self.M_T,
-                                return_original_idx=return_original_idx)
+                                method=method, return_original_idx=return_original_idx, check_est_df=check_est_df)
 
     def CATE(self, df_estimation, control_match_groups=None, treatment_match_groups=None, k=10, method='mean',
              augmented=True, propensity_model=None):

@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor as RFR
-from sklearn.linear_model import RidgeCV, LogisticRegression
+from sklearn.linear_model import RidgeCV
 from sklearn.neighbors import NearestNeighbors
+import time
 
 
-def get_match_groups(df_estimation, k, covariates, treatment, M_C, M_T, return_original_idx=True, check_est_df=True):
+def get_match_groups(df_estimation, k, covariates, treatment, M_C, M_T, method='intersection', return_original_idx=True,
+                     check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [treatment])
     old_idx = np.array(df_estimation.index)
@@ -16,14 +18,43 @@ def get_match_groups(df_estimation, k, covariates, treatment, M_C, M_T, return_o
     X_T = X[:, M_T > 0]
     M_C = M_C[M_C > 0]
     M_T = M_T[M_T > 0]
-    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_C * X_C[T == 0])
-    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_T * X_T[T == 1])
-    control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
-    treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
-    control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
-    treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
-    control_dist = pd.DataFrame(control_dist)
-    treatment_dist = pd.DataFrame(treatment_dist)
+    n = X.shape[0]
+    if method == 'intersection':
+        control_nn = NearestNeighbors(n_neighbors=n, leaf_size=50, algorithm='kd_tree', n_jobs=10, p=1).fit(
+            M_C * X_C)
+        # treatment_nn = NearestNeighbors(n_neighbors=n, leaf_size=50, algorithm='kd_tree', n_jobs=10, p=1).fit(
+        #     M_T * X_T)
+        start = time.time()
+        control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
+        print('n')
+        print(time.time() - start)
+        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10, p=1).fit(
+            M_C * X_C)
+        start = time.time()
+        control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
+        print('k')
+        print(time.time() - start)
+        treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
+        control_mg = np.argsort(control_mg)
+        treatment_mg = np.argsort(treatment_mg)
+        control_dist = control_dist[np.mgrid[0:n, 0:n][0], control_mg]
+        treatment_dist = treatment_dist[np.mgrid[0:n, 0:n][0], treatment_mg]
+        total_dist = control_dist + treatment_dist
+        control_mg = np.argsort(np.where(T == 0, total_dist, np.inf))[:, :k]
+        treatment_mg = np.argsort(np.where(T == 1, total_dist, np.inf))[:, :k]
+        control_dist = pd.DataFrame(total_dist[np.mgrid[0:n, 0:k][0], control_mg])
+        treatment_dist = pd.DataFrame(total_dist[np.mgrid[0:n, 0:k][0], treatment_mg])
+        control_mg = pd.DataFrame(control_mg)
+        treatment_mg = pd.DataFrame(treatment_mg)
+    else:
+        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_C * X_C[T == 0])
+        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_T * X_T[T == 1])
+        control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
+        treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
+        control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
+        treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
+        control_dist = pd.DataFrame(control_dist)
+        treatment_dist = pd.DataFrame(treatment_dist)
     if return_original_idx:
         control_dist.index = old_idx
         treatment_dist.index = old_idx
@@ -36,64 +67,41 @@ def convert_idx(mg, idx):
 
 
 def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, treatment, model_C, model_T, MC, MT,
-              augmented=False, propensity_model=None, control_preds=None, treatment_preds=None, check_est_df=True):
+              augmented=False, control_preds=None, treatment_preds=None, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
     df_estimation, old_idx = check_mg_indices(df_estimation, control_mg.shape[0], treatment_mg.shape[0])
-    if augmented:
-        if control_preds is None:
-            control_preds = model_C.predict(df_estimation[covariates])
-        if treatment_preds is None:
-            treatment_preds = model_T.predict(df_estimation[covariates])
-    if method == 'model':
-        model_cates = treatment_preds - control_preds
-        mg_cates = np.zeros(model_cates.shape)
-    elif method == 'mean':
-        if augmented:
-            model_cates = treatment_preds[treatment_mg.to_numpy()].mean(axis=1) - control_preds[
-                control_mg.to_numpy()].mean(axis=1)
-
-            if propensity_model is None:
-                propensity_model = LogisticRegression().fit(df_estimation[covariates], df_estimation[treatment])
-            prop_scores = propensity_model.predict_proba(df_estimation[covariates])[:, 1]
-            treatment_prop_weights = (1 / prop_scores)[treatment_mg.to_numpy()] * (1 / (1 / prop_scores)[
-                treatment_mg.to_numpy()].sum(axis=1))[:, None]
-            control_prop_weights = (1 / (1 - prop_scores))[control_mg.to_numpy()] * (1 / (1 / (1 - prop_scores))[
-                control_mg.to_numpy()].sum(axis=1))[:, None]
-
-            mg_cates = ((df_estimation[outcome].to_numpy() - treatment_preds)[
-                            treatment_mg.to_numpy()] * treatment_prop_weights).sum(axis=1) - \
-                       ((df_estimation[outcome].to_numpy() - control_preds)[
-                            control_mg.to_numpy()] * control_prop_weights).sum(axis=1)
-        else:
-            mg_cates = df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()].mean(axis=1) - \
-                    df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
+    if method == 'mean':
+        mg_cates = df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()].mean(axis=1) - \
+                df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
     else:
+        full_mg = control_mg.join(treatment_mg, lsuffix='_c', rsuffix='_t')
         if 'pruned' in method:
-            control_covs = list(np.array(covariates)[MC > 0])
-            treatment_covs = list(np.array(covariates)[MT > 0])
+            imp_covs = list(np.array(covariates)[MC > 0]) + list(np.array(covariates)[MT > 0])
         else:
-            control_covs = covariates
-            treatment_covs = covariates
+            imp_covs = covariates
         if augmented:
+            if control_preds is None:
+                control_preds = model_C.predict(df_estimation[covariates])
+            if treatment_preds is None:
+                treatment_preds = model_T.predict(df_estimation[covariates])
             model_cates = treatment_preds - control_preds
-            control_mg = np.concatenate([df_estimation[control_covs].to_numpy(),
-                                         (df_estimation[outcome].to_numpy() - control_preds).reshape(-1, 1)],
-                                        axis=1)[control_mg.reset_index().to_numpy()]
-            treatment_mg = np.concatenate([df_estimation[treatment_covs].to_numpy(),
-                                           (df_estimation[outcome].to_numpy() - treatment_preds).reshape(-1, 1)],
-                                          axis=1)[treatment_mg.reset_index().to_numpy()]
+            full_mg = np.concatenate([df_estimation[imp_covs + [treatment]].to_numpy(),
+                                      (df_estimation[treatment].to_numpy()*control_preds) +
+                                      ((1 - df_estimation[treatment].to_numpy())*treatment_preds).reshape(-1, 1)],
+                                     axis=1)[full_mg.reset_index().to_numpy()]
         else:
-            control_mg = df_estimation[control_covs + [outcome]].to_numpy()[control_mg.reset_index().to_numpy()]
-            treatment_mg = df_estimation[treatment_covs + [outcome]].to_numpy()[treatment_mg.reset_index().to_numpy()]
+            full_mg = df_estimation[imp_covs + [treatment, outcome]].to_numpy()[full_mg.reset_index().to_numpy()]
         if 'linear' in method:
             model_type = 'linear'
         elif 'rf' in method:
             model_type = 'rf'
         else:
-            model_type = 'linear'
-        mg_cates = np.array([cate_model_pred(treatment_mg[i, :, :], model_type) for i in range(treatment_mg.shape[0])]) - \
-                   np.array([cate_model_pred(control_mg[i, :, :], model_type) for i in range(control_mg.shape[0])])
+            raise Exception(f'CATE Method type {method} not supported. Supported methods are: mean, linear, and rf.')
+        # if 'linear' in method:
+        mg_cates = np.array([cate_model_pred(full_mg[i, :, :]) for i in range(full_mg.shape[0])])
+        # else:
+        #     mg_cates = np.array([cate_model_pred2(full_mg[i, :, :], model_type) for i in range(full_mg.shape[0])])
     if augmented:
         cates = model_cates + mg_cates
     else:
@@ -101,12 +109,28 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
     return pd.Series(cates, index=old_idx, name=f'CATE_{method}')
 
 
-def cate_model_pred(a, model_type='linear'):
+def cate_model_pred2(a, model_type):
     if model_type == 'linear':
-        m = RidgeCV().fit(a[1:, :-1], a[1:, -1])
+        return RidgeCV().fit(a[1:, :-1], a[1:, -1]).coef_[-1]
     elif model_type == 'rf':
         m = RFR().fit(a[1:, :-1], a[1:, -1])
-    return m.predict(a[0, :-1].reshape(1, -1))[0]
+        return m.predict(np.concatenate([a[0, :-2], [1]]).reshape(1, -1))[0] - \
+               m.predict(np.concatenate([a[0, :-2], [0]]).reshape(1, -1))[0]
+
+
+def cate_model_pred(a):
+    mc = RidgeCV().fit(a[1:61, :-2], a[1:61, -1])
+    mt = RidgeCV().fit(a[61:, :-2], a[61:, -1])
+    # print('Ridge')
+    # print(mc.score(a[1:61, :-2], a[1:61, -1]))
+    # print(mt.score(a[61:, :-2], a[61:, -1]))
+    # mc = RFR().fit(a[1:61, :-2], a[1:61, -1])
+    # mt = RFR().fit(a[61:, :-2], a[61:, -1])
+    # print('RFR')
+    # print(mc.score(a[1:61, :-2], a[1:61, -1]))
+    # print(mt.score(a[61:, :-2], a[61:, -1]))
+    return mt.predict(a[0, :-2].reshape(1, -1))[0] - \
+           mc.predict(a[0, :-2].reshape(1, -1))[0]
 
 
 def check_df_estimation(df_cols, necessary_cols):
