@@ -77,51 +77,25 @@ class Amect:
 
         self.model_C = None
         self.model_T = None
-        self.M_C = None
-        self.M_T = None
+        self.M = None
 
     def fit(self, params=None):
         if params is None:
             params = {}
         self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
         self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
-        print(f'C score: {self.model_C.score(self.X[:self.T_split], self.Y_C)}')
-        print(f'T score: {self.model_T.score(self.X[self.T_split:], self.Y_T)}')
+        model_C_score = max([self.model_C.score(self.X[:self.T_split], self.Y_C), 0])
+        model_T_score = max([self.model_T.score(self.X[self.T_split:], self.Y_T), 0])
+        print(f'C score: {model_C_score}')
+        print(f'T score: {model_T_score}')
         M_C_hat = np.abs(self.model_C.coef_)
         M_T_hat = np.abs(self.model_T.coef_)
-        if np.all(M_C_hat == 0):
-            M_C_hat = np.ones(M_C_hat.shape)
-        if np.all(M_T_hat == 0):
-            M_T_hat = np.ones(M_T_hat.shape)
-        M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
-        M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
-        M_C_hat = (M_C_hat * (self.model_C.score(self.X[:self.T_split], self.Y_C) * self.T_split)) + \
-                   (M_T_hat * (self.model_T.score(self.X[self.T_split:], self.Y_T) * (self.n - self.T_split)))
-        self.M_C = (M_C_hat / np.sum(M_C_hat)) * self.p
-        self.M_T = self.M_C
-        # if params is None:
-        #     params = {}
-        # self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
-        # self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
-        # print(f'C score: {self.model_C.score(self.X[:self.T_split], self.Y_C)}')
-        # print(f'T score: {self.model_T.score(self.X[self.T_split:], self.Y_T)}')
-        # M_C_hat = np.abs(self.model_C.coef_)
-        # M_T_hat = np.abs(self.model_T.coef_)
-        # if np.all(M_C_hat == 0):
-        #     M_C_hat = np.ones(M_C_hat.shape)
-        # if np.all(M_T_hat == 0):
-        #     M_T_hat = np.ones(M_T_hat.shape)
-        # M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
-        # M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
-        # if prune:
-        #     M_C_hat = np.where(M_C_hat >= (self.p * prune), M_C_hat, 0)
-        #     M_T_hat = np.where(M_T_hat >= (self.p * prune), M_T_hat, 0)
-        #     M_C_hat = (M_C_hat / np.sum(M_C_hat)) * self.p
-        #     M_T_hat = (M_T_hat / np.sum(M_T_hat)) * self.p
-        # self.M_C = M_C_hat
-        # self.M_T = M_T_hat
+        M_C_hat = M_C_hat / np.sum(M_C_hat) if not np.all(M_C_hat == 0) else np.zeros(self.p)
+        M_T_hat = M_T_hat / np.sum(M_T_hat) if not np.all(M_T_hat == 0) else np.zeros(self.p)
+        M_hat = (M_C_hat * (model_C_score * self.T_split)) + (M_T_hat * (model_T_score * (self.n - self.T_split)))
+        self.M = (M_hat / np.sum(M_hat)) * self.p
 
-    def get_matched_groups(self, df_estimation, k=10, method='intersection', return_original_idx=False, check_est_df=False):
+    def get_matched_groups(self, df_estimation, k=10, return_original_idx=False, check_est_df=False):
         """Get the match groups for a given
 
         :param df_estimation:
@@ -129,15 +103,16 @@ class Amect:
         :param check_df:
         :return:
         """
-        return get_match_groups(df_estimation, k, self.covariates, self.treatment, M_C=self.M_C, M_T=self.M_T,
-                                method=method, return_original_idx=return_original_idx, check_est_df=check_est_df)
+        return get_match_groups(df_estimation, k, self.covariates, self.treatment, M=self.M,
+                                return_original_idx=return_original_idx, check_est_df=check_est_df)
 
     def CATE(self, df_estimation, control_match_groups=None, treatment_match_groups=None, k=10, method='mean',
-             augmented=True, propensity_model=None):
+             augmented=True, check_est_df=False):
         if (control_match_groups is None) or (treatment_match_groups is None):
             control_match_groups, treatment_match_groups, _, _ = self.get_matched_groups(df_estimation=df_estimation,
-                                                                                         k=k, return_original_idx=False)
+                                                                                         k=k, return_original_idx=False,
+                                                                                         check_est_df=check_est_df)
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
-                         self.covariates, self.outcome, self.treatment, self.model_C, self.model_T, self.M_C, self.M_T,
-                         augmented=augmented, propensity_model=propensity_model)
+                         self.covariates, self.outcome, self.treatment, self.model_C, self.model_T, self.M,
+                         augmented=augmented, control_preds=None, treatment_preds=None, check_est_df=check_est_df)
 

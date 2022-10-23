@@ -6,55 +6,22 @@ from sklearn.neighbors import NearestNeighbors
 import time
 
 
-def get_match_groups(df_estimation, k, covariates, treatment, M_C, M_T, method='intersection', return_original_idx=True,
-                     check_est_df=True):
+def get_match_groups(df_estimation, k, covariates, treatment, M, return_original_idx=True, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [treatment])
     old_idx = np.array(df_estimation.index)
     df_estimation = df_estimation.reset_index(drop=True)
     X = df_estimation[covariates].to_numpy()
     T = df_estimation[treatment].to_numpy()
-    X_C = X[:, M_C > 0]
-    X_T = X[:, M_T > 0]
-    M_C = M_C[M_C > 0]
-    M_T = M_T[M_T > 0]
-    n = X.shape[0]
-    if method == 'intersection':
-        control_nn = NearestNeighbors(n_neighbors=n, leaf_size=50, algorithm='kd_tree', n_jobs=10, p=1).fit(
-            M_C * X_C)
-        # treatment_nn = NearestNeighbors(n_neighbors=n, leaf_size=50, algorithm='kd_tree', n_jobs=10, p=1).fit(
-        #     M_T * X_T)
-        start = time.time()
-        control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
-        print('n')
-        print(time.time() - start)
-        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10, p=1).fit(
-            M_C * X_C)
-        start = time.time()
-        control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
-        print('k')
-        print(time.time() - start)
-        treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
-        control_mg = np.argsort(control_mg)
-        treatment_mg = np.argsort(treatment_mg)
-        control_dist = control_dist[np.mgrid[0:n, 0:n][0], control_mg]
-        treatment_dist = treatment_dist[np.mgrid[0:n, 0:n][0], treatment_mg]
-        total_dist = control_dist + treatment_dist
-        control_mg = np.argsort(np.where(T == 0, total_dist, np.inf))[:, :k]
-        treatment_mg = np.argsort(np.where(T == 1, total_dist, np.inf))[:, :k]
-        control_dist = pd.DataFrame(total_dist[np.mgrid[0:n, 0:k][0], control_mg])
-        treatment_dist = pd.DataFrame(total_dist[np.mgrid[0:n, 0:k][0], treatment_mg])
-        control_mg = pd.DataFrame(control_mg)
-        treatment_mg = pd.DataFrame(treatment_mg)
-    else:
-        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_C * X_C[T == 0])
-        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_T * X_T[T == 1])
-        control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
-        treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
-        control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
-        treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
-        control_dist = pd.DataFrame(control_dist)
-        treatment_dist = pd.DataFrame(treatment_dist)
+    X = M[M > 0] * X[:, M > 0]
+    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(X[T == 0])
+    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(X[T == 1])
+    control_dist, control_mg = control_nn.kneighbors(X, return_distance=True)
+    treatment_dist, treatment_mg = treatment_nn.kneighbors(X, return_distance=True)
+    control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
+    treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
+    control_dist = pd.DataFrame(control_dist)
+    treatment_dist = pd.DataFrame(treatment_dist)
     if return_original_idx:
         control_dist.index = old_idx
         treatment_dist.index = old_idx
@@ -66,7 +33,7 @@ def convert_idx(mg, idx):
     return pd.DataFrame(idx[mg.to_numpy()], index=idx)
 
 
-def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, treatment, model_C, model_T, MC, MT,
+def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, treatment, model_C, model_T, M,
               augmented=False, control_preds=None, treatment_preds=None, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
@@ -77,7 +44,7 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
     else:
         full_mg = control_mg.join(treatment_mg, lsuffix='_c', rsuffix='_t')
         if 'pruned' in method:
-            imp_covs = list(np.array(covariates)[MC > 0]) + list(np.array(covariates)[MT > 0])
+            imp_covs = list(np.array(covariates)[M > 0])
         else:
             imp_covs = covariates
         if augmented:

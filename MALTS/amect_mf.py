@@ -22,8 +22,7 @@ class Amect_mf:
         self.gen_skf = list(skf.split(data, data[treatment]))
         self.model_C_list = []
         self.model_T_list = []
-        self.M_C_list = []
-        self.M_T_list = []
+        self.M_list = []
         self.model_prop_score_list = []
         self.col_orders = []
         self.MG_size = None
@@ -33,11 +32,10 @@ class Amect_mf:
         self.T_MG_distance = []
         self.cates_list = []
 
-    def fit(self, params=None, prune=0.01):
+    def fit(self, params=None):
         self.model_C_list = []
         self.model_T_list = []
-        self.M_C_list = []
-        self.M_T_list = []
+        self.M_list = []
         self.col_orders = []
         for est_idx, train_idx in self.gen_skf:
             df_train = self.data.iloc[train_idx]
@@ -46,11 +44,10 @@ class Amect_mf:
             m.fit(params=params)
             self.model_C_list.append(m.model_C)
             self.model_T_list.append(m.model_T)
-            self.M_C_list.append(m.M_C)
-            self.M_T_list.append(m.M_T)
+            self.M_list.append(m.M)
             self.col_orders.append(m.col_order)
 
-    def MG(self, k=80, mg_method=None, return_distance=False, treatment=None):
+    def MG(self, k=80, return_distance=False, treatment=None):
         if treatment is None:
             treatment = self.treatment
         self.MG_size = k
@@ -64,9 +61,7 @@ class Amect_mf:
             df_estimation = self.data.iloc[est_idx]
             control_mg, treatment_mg, control_dist, treatment_dist = get_match_groups(df_estimation, k, self.covariates,
                                                                                       treatment,
-                                                                                      M_C=self.M_C_list[i],
-                                                                                      M_T=self.M_T_list[i],
-                                                                                      method=mg_method,
+                                                                                      M=self.M_list[i],
                                                                                       return_original_idx=False,
                                                                                       check_est_df=False)
             self.C_MG_list.append(control_mg)
@@ -90,8 +85,8 @@ class Amect_mf:
             cates = []
             for method in cate_methods:
                 cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method, self.covariates,
-                                       outcome, treatment, self.model_C_list[i], self.model_T_list[i], self.M_C_list[i],
-                                       self.M_T_list[i], augmented=augmented, control_preds=None, treatment_preds=None,
+                                       outcome, treatment, self.model_C_list[i], self.model_T_list[i], self.M_list[i],
+                                       augmented=augmented, control_preds=None, treatment_preds=None,
                                        check_est_df=False)
                              )
             cates = pd.DataFrame(cates).T

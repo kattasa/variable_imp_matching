@@ -33,10 +33,10 @@ datasets = [
     'dense_continuous',
     'dense_discrete',
     'dense_mixed',
-    # 'polynomials',
+    'polynomials',
     # 'sine',
-    # 'non_linear_mixed',
-    # 'test',
+    'non_linear_mixed',
+    'test',
     # 'poly_no_interaction',
     # 'poly_interaction',
     # 'exp_log_interaction',
@@ -47,7 +47,6 @@ datasets = [
 ]
 
 admalts_params = None
-admalts_prune = False
 malts_methods = ['mean', 'linear']
 manhatten_methods = ['mean', 'linear']
 manhatten_pruned_methods = ['mean', 'linear']
@@ -86,6 +85,10 @@ for data in datasets:
         n_splits = 5
     else:
         n_splits = 6
+
+    if data in ['polynomials', 'non_linear_mixed', 'test']:
+        num_samples = 10000
+        n_splits = 5
 
     config = {'n_splits': n_splits, 'n_repeats': n_repeats, 'k_est_mean': k_est_mean, 'k_est_linear': k_est_linear}
 
@@ -147,16 +150,12 @@ for data in datasets:
         ad_m = Amect_mf(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=n_repeats)
         init_time = time.time() - start
         split_strategy = ad_m.gen_skf
-        ad_m.fit(params=admalts_params, prune=False)
+        ad_m.fit(params=admalts_params)
         fit_time = time.time() - start
-        print('M_C')
-        print([df_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_C_list])
-        print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_C_list])
-        print('M_T')
-        print([df_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_T_list])
-        print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_T_list])
-        print(f'MC Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_C_list]}')
-        print(f'MT Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_T_list]}')
+        print('M')
+        print([df_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
+        print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
+        print(f'M Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_list]}')
         for e_method in [['mean', k_est_mean, False], ['linear_pruned', k_est_linear, False]]:
             method_name = f'Lasso Matching {"Augmented " if e_method[2] else ""}{" ".join(e_method[0].split("_")).title()}'
             if e_method[1] != ad_m.MG_size:
@@ -202,12 +201,10 @@ for data in datasets:
                 method_name = f'Manhatten Matching {e_method[0].title()}'
                 start = time.time()
                 c_mg, t_mg, _, _ = get_match_groups(df_data, k=e_method[1], covariates=covariates, treatment='T',
-                                                    M_C=weights,
-                                                    M_T=weights,
-                                                    method=None,
+                                                    M=weights,
                                                     return_original_idx=False,
                                                     check_est_df=False)
-                cates = get_CATES(df_data, c_mg, t_mg, e_method[0], covariates, 'Y', 'T', None, None, weights, weights,
+                cates = get_CATES(df_data, c_mg, t_mg, e_method[0], covariates, 'Y', 'T', None, None, weights,
                                   augmented=False, control_preds=None, treatment_preds=None, check_est_df=False)
                 times[method_name] = time.time() - start
                 cate_df = cates.to_frame()
@@ -223,8 +220,7 @@ for data in datasets:
 
         if 'manhatten_pruned' in methods:
             est_methods = [[f'{m}_pruned', k_est_mean if m == 'mean' else k_est_linear] for m in manhatten_pruned_methods]
-            ad_m.M_C_list = [(a != 0).astype(int) for a in ad_m.M_C_list]
-            ad_m.M_T_list = [(a != 0).astype(int) for a in ad_m.M_T_list]
+            ad_m.M_list = [(a != 0).astype(int) for a in ad_m.M_list]
             for e_method in est_methods:
                 method_name = f'Manhatten Matching {" ".join(e_method[0].split("_")).title()}'
                 start = time.time()
