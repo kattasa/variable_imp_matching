@@ -10,12 +10,12 @@ import sklearn.ensemble as ensemble
 import pandas as pd
 
 from sklearn.model_selection import StratifiedKFold
-from sklearn.linear_model import Lasso, LassoCV
+from sklearn.linear_model import RidgeCV, LogisticRegressionCV
 from sklearn.neighbors import NearestNeighbors
 
 
 class prognostic:
-    def __init__(self, Y, T, df, method):
+    def __init__(self, Y, T, df, method, binary=False):
         self.Y = Y
         self.T = T
         self.df = df
@@ -23,13 +23,22 @@ class prognostic:
         self.df_c = df.loc[df[T] == 0]
         self.Xc, self.Yc = self.df_c[self.cov], self.df_c[Y]
         if method == 'rf':
-            self.hc = ensemble.RandomForestRegressor(n_estimators=100).fit(self.Xc, self.Yc)
-        elif method == 'lasso':
-            self.hc = LassoCV().fit(self.Xc, self.Yc)
+            if binary:
+                self.hc = ensemble.RandomForestClassifier(n_estimators=100).fit(self.Xc, self.Yc)
+            else:
+                self.hc = ensemble.RandomForestRegressor(n_estimators=100).fit(self.Xc, self.Yc)
+        elif method == 'linear':
+            if binary:
+                self.hc = LogisticRegressionCV().fit(self.Xc, self.Yc)
+            else:
+                self.hc = RidgeCV().fit(self.Xc, self.Yc)
 
-    def get_matched_group(self, df_est, k=10):
+    def get_matched_group(self, df_est, k=10, binary=False):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
-        hat_Y = self.hc.predict(X_est)
+        if binary:
+            hat_Y = self.hc.predict_proba(X_est)[:, 1]
+        else:
+            hat_Y = self.hc.predict(X_est)
         control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
             hat_Y[T_est == 0].reshape(-1, 1))
         treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
@@ -55,11 +64,12 @@ def prognostic_cv(outcome, treatment, data, method, k_est=1, n_splits=5, gen_skf
     cate_est = pd.DataFrame()
     control_mgs = []
     treatment_mgs = []
+    binary = data[outcome].nunique() == 2
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
-        prog = prognostic(outcome, treatment, df_train, method=method)
-        prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est)
+        prog = prognostic(outcome, treatment, df_train, method=method, binary=binary)
+        prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est, binary=binary)
         control_mgs.append(c_mgs)
         treatment_mgs.append(t_mgs)
         cate_est_i = pd.DataFrame(prog_mg['CATE'])

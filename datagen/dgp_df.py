@@ -112,7 +112,7 @@ def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672):
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
 
 
-def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None):
+def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10):
     df = pd.read_csv(f'{ACIC_FOLDER}/{ACIC_FILE.replace("[IDX]", str(dataset_idx))}')
     df_cf = pd.read_csv(f'{ACIC_FOLDER}/{ACIC_FILE.replace("[IDX]", str(dataset_idx) + "_cf")}')
     x_cols = []
@@ -122,9 +122,16 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None):
         x_cols.append(f'X{i}')
     df = df.rename(columns=rename_cols)
     discrete = []
+    dummy_cols = []
     for i in range(len(x_cols)):
         if df.iloc[:, 2 + i].unique().shape[0] <= 2:
             discrete.append(f'X{i}')
+        elif df.iloc[:, 2 + i].unique().shape[0] <= dummy_cutoff and df.iloc[:, 2 + i].dtype == int:
+            discrete.append(f'X{i}')
+            dummy_cols.append(pd.get_dummies(df.iloc[:, 2+i]))
+    dummy_cols = pd.concat(dummy_cols, axis=1)
+    dummy_cols.columns = [f'X{i}' for i in range(len(x_cols), len(x_cols)+dummy_cols.shape[1])]
+    df = pd.concat([df, dummy_cols], axis=1)
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)
     else:
@@ -139,13 +146,14 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None):
     df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
-    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
+    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols,\
+           discrete, list(dummy_cols.columns)
 
 
 def dgp_acic_2018_df(perc_train=None, n_train=None):
     df = pd.read_csv(f'{ACIC_2018_FOLDER}/x.csv')
-    df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/f4c24afdc049400aac2aa409431321b2.csv')
-    df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/f4c24afdc049400aac2aa409431321b2_cf.csv')
+    df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/f2e5cac9902246fba6e5a5c3b11d1605.csv')
+    df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/f2e5cac9902246fba6e5a5c3b11d1605_cf.csv')
     df_cf = df_cf[['sample_id', 'y0', 'y1']]
     x_cols = [c for c in df.columns if c != 'sample_id']
     discrete = []  # will need to change df structure for MALTS

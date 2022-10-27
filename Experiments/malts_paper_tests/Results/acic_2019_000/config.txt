@@ -1,0 +1,7 @@
+{
+  "n_splits": 4,
+  "n_repeats": 1,
+  "k_est_mean": 15,
+  "k_est_linear": 60,
+  "acic_file": 1
+}

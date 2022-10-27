@@ -30,35 +30,36 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 datasets = [
-    'dense_continuous',
-    'dense_discrete',
-    'dense_mixed',
-    'polynomials',
+    # 'dense_continuous',
+    # 'dense_discrete',
+    # 'dense_mixed',
+    # 'polynomials',
     # 'sine',
-    'non_linear_mixed',
-    'test',
+    # 'non_linear_mixed',
+    # 'test',
     # 'poly_no_interaction',
     # 'poly_interaction',
     # 'exp_log_interaction',
     # 'friedman',
-    'ihdp',
+    # 'ihdp',
     # 'acic_2018',
-    # 'acic_2019'
+    'acic_2019'
 ]
+acic_file = 1
 
 admalts_params = None
 malts_methods = ['mean', 'linear']
 manhatten_methods = ['mean', 'linear']
 manhatten_pruned_methods = ['mean', 'linear']
-prognostic_methods = ['lasso', 'rf']
+prognostic_methods = ['linear', 'rf']
 methods = [
     'malts',
     'manhatten',
-    # 'manhatten_pruned',
+    'manhatten_pruned',
     'propensity',
     'prognostic',
-    'genmatch',
-    'bart',
+    # 'genmatch',
+    # 'bart',
     'causal_forest'
 ]
 
@@ -69,7 +70,7 @@ k_est_linear = 60
 
 print_progress = True
 
-iters = 1
+iters = 8
 include_title = False
 iter_in_title = False
 
@@ -93,6 +94,7 @@ for data in datasets:
     config = {'n_splits': n_splits, 'n_repeats': n_repeats, 'k_est_mean': k_est_mean, 'k_est_linear': k_est_linear}
 
     df_err = pd.DataFrame(columns=['Method', 'Relative Error (%)', 'Iter'])
+    model_scores = pd.DataFrame(columns=['Method', 'Score', 'Iter'])
     all_times = []
 
     for iter in range(0, iters):
@@ -119,60 +121,50 @@ for data in datasets:
             ndu = 0
         print(f'Imp continuous: {nci}\nImp discrete: {ndi}\nUnimp continuous: {ncu}\nUnimp discrete: {ndu}')
 
-        df_data, df_true, discrete, config = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
-                                                      unimp_d=ndu)
-        # import itertools
-        # from sklearn.feature_selection import SelectKBest
-        # from sklearn.feature_selection import f_regression
-        # second_order_df = pd.DataFrame()
-        # for combo in itertools.combinations_with_replacement([c for c in df_data.columns if c not in ['Y', 'T']], 2):
-        #     second_order_df[f'{combo[0]}_{combo[1]}'] = df_data[combo[0]] * df_data[combo[1]]
-        # print(df_data.shape)
-        # second_order_sel = SelectKBest(f_regression, k=min(int(df_data.shape[0] / n_splits)-df_data.shape[1]-2, second_order_df.shape[1]))\
-        #     .fit(second_order_df, df_data['Y'])
-        # df_admalts_data = df_data.join(pd.DataFrame(second_order_sel.transform(second_order_df),
-        #                                     columns=second_order_sel.get_feature_names_out()))
-        # print(df_admalts_data.shape)
-
-        # sin_cos_df = pd.DataFrame()
-        # for col in [c for c in df_data.columns if c not in ['Y', 'T']]:
-        #     sin_cos_df[f'{col}_sin'] = np.sin(df_data[col])
-        #     sin_cos_df[f'{col}_cos'] = np.cos(df_data[col])
-        # df_admalts_data = df_data.join(sin_cos_df)
-        # print(df_admalts_data.shape)
+        acic_file = iter + 1
+        df_data, df_true, discrete, config, dummy_cols = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
+                                                                  unimp_d=ndu, acic_file=acic_file)
 
         with open(f'{save_folder}/config.txt', 'w') as f:
             json.dump(config, f, indent=2)
 
         times = {}
 
-        start = time.time()
-        ad_m = Amect_mf(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=n_repeats)
-        init_time = time.time() - start
-        split_strategy = ad_m.gen_skf
-        ad_m.fit(params=admalts_params)
-        fit_time = time.time() - start
-        print('M')
-        print([df_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
-        print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
-        print(f'M Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_list]}')
-        for e_method in [['mean', k_est_mean, False], ['linear_pruned', k_est_linear, False]]:
-            method_name = f'Lasso Matching {"Augmented " if e_method[2] else ""}{" ".join(e_method[0].split("_")).title()}'
-            if e_method[1] != ad_m.MG_size:
-                start = time.time()
-                ad_m.MG(k=e_method[1])
-                mg_time = time.time() - start
+        df_admalts_data = df_data.copy(deep=True)
+        if dummy_cols is not None:
+            df_data = df_data.drop(columns=dummy_cols)
+
+        for double_model in [True, False]:
             start = time.time()
-            ad_m.CATE(cate_methods=[e_method[0]], augmented=e_method[2])
-            times[method_name] = time.time() - start + fit_time + mg_time
-            cate_df = ad_m.cate_df
-            cate_df['true.CATE'] = df_true['TE'].to_numpy()
-            cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/np.abs(cate_df['true.CATE']).mean())
-            cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-            cate_df['Iter'] = iter
-            df_err = df_err.append(cate_df[['Method', 'Relative Error (%)', 'Iter']].copy(deep=True))
-            if print_progress:
-                print(f'{method_name} method complete: {time.time() - start + fit_time + mg_time}')
+            ad_m = Amect_mf(outcome='Y', treatment='T', data=df_admalts_data, n_splits=n_splits, n_repeats=n_repeats)
+            init_time = time.time() - start
+            split_strategy = ad_m.gen_skf
+            ad_m.fit(params=admalts_params, double_model=double_model)
+            model_scores = model_scores.append(
+                pd.DataFrame([[f'{"Double" if double_model else "Single"} Model Lasso Matching']*n_splits,
+                              ad_m.modl_score_list, [iter]*n_splits]).T.rename(columns={0: 'Method', 1: 'Score', 2: 'Iter'}))
+            fit_time = time.time() - start
+            print('M')
+            print([df_admalts_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
+            print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
+            print(f'M Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_list]}')
+            for e_method in [['mean', k_est_mean, False]]:
+                method_name = f'{"Double" if double_model else "Single"} Model Lasso Matching {"Augmented " if e_method[2] else ""}{" ".join(e_method[0].split("_")).title()}'
+                if e_method[1] != ad_m.MG_size:
+                    start = time.time()
+                    ad_m.MG(k=e_method[1])
+                    mg_time = time.time() - start
+                start = time.time()
+                ad_m.CATE(cate_methods=[e_method[0]], augmented=e_method[2])
+                times[method_name] = time.time() - start + fit_time + mg_time
+                cate_df = ad_m.cate_df
+                cate_df['true.CATE'] = df_true['TE'].to_numpy()
+                cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/np.abs(cate_df['true.CATE']).mean())
+                cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+                cate_df['Iter'] = iter
+                df_err = df_err.append(cate_df[['Method', 'Relative Error (%)', 'Iter']].copy(deep=True))
+                if print_progress:
+                    print(f'{method_name} method complete: {time.time() - start + fit_time + mg_time}')
 
         if 'malts' in methods:
             est_methods = [[m, k_est_mean if m == 'mean' else k_est_linear] for m in malts_methods]
@@ -219,17 +211,23 @@ for data in datasets:
                     print(f'{method_name} complete: {time.time() - start}')
 
         if 'manhatten_pruned' in methods:
+            start = time.time()
+            man_pruned = Amect_mf(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=n_repeats)
+            init_time = time.time() - start
+            man_pruned.gen_skf = split_strategy
+            man_pruned.fit(params=admalts_params)
+            fit_time = time.time() - start
             est_methods = [[f'{m}_pruned', k_est_mean if m == 'mean' else k_est_linear] for m in manhatten_pruned_methods]
-            ad_m.M_list = [(a != 0).astype(int) for a in ad_m.M_list]
+            man_pruned.M_list = [(a != 0).astype(int) for a in man_pruned.M_list]
             for e_method in est_methods:
                 method_name = f'Manhatten Matching {" ".join(e_method[0].split("_")).title()}'
                 start = time.time()
-                ad_m.MG(k=e_method[1])
+                man_pruned.MG(k=e_method[1])
                 mg_time = time.time() - start
                 start = time.time()
-                ad_m.CATE(cate_methods=['mean' if e_method[0] == 'mean_pruned' else e_method[0]], augmented=False)
+                man_pruned.CATE(cate_methods=['mean' if e_method[0] == 'mean_pruned' else e_method[0]], augmented=False)
                 times[method_name] = time.time() - start + fit_time + mg_time
-                cate_df = ad_m.cate_df
+                cate_df = man_pruned.cate_df
                 cate_df['true.CATE'] = df_true['TE'].to_numpy()
                 cate_df['Relative Error (%)'] = np.abs(
                     (cate_df['avg.CATE'] - cate_df['true.CATE']) / np.abs(cate_df['true.CATE']).mean())
@@ -360,3 +358,4 @@ for data in datasets:
     all_times = pd.DataFrame(all_times).T
     all_times['avg'] = all_times.mean(axis=1)
     all_times.to_csv(f'{save_folder}/times.csv')
+    model_scores.to_csv(f'{save_folder}/model_scores.csv')

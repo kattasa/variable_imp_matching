@@ -1,0 +1,13 @@
+,Method,Score,Iter
+0,Double Model Lasso Matching,0.9824232359357254,0
+1,Double Model Lasso Matching,0.9808619570229591,0
+2,Double Model Lasso Matching,0.9819523952260452,0
+3,Double Model Lasso Matching,0.9834700716963851,0
+4,Double Model Lasso Matching,0.9797027480074508,0
+5,Double Model Lasso Matching,0.9804349494700515,0
+0,Single Model Lasso Matching,0.6253032586819303,0
+1,Single Model Lasso Matching,0.6133796872316329,0
+2,Single Model Lasso Matching,0.6347678614413732,0
+3,Single Model Lasso Matching,0.59362626596921,0
+4,Single Model Lasso Matching,0.6624580955603965,0
+5,Single Model Lasso Matching,0.6674858353067743,0

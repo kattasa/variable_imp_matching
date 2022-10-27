@@ -62,6 +62,7 @@ class Amect:
         self.p = data.shape[1] - 2
         self.n = data.shape[0]
         self.outcome = outcome
+        self.binary = data[outcome].nunique() == 2
         self.treatment = treatment
         self.covariates = [c for c in data.columns if c not in [outcome, treatment]]
         self.col_order = [*self.covariates, self.treatment, self.outcome]
@@ -77,22 +78,44 @@ class Amect:
 
         self.model_C = None
         self.model_T = None
+        self.model_score = None
         self.M = None
 
-    def fit(self, params=None):
+    def fit(self, params=None, double_model=False):
         if params is None:
-            params = {}
-        self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
-        self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
-        model_C_score = max([self.model_C.score(self.X[:self.T_split], self.Y_C), 0])
-        model_T_score = max([self.model_T.score(self.X[self.T_split:], self.Y_T), 0])
-        print(f'C score: {model_C_score}')
-        print(f'T score: {model_T_score}')
-        M_C_hat = np.abs(self.model_C.coef_)
-        M_T_hat = np.abs(self.model_T.coef_)
-        M_C_hat = M_C_hat / np.sum(M_C_hat) if not np.all(M_C_hat == 0) else np.zeros(self.p)
-        M_T_hat = M_T_hat / np.sum(M_T_hat) if not np.all(M_T_hat == 0) else np.zeros(self.p)
-        M_hat = (M_C_hat * (model_C_score * self.T_split)) + (M_T_hat * (model_T_score * (self.n - self.T_split)))
+            if self.binary:
+                params = {'penalty': 'l1', 'solver': 'saga'}
+            else:
+                params = {}
+        if self.binary:
+            if double_model:
+                self.model_C = linear.LogisticRegressionCV(**params).fit(self.X[:self.T_split], self.Y_C)
+                self.model_T = linear.LogisticRegressionCV(**params).fit(self.X[self.T_split:], self.Y_T)
+            else:
+                self.model_C = linear.LogisticRegressionCV(**params).fit(self.X, np.concatenate([self.Y_C, self.Y_T]))
+                self.model_T = self.model_C
+        else:
+            if double_model:
+                self.model_C = linear.LassoCV(**params).fit(self.X[:self.T_split], self.Y_C)
+                self.model_T = linear.LassoCV(**params).fit(self.X[self.T_split:], self.Y_T)
+            else:
+                self.model_C = linear.LassoCV(**params).fit(self.X, np.concatenate([self.Y_C, self.Y_T]))
+                self.model_T = self.model_C
+        if double_model:
+            model_C_score = max([self.model_C.score(self.X[:self.T_split], self.Y_C), 0])
+            model_T_score = max([self.model_T.score(self.X[self.T_split:], self.Y_T), 0])
+            print(f'Weighted score: {(model_C_score * (self.T_split / self.n)) +  (model_T_score * ((self.n - self.T_split) / self.n))}')
+            M_C_hat = np.abs(self.model_C.coef_).reshape(-1,)
+            M_T_hat = np.abs(self.model_T.coef_).reshape(-1,)
+            M_C_hat = M_C_hat / np.sum(M_C_hat) if not np.all(M_C_hat == 0) else np.zeros(self.p)
+            M_T_hat = M_T_hat / np.sum(M_T_hat) if not np.all(M_T_hat == 0) else np.zeros(self.p)
+            M_hat = (M_C_hat * (self.T_split / self.n)) + (M_T_hat * ((self.n - self.T_split) / self.n))
+        else:
+            model_score = max([self.model_C.score(self.X, np.concatenate([self.Y_C, self.Y_T])), 0])
+            print(f'Total score: {model_score}')
+            M_hat = np.abs(self.model_C.coef_).reshape(-1,)
+            M_hat = M_hat if not np.all(M_hat == 0) else np.ones(self.p)
+        self.model_score = (model_C_score * (self.T_split / self.n)) + (model_T_score * ((self.n - self.T_split) / self.n)) if double_model else model_score
         self.M = (M_hat / np.sum(M_hat)) * self.p
 
     def get_matched_groups(self, df_estimation, k=10, return_original_idx=False, check_est_df=False):

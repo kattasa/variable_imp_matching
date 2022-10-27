@@ -22,6 +22,7 @@ class Amect_mf:
         self.gen_skf = list(skf.split(data, data[treatment]))
         self.model_C_list = []
         self.model_T_list = []
+        self.modl_score_list = []
         self.M_list = []
         self.model_prop_score_list = []
         self.col_orders = []
@@ -32,7 +33,7 @@ class Amect_mf:
         self.T_MG_distance = []
         self.cates_list = []
 
-    def fit(self, params=None):
+    def fit(self, params=None, double_model=False):
         self.model_C_list = []
         self.model_T_list = []
         self.M_list = []
@@ -41,9 +42,10 @@ class Amect_mf:
             df_train = self.data.iloc[train_idx]
 
             m = Amect(outcome=self.outcome, treatment=self.treatment, data=df_train)
-            m.fit(params=params)
+            m.fit(params=params, double_model=double_model)
             self.model_C_list.append(m.model_C)
             self.model_T_list.append(m.model_T)
+            self.modl_score_list.append(m.model_score)
             self.M_list.append(m.M)
             self.col_orders.append(m.col_order)
 
