@@ -148,7 +148,7 @@ for data in datasets:
             print([df_admalts_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
             print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
             print(f'M Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_list]}')
-            for e_method in [['mean', k_est_mean, False]]:
+            for e_method in [['mean', k_est_mean, False], ['linear_pruned', k_est_linear, False]]:
                 method_name = f'{"Double" if double_model else "Single"} Model Lasso Matching {"Augmented " if e_method[2] else ""}{" ".join(e_method[0].split("_")).title()}'
                 if e_method[1] != ad_m.MG_size:
                     start = time.time()
