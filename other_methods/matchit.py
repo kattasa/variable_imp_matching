@@ -7,13 +7,12 @@ Created on Sat Apr 18 15:20:12 2020
 import pandas as pd
 import numpy as np
 
-import rpy2
 from rpy2.robjects.packages import importr
 from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
 import rpy2.robjects.numpy2ri
 
 rpy2.robjects.numpy2ri.activate()
-from rpy2.robjects import r, pandas2ri
+from rpy2.robjects import pandas2ri
 
 pandas2ri.activate()
 

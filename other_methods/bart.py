@@ -5,15 +5,9 @@ Created on Sat Apr 18 18:56:18 2020
 """
 
 import numpy as np
-import scipy.optimize as opt
 import pandas as pd
-import sklearn.linear_model as lm
-import sklearn.ensemble as ensemble
-import seaborn as sns
 from sklearn.model_selection import StratifiedKFold
-import rpy2
 from rpy2.robjects.packages import importr
-from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
 import rpy2.robjects.numpy2ri
 from rpy2.robjects import pandas2ri
 

@@ -9,19 +9,17 @@ import numpy as np
 import pandas as pd
 import time
 
-import pymalts
-
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
 import sys
 sys.path.append("..")
-from helpers import create_folder, get_data
+from linear_coef_matching.Experiments.helpers import create_folder, get_data
 sys.path.append("..")
-from MALTS.amect_mf import Amect_mf
-from other_methods import bart, causalforest, matchit, prognostic
-from utils import get_match_groups, get_CATES
+from linear_coef_matching.MALTS.amect_mf import Amect_mf
+from linear_coef_matching.other_methods import pymalts, bart, causalforest, matchit, prognostic
+from linear_coef_matching.utils import get_match_groups, get_CATES
 
 import warnings
 
@@ -30,7 +28,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
@@ -43,14 +41,16 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    'acic_2019'
+    # 'acic_2019'
 ]
 acic_file = 1
 
 admalts_params = None
-malts_methods = ['mean', 'linear']
-manhatten_methods = ['mean', 'linear']
-manhatten_pruned_methods = ['mean', 'linear']
+admalts_methods = ['mean']
+augmented = False
+malts_methods = ['mean']
+manhatten_methods = ['mean']
+manhatten_pruned_methods = ['mean']
 prognostic_methods = ['linear', 'rf']
 methods = [
     'malts',
@@ -59,18 +59,18 @@ methods = [
     'propensity',
     'prognostic',
     # 'genmatch',
-    # 'bart',
+    'bart',
     'causal_forest'
 ]
 
-num_samples = 3000
+num_samples = 1000
 n_repeats = 1
 k_est_mean = 15
 k_est_linear = 60
 
 print_progress = True
 
-iters = 8
+iters = 1
 include_title = False
 iter_in_title = False
 
@@ -85,7 +85,7 @@ for data in datasets:
     elif data == 'acic_2018':
         n_splits = 5
     else:
-        n_splits = 6
+        n_splits = 2
 
     if data in ['polynomials', 'non_linear_mixed', 'test']:
         num_samples = 10000
@@ -100,8 +100,8 @@ for data in datasets:
     for iter in range(0, iters):
         total_time = time.time()
         if data == 'dense_continuous':
-            nci = 15
-            ncu = 25
+            nci = 3
+            ncu = 5
             ndi = 0
             ndu = 0
         elif data == 'dense_discrete':
@@ -121,7 +121,7 @@ for data in datasets:
             ndu = 0
         print(f'Imp continuous: {nci}\nImp discrete: {ndi}\nUnimp continuous: {ncu}\nUnimp discrete: {ndu}')
 
-        acic_file = iter + 1
+        # acic_file = iter + 1
         df_data, df_true, discrete, config, dummy_cols = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
                                                                   unimp_d=ndu, acic_file=acic_file)
 
@@ -134,11 +134,15 @@ for data in datasets:
         if dummy_cols is not None:
             df_data = df_data.drop(columns=dummy_cols)
 
+        split_strategy = None
         for double_model in [True, False]:
             start = time.time()
             ad_m = Amect_mf(outcome='Y', treatment='T', data=df_admalts_data, n_splits=n_splits, n_repeats=n_repeats)
             init_time = time.time() - start
-            split_strategy = ad_m.gen_skf
+            if split_strategy:
+                ad_m.gen_skf = split_strategy
+            else:
+                split_strategy = ad_m.gen_skf
             ad_m.fit(params=admalts_params, double_model=double_model)
             model_scores = model_scores.append(
                 pd.DataFrame([[f'{"Double" if double_model else "Single"} Model Lasso Matching']*n_splits,
@@ -148,7 +152,7 @@ for data in datasets:
             print([df_admalts_data.columns[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
             print([z[np.argsort(-z)[:np.sum(z != 0)]] for z in ad_m.M_list])
             print(f'M Nonzero weights: {[np.sum(z != 0) for z in ad_m.M_list]}')
-            for e_method in [['mean', k_est_mean, False], ['linear_pruned', k_est_linear, False]]:
+            for e_method in [[m, k_est_mean if m == 'mean' else k_est_linear, augmented] for m in admalts_methods]:
                 method_name = f'{"Double" if double_model else "Single"} Model Lasso Matching {"Augmented " if e_method[2] else ""}{" ".join(e_method[0].split("_")).title()}'
                 if e_method[1] != ad_m.MG_size:
                     start = time.time()

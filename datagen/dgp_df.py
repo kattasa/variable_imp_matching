@@ -4,19 +4,15 @@ import numpy as np
 import pandas as pd
 import random
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold
-from sklearn.linear_model import LassoCV
 
-from datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction,\
+from linear_coef_matching.datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction,\
     dgp_friedman, data_generation_dense_mixed_endo, dgp_sine, dgp_non_linear_mixed, dgp_polynomials, dgp_test
 
-IHDP_FOLDER = '/Users/qlanners/projects/linear_coef_matching/datagen/ihdp'
+IHDP_FOLDER = os.getenv('IHDP_FOLDER')
 
-ACIC_FOLDER = '/Users/qlanners/projects/linear_coef_matching/datagen/acic'
-ACIC_FILE = 'highDim_testdataset[IDX].csv'
-
-ACIC_2018_FOLDER = '/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018'
-ACIC_2022_FOLDER = '/Users/qlanners/projects/linear_coef_matching/datagen/acic_2022'
+ACIC_2018_FOLDER = os.getenv('ACIC_2018_FOLDER')
+ACIC_2019_FOLDER = os.getenv('ACIC_2019_FOLDER')
+ACIC_2022_FOLDER = os.getenv('ACIC_2022_FOLDER')
 
 
 def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=None):
@@ -113,8 +109,8 @@ def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672):
 
 
 def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10):
-    df = pd.read_csv(f'{ACIC_FOLDER}/{ACIC_FILE.replace("[IDX]", str(dataset_idx))}')
-    df_cf = pd.read_csv(f'{ACIC_FOLDER}/{ACIC_FILE.replace("[IDX]", str(dataset_idx) + "_cf")}')
+    df = pd.read_csv(f'{ACIC_2019_FOLDER}/{"highDim_testdataset[IDX].csv".replace("[IDX]", str(dataset_idx))}')
+    df_cf = pd.read_csv(f'{ACIC_2019_FOLDER}/{"highDim_testdataset[IDX].csv".replace("[IDX]", str(dataset_idx) + "_cf")}')
     x_cols = []
     rename_cols = {'A': 'T'}
     for i in range(df.shape[1]-2):
@@ -150,9 +146,9 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
            discrete, list(dummy_cols.columns)
 
 
-def dgp_acic_2018_df(perc_train=None, n_train=None):
+def dgp_acic_2018_df(perc_train=None, n_train=None, file=None):
     df = pd.read_csv(f'{ACIC_2018_FOLDER}/x.csv')
-    df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/f2e5cac9902246fba6e5a5c3b11d1605.csv')
+    df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/{file}.csv')
     df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/f2e5cac9902246fba6e5a5c3b11d1605_cf.csv')
     df_cf = df_cf[['sample_id', 'y0', 'y1']]
     x_cols = [c for c in df.columns if c != 'sample_id']

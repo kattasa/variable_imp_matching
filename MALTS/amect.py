@@ -7,11 +7,8 @@ Created on Sat May 14 2022
 """
 import numpy as np
 import sklearn.linear_model as linear
-import sklearn.ensemble as ensemble
-import sklearn.neural_network as nn
 from sklearn.preprocessing import StandardScaler
-from utils import get_match_groups, get_CATES
-from xgboost import XGBRegressor
+from linear_coef_matching.utils import get_match_groups, get_CATES
 
 
 class Amect:
@@ -114,7 +111,7 @@ class Amect:
             model_score = max([self.model_C.score(self.X, np.concatenate([self.Y_C, self.Y_T])), 0])
             print(f'Total score: {model_score}')
             M_hat = np.abs(self.model_C.coef_).reshape(-1,)
-            M_hat = M_hat if not np.all(M_hat == 0) else np.ones(self.p)
+        M_hat = M_hat if not np.all(M_hat == 0) else np.ones(self.p)
         self.model_score = (model_C_score * (self.T_split / self.n)) + (model_T_score * ((self.n - self.T_split) / self.n)) if double_model else model_score
         self.M = (M_hat / np.sum(M_hat)) * self.p
 

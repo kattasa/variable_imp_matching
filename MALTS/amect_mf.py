@@ -1,9 +1,9 @@
 import pandas as pd
 from sklearn.model_selection import RepeatedStratifiedKFold
 
-from MALTS.amect import Amect
+from linear_coef_matching.MALTS.amect import Amect
 
-from utils import get_match_groups, get_CATES, convert_idx
+from linear_coef_matching.utils import get_match_groups, get_CATES, convert_idx
 
 
 class Amect_mf:

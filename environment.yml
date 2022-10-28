@@ -1,0 +1,17 @@
+name: linear_coef_matching
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - seaborn
+  - rpy2
+  - r-dbarts
+  - r-grf
+  - r-matchit
+  - r-matching
+prefix: /Users/qlanners/opt/anaconda3/envs/linear_coef_matching

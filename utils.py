@@ -42,7 +42,11 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
                 df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
     else:
         if 'pruned' in method:
-            imp_covs = list(np.array(covariates)[M >= 0.01*M.shape[0]])
+            imp_covs = []
+            prune_level = 0.01
+            while len(imp_covs) == 0:
+                imp_covs = list(np.array(covariates)[M >= prune_level*M.shape[0]])
+                prune_level *= 0.1
         else:
             imp_covs = covariates
         if augmented:

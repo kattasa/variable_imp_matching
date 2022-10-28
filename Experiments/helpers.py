@@ -1,14 +1,14 @@
 import os
 import sys
 sys.path.append("..")
-from datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, dgp_ihdp_df, dgp_lalonde, dgp_acic_2018_df
+from linear_coef_matching.datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, dgp_ihdp_df, dgp_lalonde, dgp_acic_2018_df
 
 
 def create_folder(data, print_progress=True):
     folders = [int(c.replace(f'{data}_', '')) for c in
-               [d for d in os.listdir('Results/') if data in d]]
+               [d for d in os.listdir(os.getenv('RESULTS_FOLDER')) if data in d]]
     iter = max(folders) + 1 if len(folders) > 0 else 0
-    save_folder = f'Results/{data}_{iter:03d}'
+    save_folder = f'{os.getenv("RESULTS_FOLDER")}/{data}_{iter:03d}'
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
     if print_progress:
