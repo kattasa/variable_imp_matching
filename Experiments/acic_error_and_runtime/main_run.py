@@ -13,12 +13,12 @@ all_acic_2018_files = [f.replace('.csv', '') for f in set([c.split('/')[-1].repl
                                                            glob.glob(f"{os.getenv('ACIC_2018_FOLDER')}/*.csv")])]
 n_samples_per_split = 5000
 
-# for acic_file in all_acic_2019_files:
-#     acic_year = 'acic_2019'
-#     n_splits = 3
-#     save_folder = create_folder(f'{acic_year}-{acic_file}', print_progress)
-#     cate_error(acic_year=acic_year, acic_file=acic_file, n_splits=n_splits, k_est=k_est, save_folder=save_folder,
-#                print_progress=print_progress)
+for acic_file in all_acic_2019_files:
+    acic_year = 'acic_2019'
+    n_splits = 3
+    save_folder = create_folder(f'{acic_year}-{acic_file}', print_progress)
+    cate_error(acic_year=acic_year, acic_file=acic_file, n_splits=n_splits, k_est=k_est, save_folder=save_folder,
+               print_progress=print_progress)
 
 
 for acic_file in all_acic_2018_files:
