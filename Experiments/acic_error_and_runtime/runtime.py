@@ -21,6 +21,7 @@ def runtime(df_data, split_strategy, k_est):
         lcm.fit(double_model=False)
         fit_time = time.time() - start
 
+
         df_est = df_est[lcm.col_order]
         covariates = np.array(lcm.covariates)
         M = lcm.M
