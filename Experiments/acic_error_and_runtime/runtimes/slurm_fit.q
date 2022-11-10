@@ -15,6 +15,7 @@ memory=$"8G"
 cd $RESULTS_FOLDER
 folders=$(ls -d */)
 echo "$folders"
+cd -
 
 for f in $folders; do
     echo "$f"
