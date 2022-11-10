@@ -16,15 +16,13 @@ cd $RESULTS_FOLDER
 folders=$(ls -d */)
 echo "$folders"
 cd -
+iters=3
 
 for f in $folders; do
-    echo "$f"
-    f=$"acic_2019-1_000/"
-    echo "$f"
     n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
     n_splits=$(($n_splits + 0))
     counter=0
-    while [ $counter -lt 3 ]
+    while [ $counter -lt $iters ]
     do
       split_num=0
       while [ $split_num -lt $n_splits ]
@@ -34,5 +32,4 @@ for f in $folders; do
       done
       ((counter++))
     done
-    break
 done

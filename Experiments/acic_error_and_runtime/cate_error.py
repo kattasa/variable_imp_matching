@@ -47,6 +47,8 @@ def cate_error(acic_year, acic_file, n_splits, k_est, save_folder, print_progres
             f.write(str(dummy_cols))
         df_lcm_data.to_csv(f'{save_folder}/df_lcm_data.csv')
     df_data.to_csv(f'{save_folder}/df_data.csv')
+    with open(f'{save_folder}/discrete_cols.txt', 'w') as f:
+        f.write(str(discrete))
 
 
     times = {}
