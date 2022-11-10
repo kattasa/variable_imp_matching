@@ -5,3 +5,5 @@ datagen/acic_2018
 datagen/news
 Experiments/dcc_runs
 .idea/
+Experiments/cate_error/Results
+Experiments/acic_error_and_runtime/Results

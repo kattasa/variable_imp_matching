@@ -33,7 +33,7 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
 
-        covariates = set(data.columns) - set([outcome, treatment])
+        covariates = list(set(data.columns) - set([outcome, treatment]))
 
         Xc = np.array(df_train.loc[df_train[treatment] == 0, covariates])
         Yc = np.array(df_train.loc[df_train[treatment] == 0, outcome])
@@ -71,3 +71,18 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
     if result == 'full':
         return cate_est, control_preds, treatment_preds
     return cate_est
+
+def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False):
+    Xc = np.array(df_train.loc[df_train[treatment] == 0, covariates])
+    Yc = np.array(df_train.loc[df_train[treatment] == 0, outcome])
+
+    Xt = np.array(df_train.loc[df_train[treatment] == 1, covariates])
+    Yt = np.array(df_train.loc[df_train[treatment] == 1, outcome])
+
+    if binary:
+        # for some reason bart can't do one sample inference with binary outcome. so we add a dummy sample
+        sample = np.concatenate([sample, np.zeros(shape=sample.shape)], axis=0)
+        return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[2][:, 0].mean() - \
+               dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[2][:, 0].mean()
+    return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[7][0] - \
+           dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[7][0]

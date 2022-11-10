@@ -25,6 +25,22 @@ class Prognostic:
         else:
             self.hc = ensemble.GradientBoostingRegressor().fit(self.Xc, self.Yc)
 
+    def get_sample_cate(self, df_est, sample_idx, k=10, binary=False):
+        X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
+        if binary:
+            hat_Y = self.hc.predict_proba(X_est)[:, 1]
+        else:
+            hat_Y = self.hc.predict(X_est)
+        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
+            hat_Y[T_est == 0].reshape(-1, 1))
+        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
+            hat_Y[T_est == 1].reshape(-1, 1))
+        c_mg = control_nn.kneighbors(hat_Y[sample_idx].reshape(1, -1), return_distance=False).reshape(-1, )
+        yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean()
+        t_mg = treatment_nn.kneighbors(hat_Y[sample_idx].reshape(1, -1), return_distance=False).reshape(-1, )
+        yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean()
+        return yt - yc
+
     def get_matched_group(self, df_est, k=10, binary=False):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
         if binary:

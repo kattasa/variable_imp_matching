@@ -8,7 +8,7 @@ from Experiments.helpers import create_folder
 print_progress = True
 k_est = 60
 
-all_acic_2019_files = list(range(1, 9))
+all_acic_2019_files = list(range(8, 9))
 all_acic_2018_files = [f.replace('.csv', '') for f in set([c.split('/')[-1].replace('_cf', '') for c in
                                                            glob.glob(f"{os.getenv('ACIC_2018_FOLDER')}/*.csv")])]
 n_samples_per_split = 5000

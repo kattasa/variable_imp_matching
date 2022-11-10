@@ -50,3 +50,15 @@ def causalforest(outcome, treatment, data, n_splits=2, result='brief', gen_skf=N
     if result == 'full':
         return cate_est, crf
     return cate_est
+
+
+def causalforest_sample(outcome, treatment, df_train, sample, covariates):
+    Ycrf = df_train[outcome]
+    Tcrf = df_train[treatment]
+    X = df_train[covariates]
+
+    crf = grf.causal_forest(X, Ycrf, Tcrf)
+    tauhat = grf.predict_causal_forest(crf, sample)
+    with localconverter(ro.default_converter + pandas2ri.converter):
+        tauhat = ro.conversion.rpy2py(tauhat)['predictions'][0]
+    return tauhat
