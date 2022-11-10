@@ -33,9 +33,10 @@ sample_idx = np.random.randint(0, df_est.shape[0])
 df_est = df_est[lcm.col_order]
 
 start = time.time()
+M = lcm.M
 X = M[M > 0] * df_estimation[covariates[M > 0]].to_numpy()
 print(X.shape)
-T = df_estimation[treatment].to_numpy()
+T = df_estimation['T'].to_numpy()
 print(X[T == 0].shape)
 mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est,
                                 covariates=covariates, treatment='T', M=lcm.M)
