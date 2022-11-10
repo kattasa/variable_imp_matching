@@ -34,7 +34,7 @@ df_est = df_est[lcm.col_order]
 
 start = time.time()
 M = lcm.M
-X = M[M > 0] * df_estimation[covariates[M > 0]].to_numpy()
+X = M[M > 0] * df_est[covariates[M > 0]].to_numpy()
 print(X.shape)
 T = df_estimation['T'].to_numpy()
 print(X[T == 0].shape)
