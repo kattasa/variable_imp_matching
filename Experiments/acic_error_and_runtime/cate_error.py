@@ -72,22 +72,22 @@ def cate_error(acic_year, acic_file, n_splits, k_est, save_folder, print_progres
     with open(f'{save_folder}/split.pkl', 'wb') as f:
         pickle.dump(split_strategy, f)
 
-    # method_name = 'MALTS Matching'
-    # start = time.time()
-    # m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est,
-    #                      n_splits=n_splits, estimator='linear', smooth_cate=False,
-    #                      gen_skf=split_strategy)
-    # times[method_name] = time.time() - start
-    #
-    # cate_df = m.CATE_df
-    # cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-    # cate_df['True_CATE'] = df_true['TE'].to_numpy()
-    # cate_df['Relative Error (%)'] = np.abs(
-    #     (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
-    # cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-    # df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
-    # if print_progress:
-    #     print(f'{method_name} complete: {time.time() - start}')
+    method_name = 'MALTS Matching'
+    start = time.time()
+    m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est,
+                         n_splits=n_splits, estimator='linear', smooth_cate=False,
+                         gen_skf=split_strategy)
+    times[method_name] = time.time() - start
+
+    cate_df = m.CATE_df
+    cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+    cate_df['True_CATE'] = df_true['TE'].to_numpy()
+    cate_df['Relative Error (%)'] = np.abs(
+        (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
+    cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+    df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
+    if print_progress:
+        print(f'{method_name} complete: {time.time() - start}')
 
     method_name = 'Prognostic Score Matching'
     start = time.time()

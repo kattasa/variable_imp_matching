@@ -5,7 +5,7 @@
 #SBATCH --error=/hpc/group/volfovskylab/qml/linear_coef_matching/Results/slurm_%A_%a.err
 #SBATCH --mem=32G
 
-export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/Results
+export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/cate_error/Results
 export ACIC_2018_FOLDER=/work/qml/acic_2018
 export ACIC_2019_FOLDER=/work/qml/acic_2019
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
