@@ -107,7 +107,7 @@ def dgp_sine(n_samples, n_imp, n_unimp):
     t_errors = np.random.normal(0, 1, (n_samples,))
     t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
            (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
@@ -128,7 +128,7 @@ def dgp_polynomials(n_samples, n_imp, n_unimp):
     t_errors = np.random.normal(0, 1, (n_samples,))
     t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
            (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
@@ -149,7 +149,7 @@ def dgp_non_linear_mixed(n_samples, n_imp, n_unimp):
     t_errors = np.random.normal(0, 1, (n_samples,))
     t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
@@ -170,7 +170,7 @@ def dgp_test(n_samples, n_imp, n_unimp):
     t_errors = np.random.normal(0, 1, (n_samples,))
     t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 0.8, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)

@@ -11,8 +11,6 @@ import scipy.optimize as opt
 import pandas as pd
 import sklearn.linear_model as lm
 import sklearn.ensemble as ensemble
-import sklearn.gaussian_process as gp
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -316,6 +314,7 @@ class malts_mf:
                     self.MG_matrix.loc[a[0], a[1]] = self.MG_matrix.loc[a[0], a[1]] + 1
 
         cate_df = self.CATE_df['CATE']
+        cate_df = cate_df.sort_index()
         cate_df['avg.CATE'] = cate_df.mean(axis=1)
         cate_df['std.CATE'] = cate_df.std(axis=1)
         cate_df[self.outcome] = self.CATE_df['outcome'].mean(axis=1)

@@ -44,6 +44,7 @@ def causalforest(outcome, treatment, data, n_splits=2, result='brief', gen_skf=N
         cate_est_i = pd.DataFrame(t_hat_crf, index=df_est.index, columns=['CATE'])
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
 
+    cate_est = cate_est.sort_index()
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
     if result == 'full':

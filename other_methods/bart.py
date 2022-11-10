@@ -6,6 +6,7 @@ Created on Sat Apr 18 18:56:18 2020
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 from sklearn.model_selection import StratifiedKFold
 from rpy2.robjects.packages import importr
 import rpy2.robjects.numpy2ri
@@ -18,13 +19,16 @@ utils = importr('utils')
 dbarts = importr('dbarts')
 
 
-def bart(outcome, treatment, data, n_splits=2, result='brief', method='new', gen_skf=None):
+def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
     cate_est = pd.DataFrame()
     treatment_preds = pd.DataFrame()
     control_preds = pd.DataFrame()
+    discrete_outcome = False
+    if data[outcome].nunique() == 2:
+        discrete_outcome = True
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
@@ -37,19 +41,19 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', method='new', gen
         Xt = np.array(df_train.loc[df_train[treatment] == 1, covariates])
         Yt = np.array(df_train.loc[df_train[treatment] == 1, outcome])
         #
-        if method == 'old':
-            Xtest = df_train[covariates]
-        elif method == 'new':
-            Xtest = df_est[covariates]
+        Xtest = df_est[covariates].to_numpy()
         bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False)
-        y_c_hat_bart = np.array(bart_res_c[7])
+        if discrete_outcome:
+            y_c_hat_bart = norm.cdf(bart_res_c[2]).mean(axis=0)
+        else:
+            y_c_hat_bart = np.array(bart_res_c[7])
         bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False)
-        y_t_hat_bart = np.array(bart_res_t[7])
+        if discrete_outcome:
+            y_t_hat_bart = norm.cdf(bart_res_t[2]).mean(axis=0)
+        else:
+            y_t_hat_bart = np.array(bart_res_t[7])
         t_hat_bart = np.array(y_t_hat_bart - y_c_hat_bart)
-        if method == 'old':
-            this_index = df_train.index
-        elif method == 'new':
-            this_index = df_est.index
+        this_index = df_est.index
         control_preds_i = pd.DataFrame(y_c_hat_bart, index=this_index, columns=['Y0'])
         treatment_preds_i = pd.DataFrame(y_t_hat_bart, index=this_index, columns=['Y1'])
         cate_est_i = pd.DataFrame(t_hat_bart, index=this_index, columns=['CATE'])
@@ -61,6 +65,7 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', method='new', gen
     control_preds['std.Y0'] = control_preds.std(axis=1)
     treatment_preds['avg.Y1'] = treatment_preds.mean(axis=1)
     treatment_preds['std.Y1'] = treatment_preds.std(axis=1)
+    cate_est = cate_est.sort_index()
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
     if result == 'full':

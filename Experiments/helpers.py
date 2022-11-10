@@ -1,7 +1,6 @@
 import os
-import sys
-sys.path.append("..")
-from linear_coef_matching.datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, dgp_ihdp_df, dgp_lalonde, dgp_acic_2018_df
+from datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, \
+    dgp_ihdp_df, dgp_news, dgp_acic_2018_df
 
 
 def create_folder(data, print_progress=True):
@@ -16,29 +15,28 @@ def create_folder(data, print_progress=True):
     return save_folder
 
 
-def get_data(data, num_samples, config, imp_c=None, imp_d=None, unimp_c=None, unimp_d=None, n_train=0, acic_file=8):
+def get_data(data, config):
     dummy_cols = None  # col names for any cols that were transformed into several cols from a single categorical col
     if 'dense' in data:
-        df_train, df_data, df_true, x_cols, discrete = dgp_dense_mixed_endo_df(num_samples, imp_c, imp_d, unimp_c,
-                                                                               unimp_d, n_train=n_train)
+        df_train, df_data, df_true, x_cols, discrete = dgp_dense_mixed_endo_df(config['num_samples'], config['imp_c'],
+                                                                               config['imp_d'], config['unimp_c'],
+                                                                               config['unimp_d'],
+                                                                               n_train=config['n_train'])
     elif data == 'acic_2019':
-        df_train, df_data, df_true, x_cols, discrete, dummy_cols = dgp_acic_2019_df(acic_file, n_train=n_train)
-        config['acic_file'] = acic_file
+        df_train, df_data, df_true, x_cols, discrete, dummy_cols = dgp_acic_2019_df(config['acic_file'],
+                                                                                    n_train=config['n_train'])
     elif data == 'acic_2018':
-        df_train, df_data, df_true, x_cols, discrete = dgp_acic_2018_df(n_train=n_train)
-        config['acic_file'] = None
+        df_train, df_data, df_true, x_cols, discrete, dummy_cols = dgp_acic_2018_df(config['acic_file'],
+                                                                                    n_train=config['n_train'])
 
     elif data == 'ihdp':
-        ihdp_file = 100
-        df_train, df_data, df_true, x_cols, discrete = dgp_ihdp_df(ihdp_file, n_train=n_train)
-        config['ihdp_file'] = ihdp_file
-    elif data == 'lalonde':
-        df_train, df_data, df_true, x_cols, discrete = dgp_lalonde()
+        df_train, df_data, df_true, x_cols, discrete = dgp_ihdp_df(config['ihdp_file'], n_train=config['n_train'])
+    elif data == 'news':
+        df_train, df_data, df_true, x_cols, discrete = dgp_news(config['news_file'], n_train=config['n_train'])
     else:
-        df_train, df_data, df_true, x_cols, discrete = dgp_df(dgp=data, n_samples=num_samples,
-                                                              n_imp=imp_c, n_unimp=unimp_c, n_train=n_train)
-
-    if n_train > 0:
-        return df_train, df_data, df_true, discrete, config, dummy_cols
-
-    return df_data, df_true, discrete, config, dummy_cols
+        df_train, df_data, df_true, x_cols, discrete = dgp_df(dgp=data, n_samples=config['num_samples'],
+                                                              n_imp=config['imp_c'], n_unimp=config['unimp_c'],
+                                                              n_train=config['n_train'])
+    if config['n_train'] > 0:
+        return df_train, df_data, df_true, discrete, dummy_cols
+    return df_data, df_true, discrete, dummy_cols

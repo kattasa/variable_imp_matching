@@ -4,15 +4,18 @@ import numpy as np
 import pandas as pd
 import random
 from sklearn.preprocessing import StandardScaler
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
 
-from linear_coef_matching.datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction,\
-    dgp_friedman, data_generation_dense_mixed_endo, dgp_sine, dgp_non_linear_mixed, dgp_polynomials, dgp_test
+from datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction,dgp_friedman, data_generation_dense_mixed_endo, \
+    dgp_sine, dgp_non_linear_mixed, dgp_polynomials, dgp_test
 
 IHDP_FOLDER = os.getenv('IHDP_FOLDER')
 
 ACIC_2018_FOLDER = os.getenv('ACIC_2018_FOLDER')
 ACIC_2019_FOLDER = os.getenv('ACIC_2019_FOLDER')
 ACIC_2022_FOLDER = os.getenv('ACIC_2022_FOLDER')
+NEWS_FOLDER = os.getenv('NEWS_FOLDER')
 
 
 def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=None):
@@ -146,19 +149,25 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
            discrete, list(dummy_cols.columns)
 
 
-def dgp_acic_2018_df(perc_train=None, n_train=None, file=None):
-    df = pd.read_csv(f'{ACIC_2018_FOLDER}/x.csv')
-    df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/{file}.csv')
-    df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/f2e5cac9902246fba6e5a5c3b11d1605_cf.csv')
+def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
+    if os.path.isfile(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv'):
+        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv')
+        with open(f'{ACIC_2018_FOLDER}/covariates/x_discrete.csv') as d:
+            discrete = d.read().replace('\n', '').split(',')
+        with open(f'{ACIC_2018_FOLDER}/covariates/x_dummy.csv') as d:
+            dummy_cols = d.read().replace('\n', '').split(',')
+    else:
+        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv')
+        df, discrete, dummy_cols = clean_2018_covariates(df)
+    df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}.csv')
+    df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}_cf.csv')
     df_cf = df_cf[['sample_id', 'y0', 'y1']]
     x_cols = [c for c in df.columns if c != 'sample_id']
-    discrete = []  # will need to change df structure for MALTS
     df = df.join(df_results.set_index('sample_id'), on='sample_id', how='inner')
     df = df.join(df_cf.set_index('sample_id'), on='sample_id', how='inner')
     df = df.rename(columns={'z': 'T', 'y': 'Y', 'y0': 'Y0_true', 'y1': 'Y1_true'})
     df['TE'] = df['Y1_true'] - df['Y0_true']
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
-
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)
     else:
@@ -167,7 +176,8 @@ def dgp_acic_2018_df(perc_train=None, n_train=None, file=None):
     df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
-    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
+    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, \
+           discrete, dummy_cols
 
 
 def dgp_acic_2022_df(track=2):
@@ -188,6 +198,35 @@ def dgp_acic_2022_df(track=2):
     return practice_df, practice_year_df
 
 
+def dgp_news(news_file, perc_train=None, n_train=None):
+    x = pd.read_csv(f'{NEWS_FOLDER}/{news_file}.csv.x')
+    new_x = np.zeros(shape=(int(x.columns[0]), int(x.columns[1])))
+    x = x.to_numpy()
+    for i in range(x.shape[0]):
+        new_x[x[i, 0] - 1, x[i, 1] - 1] = x[i, 2]
+    df_outcome = pd.read_csv(f'{NEWS_FOLDER}/{news_file}.csv.y', header=None, names=['T', 'Y', 'Ycf', 'Y0_true',
+                                                                                     'Y1_true'])
+    df_outcome = df_outcome.drop(columns=['Ycf'])
+    x_cols = [f'X{i}' for i in range(new_x.shape[1])]
+    discrete = []
+    df = pd.DataFrame(new_x)
+    df.columns = x_cols
+    df = df.join(df_outcome)
+    df['TE'] = df['Y1_true'] - df['Y0_true']
+    df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+    if perc_train:
+        train_idx = int(df.shape[0]*perc_train)
+    else:
+        train_idx = n_train
+    df_train = df.copy(deep=True)[:train_idx]
+    df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])
+    df_true = df.copy(deep=True)[train_idx:]
+    df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
+    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(
+        drop=True), x_cols, discrete
+
+
+
 def dgp_lalonde():
     df_assess = pd.read_stata('http://www.nber.org/~rdehejia/data/nsw.dta')
     df_assess = df_assess.drop(columns=['data_id'])
@@ -203,24 +242,34 @@ def dgp_lalonde():
 
 
 def clean_2018_covariates(df):
-    float_type = ['recwt']
-    int_type = ['mager41', 'mager14', 'mager9', 'meduc', 'fagecomb', 'ufagecomb', 'precare', 'precare_rec', 'uprevis', 'previs_rec',
-               'wtgain', 'wtgain_rec', 'cig_1', 'cig_2', 'cig_3', 'rf_ncesar', 'apgar5', 'apgar5r', 'dplural', 'estgest', 'combgest',
-               'gestrec10', 'dbwt', 'bwtr14']
     ordinal_unknowns = {'meduc': 9, 'fagecomb': 99, 'ufagecomb': 99, 'precare': 99, 'precare_rec': 5, 'uprevis': 99, 'previs_rec': 12,
                         'wtgain': 99, 'wtgain_rec': 9, 'cig_1': 99, 'cig_2': 99, 'cig_3': 99, 'rf_ncesar': 99, 'apgar5': 99, 'apgar5r': 5,
                         'estgest': 99, 'combgest': 99, 'gestrec10': 99, 'bwtr14': 14}
+    int_type = ['mager41', 'mager14', 'mager9', 'meduc', 'fagecomb', 'ufagecomb', 'precare', 'precare_rec', 'uprevis', 'previs_rec',
+               'wtgain', 'wtgain_rec', 'cig_1', 'cig_2', 'cig_3', 'rf_ncesar', 'apgar5', 'apgar5r', 'dplural', 'estgest', 'combgest',
+               'gestrec10', 'dbwt', 'bwtr14']
+    float_type = ['recwt']
+
     edited_cols = ['sample_id']
+
+    ordinal_unknowns_cols = [list(df.columns).index(i) for i in ordinal_unknowns.keys()]
+    for k, v in ordinal_unknowns.items():
+        df.loc[df[k] == v, k] = np.nan
+    df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df)[:, ordinal_unknowns_cols]
+    edited_cols += ordinal_unknowns_cols
+
     for c in df.columns:
         if len(df[c].unique()) == 2:
-            df[c] = df[c].map(dict(zip(set(df[c].unique()), [0,1])))
+            df[c] = df[c].map(dict(zip(set(df[c].unique()), [0, 1])))
             edited_cols.append(c)
     df[int_type] = df[int_type].astype('int64')
     df[float_type] = df[float_type].astype('float32')
     edited_cols += int_type + float_type
-    for k, v in ordinal_unknowns.items():
-        df.loc[df[k] == v, k] = df.loc[df[k] != v, k].mean()
 
-    return pd.get_dummies(df, columns=[c for c in df.columns if c not in edited_cols])
+    discrete = [c for c in df.columns if c not in edited_cols]
+    new_df = pd.concat([df, pd.get_dummies(df[discrete], columns=discrete)], axis=1)
+    dummy_cols = [c for c in new_df.columns if c not in edited_cols+discrete]
+
+    return new_df, discrete, dummy_cols
 
 

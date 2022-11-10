@@ -1,4 +1,4 @@
-name: linear_coef_matching
+name: src
 channels:
   - defaults
   - conda-forge
@@ -14,4 +14,4 @@ dependencies:
   - r-grf
   - r-matchit
   - r-matching
-prefix: /Users/qlanners/opt/anaconda3/envs/linear_coef_matching
+prefix: /Users/qlanners/opt/anaconda3/envs/src
