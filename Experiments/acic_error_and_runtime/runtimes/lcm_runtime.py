@@ -36,7 +36,7 @@ start = time.time()
 M = lcm.M
 X = M[M > 0] * df_est[covariates[M > 0]].to_numpy()
 print(X.shape)
-T = df_estimation['T'].to_numpy()
+T = df_est['T'].to_numpy()
 print(X[T == 0].shape)
 mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est,
                                 covariates=covariates, treatment='T', M=lcm.M)
