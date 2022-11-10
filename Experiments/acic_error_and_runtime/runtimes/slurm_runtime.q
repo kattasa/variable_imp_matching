@@ -22,6 +22,7 @@ for f in $folders; do
     echo "Running scripts for ${f}"
     n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
     n_splits=$(($n_splits + 0))
+    echo "${n_splits} splits"
     counter=0
     while [ $counter -lt $iters ]
     do

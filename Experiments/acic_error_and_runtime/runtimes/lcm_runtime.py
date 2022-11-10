@@ -31,4 +31,5 @@ mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est,
                                 covariates=covariates, treatment='T', M=lcm.M)
 
 sample_linear_cate(mg, lcm.covariates, lcm.M, treatment='T', outcome='Y', prune=True)
-print(time.time() - start + fit_time)
+total_time = time.time() - start + fit_time
+print(total_time)

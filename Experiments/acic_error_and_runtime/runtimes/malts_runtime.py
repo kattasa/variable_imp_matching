@@ -34,4 +34,5 @@ start = time.time()
 c_mg, t_mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est,
                                 covariates=covariates, treatment='T', M=M, combine_mg=False)
 sample_double_linear_cate(c_mg, t_mg, sample, list(covariates), M, outcome='Y', prune=False)
-print(time.time() - start + fit_time)
+total_time = time.time() - start + fit_time
+print(total_time)
