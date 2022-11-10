@@ -10,9 +10,10 @@ def lcm_fit_runtime(df_train, save_folder, split_idx):
     start = time.time()
     lcm = LCM(outcome='Y', treatment='T', data=df_train)
     lcm.fit(double_model=False)
-    print(time.time() - start)
+    fit_time = time.time() - start
     with open(f'{save_folder}/lcm_split{split_idx}.pkl', 'wb') as f:
         pickle.dump(lcm, f)
+    return fit_time
 
 
 def lcm_cate_runtime(df_est, k_est, save_folder, split_idx):
