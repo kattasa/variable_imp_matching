@@ -29,7 +29,7 @@ for f in $folders; do
       split_num=0
       while [ $split_num -lt $n_splits ]
       do
-        sbatch -o "${RESULTS_FOLDER}/${f}/lcm_fit_times.txt" -e "${RESULTS_FOLDER}/${f}/lcm_fit_times.err" --open-mode=append --mem="$memory" slurm_lcm_fit.q --export=ACIC_FOLDER="$f" --export=SPLIT_NUM="$split_num"
+        sbatch -o "${RESULTS_FOLDER}/${f}/lcm_fit_times.txt" -e "${RESULTS_FOLDER}/${f}/lcm_fit_times.err" --open-mode=append --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM="$split_num",PYTHONPATH,RESULTS_FOLDER slurm_lcm_fit.q
         ((split_num++))
       done
       ((counter++))
