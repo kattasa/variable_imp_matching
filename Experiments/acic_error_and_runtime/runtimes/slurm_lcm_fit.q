@@ -1,3 +1,5 @@
+#!/bin/bash
+#
 #SBATCH --get-user-env
 
 export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results
