@@ -14,7 +14,7 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 folders=$(ls $RESULTS_FOLDER)
 
 # iterate through array using a counter
-for f in folders; do
+for f in $folders; do
     #do something to each element of array
     echo "$f"
 done
