@@ -12,7 +12,7 @@ export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
 memory=$"8G"
-folders=$(ls -d */ $RESULTS_FOLDER)
+folders=$(ls -d $RESULTS_FOLDER */)
 echo "$folders"
 
 //for f in $folders; do
