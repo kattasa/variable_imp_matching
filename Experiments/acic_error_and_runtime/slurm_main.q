@@ -13,4 +13,4 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
-python /hpc/home/qml/linear_coef_matching/Experiments/acic_error_and_time/main_run.py
+python /hpc/home/qml/linear_coef_matching/Experiments/acic_error_and_runtime/main_run.py
