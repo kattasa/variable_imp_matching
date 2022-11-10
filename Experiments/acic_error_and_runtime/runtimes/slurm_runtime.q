@@ -24,6 +24,11 @@ for f in $folders; do
     n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
     n_splits=$(($n_splits + 0))
     echo "${n_splits} splits"
+    mkdir "${RESULTS_FOLDER}/${f}/lcm_fit_times"
+    mkdir "${RESULTS_FOLDER}/${f}/malts_fit_times"
+    mkdir "${RESULTS_FOLDER}/${f}/prognostic_fit_times"
+    mkdir "${RESULTS_FOLDER}/${f}/bart_fit_times"
+    mkdir "${RESULTS_FOLDER}/${f}/causalforest_fit_times"
     counter=0
     while [ $counter -lt $iters ]
     do
