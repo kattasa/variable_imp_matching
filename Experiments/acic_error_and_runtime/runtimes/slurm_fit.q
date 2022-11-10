@@ -16,12 +16,15 @@ folders=$(ls -d */ $RESULTS_FOLDER)
 
 # iterate through array using a counter
 for f in $folders; do
+    echo "$f"
+    f$"acic_2019-1_000/"
+    echo "$f"
     n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
     counter=0
-    while [ $counter -l 3 ]
+    while [ $counter -lt 3 ]
     do
       split_num=0
-      while [ $split_num -l $n_splits ]
+      while [ $split_num -lt $n_splits ]
       do
         sbatch -o "${RESULTS_FOLDER}/${f}/lcm_fit_times.txt" -e "${RESULTS_FOLDER}/${f}/lcm_fit_times.err" --open-mode=append --mem="$memory" slurm_lcm_fit.q --export=ACIC_FOLDER="$f" --export=SPLIT_NUM="$split_num"
         ((split_num++))
