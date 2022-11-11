@@ -12,17 +12,11 @@ acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}
 split_num = int(os.getenv('SPLIT_NUM'))
 k_est = int(os.getenv('K_EST'))
 
-print(split_num)
-print(k_est)
-
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]
 
 df_train = pd.read_csv(f'{acic_results_folder}/df_lcm_data.csv', index_col=0).loc[train_idx].reset_index(drop=True)
 df_est = pd.read_csv(f'{acic_results_folder}/df_lcm_data.csv', index_col=0).loc[est_idx].reset_index(drop=True)
-
-print(df_est.shape)
-print(df_train.shape)
 
 start = time.time()
 lcm = LCM(outcome='Y', treatment='T', data=df_train)
@@ -34,14 +28,6 @@ sample_idx = np.random.randint(0, df_est.shape[0])
 df_est = df_est[lcm.col_order]
 
 start = time.time()
-M = lcm.M
-X = M[M > 0] * df_est[covariates[M > 0]].to_numpy()
-print(X.shape)
-T = df_est['T'].to_numpy()
-print(X[T == 0].shape)
-control_nn = NearestNeighbors(n_neighbors=k_est, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 0])
-this_sample = X[sample_idx, :].reshape(1, -1)
-print(control_nn.kneighbors(this_sample, return_distance=False).reshape(-1))
 mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est, covariates=covariates,
                         treatment='T', M=lcm.M)
 

@@ -22,4 +22,5 @@ sample_idx = np.random.randint(0, df_est.shape[0])
 start = time.time()
 prog = Prognostic(Y='Y', T='T', df=df_train, binary=binary)
 cate = prog.get_sample_cate(df_est=df_est, sample_idx=sample_idx, k=k_est, binary=binary)
-print(time.time() - start)
+total_time = time.time() - start
+print(total_time)

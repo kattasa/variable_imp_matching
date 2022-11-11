@@ -21,4 +21,5 @@ sample = df_est.loc[np.random.randint(0, df_est.shape[0]), covariates].to_numpy(
 
 start = time.time()
 cate = bart_sample(outcome='Y', treatment='T', df_train=df_train, sample=sample, covariates=covariates, binary=binary)
-print(time.time() - start)
+total_time = time.time() - start
+print(total_time)
