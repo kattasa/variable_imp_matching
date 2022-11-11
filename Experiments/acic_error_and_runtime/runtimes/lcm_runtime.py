@@ -38,8 +38,11 @@ X = M[M > 0] * df_est[covariates[M > 0]].to_numpy()
 print(X.shape)
 T = df_est['T'].to_numpy()
 print(X[T == 0].shape)
-mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est,
-                                covariates=covariates, treatment='T', M=lcm.M)
+control_nn = NearestNeighbors(n_neighbors=k_est, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 0])
+this_sample = X[sample_idx, :].reshape(1, -1)
+print(control_nn.kneighbors(this_sample, return_distance=False).reshape(-1))
+mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est, covariates=covariates,
+                        treatment='T', M=lcm.M)
 
 sample_linear_cate(mg, lcm.covariates, lcm.M, treatment='T', outcome='Y', prune=True)
 total_time = time.time() - start + fit_time
