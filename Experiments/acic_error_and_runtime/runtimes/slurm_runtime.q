@@ -35,11 +35,11 @@ for f in $folders; do
       split_num=0
       while [ $split_num -lt $n_splits ]
       do
-        sbatch -o "${RESULTS_FOLDER}/${f}/lcm_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/lcm_fit_times/${split_num}_${counter}.err" --open-mode=append --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,PYTHONPATH,RESULTS_FOLDER slurm_lcm_runtime.q
-##        sbatch -o "${RESULTS_FOLDER}/${f}/malts_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/malts_fit_times/${split_num}_${counter}.err" --open-mode=append --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,PYTHONPATH,RESULTS_FOLDER slurm_malts_runtime.q
-        sbatch -o "${RESULTS_FOLDER}/${f}/prognostic_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/prognostic_fit_times/${split_num}_${counter}.err" --open-mode=append --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,PYTHONPATH,RESULTS_FOLDER slurm_prognostic_runtime.q
-        sbatch -o "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.err" --open-mode=append --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_bart_runtime.q
-        sbatch -o "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.err" --open-mode=append --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_causalforest_runtime.q
+        sbatch -o "${RESULTS_FOLDER}/${f}/lcm_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/lcm_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,PYTHONPATH,RESULTS_FOLDER slurm_lcm_runtime.q
+##        sbatch -o "${RESULTS_FOLDER}/${f}/malts_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/malts_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,PYTHONPATH,RESULTS_FOLDER slurm_malts_runtime.q
+        sbatch -o "${RESULTS_FOLDER}/${f}/prognostic_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/prognostic_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,PYTHONPATH,RESULTS_FOLDER slurm_prognostic_runtime.q
+        sbatch -o "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_bart_runtime.q
+        sbatch -o "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_causalforest_runtime.q
         ((split_num++))
       done
       ((counter++))
