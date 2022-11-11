@@ -14,7 +14,7 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
-memory=$"128G"
+memory=$"64G"
 k_est=60
 n_splits=3  # used by acic_2019
 n_sample_per_split=5000  # used by acic 2018
@@ -32,7 +32,7 @@ all_acic_2018_files=($(python -c "import glob;import os;print([f.replace('.csv',
 #    save_dir=$(printf "${RESULTS_FOLDER}/acic_2019-${acic_file}_%03d" $counter)
 #  done
 #  mkdir $save_dir
-#  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST=$k_est,SAVE_FOLDER=$save_dir,N_SPLIT=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=5000,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+#  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST=$k_est,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=5000,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
 #  ((acic_file++))
 #done
 
@@ -46,5 +46,5 @@ do
     save_dir=$(printf "${RESULTS_FOLDER}/acic_2018-${acic_file}_%03d" $counter | tr -d \"\')
   done
   mkdir $save_dir
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST=$k_est,SAVE_FOLDER=$save_dir,N_SPLIT=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=5000,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST=$k_est,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=5000,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
 done
