@@ -24,10 +24,10 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 
-acic_year = os.getenv('ACIC_YEAR')
-acic_file = os.getenv('ACIC_FILE')
+acic_year = os.getenv('ACIC_YEAR').replace("'", '').replace('"', '')
+acic_file = os.getenv('ACIC_FILE').replace("'", '').replace('"', '')
 k_est = int(os.getenv('K_EST'))
-save_folder = os.getenv('SAVE_FOLDER')
+save_folder = os.getenv('SAVE_FOLDER').replace("'", '').replace('"', '')
 n_splits = int(os.getenv('N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
 malts_max = int(os.getenv('MALTS_MAX'))
