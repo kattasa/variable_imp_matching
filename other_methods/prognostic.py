@@ -31,9 +31,9 @@ class Prognostic:
             hat_Y = self.hc.predict_proba(X_est)[:, 1]
         else:
             hat_Y = self.hc.predict(X_est)
-        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
+        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
             hat_Y[T_est == 0].reshape(-1, 1))
-        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
+        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
             hat_Y[T_est == 1].reshape(-1, 1))
         c_mg = control_nn.kneighbors(hat_Y[sample_idx].reshape(1, -1), return_distance=False).reshape(-1, )
         yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean()
@@ -47,9 +47,9 @@ class Prognostic:
             hat_Y = self.hc.predict_proba(X_est)[:, 1]
         else:
             hat_Y = self.hc.predict(X_est)
-        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
+        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
             hat_Y[T_est == 0].reshape(-1, 1))
-        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(
+        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
             hat_Y[T_est == 1].reshape(-1, 1))
         _, c_mg = control_nn.kneighbors(hat_Y.reshape(-1, 1))
         yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean(axis=1)
