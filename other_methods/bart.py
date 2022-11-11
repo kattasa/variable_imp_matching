@@ -82,7 +82,7 @@ def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False):
     if binary:
         # for some reason bart can't do one sample inference with binary outcome. so we add a dummy sample
         sample = np.concatenate([sample, np.zeros(shape=sample.shape)], axis=0)
-        return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[2][:, 0].mean() - \
-               dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[2][:, 0].mean()
+        return norm.cdf(dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[2][:, 0]).mean() - \
+               norm.cdf(dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[2][:, 0]).mean()
     return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[7][0] - \
            dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[7][0]
