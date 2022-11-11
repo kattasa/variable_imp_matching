@@ -53,23 +53,24 @@ def cate_error(acic_year, acic_file, n_splits, k_est, save_folder, print_progres
 
     times = {}
 
-    method_name = 'LASSO Coefficient Matching'
-    start = time.time()
+    # method_name = 'LASSO Coefficient Matching'
+    # start = time.time()
+    # lcm = LCM_MF(outcome='Y', treatment='T', data=df_lcm_data, n_splits=n_splits, n_repeats=1)
+    # lcm.fit(double_model=False)
+    # lcm.MG(k=k_est)
+    # lcm.CATE(cate_methods=['linear_pruned'], augmented=False)
+    # times[method_name] = time.time() - start
+    #
+    # cate_df = lcm.cate_df
+    # cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+    # cate_df['True_CATE'] = df_true['TE'].to_numpy()
+    # cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+    # cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+    # df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
+    # if print_progress:
+    #     print(f'{method_name} method complete: {time.time() - start}')
+
     lcm = LCM_MF(outcome='Y', treatment='T', data=df_lcm_data, n_splits=n_splits, n_repeats=1)
-    lcm.fit(double_model=False)
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['linear_pruned'], augmented=False)
-    times[method_name] = time.time() - start
-
-    cate_df = lcm.cate_df
-    cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-    cate_df['True_CATE'] = df_true['TE'].to_numpy()
-    cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
-    cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-    df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
-    if print_progress:
-        print(f'{method_name} method complete: {time.time() - start}')
-
     split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
     with open(f'{save_folder}/split.pkl', 'wb') as f:
         pickle.dump(split_strategy, f)
@@ -91,40 +92,40 @@ def cate_error(acic_year, acic_file, n_splits, k_est, save_folder, print_progres
     if print_progress:
         print(f'{method_name} complete: {time.time() - start}')
 
-    method_name = 'Prognostic Score Matching'
-    start = time.time()
-    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_data,
-                                                   k_est=k_est, gen_skf=split_strategy)
-    times[method_name] = time.time() - start
-
-    df_err_prog = pd.DataFrame()
-    df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
-    df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-    df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
-    df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
-    df_err = df_err.append(df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-    if print_progress:
-        print(f'{method_name} complete: {time.time() - start}')
-
-    method_name = 'BART'
-    start = time.time()
-    cate_est_bart = bart.bart('Y', 'T', df_data, gen_skf=split_strategy)
-    times[method_name] = time.time() - start
-
-    df_err_bart = pd.DataFrame()
-    df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
-    df_err_bart['Relative Error (%)'] = np.abs(
-        (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-    df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
-    df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
-    df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-    if print_progress:
-        print(f'{method_name} complete: {time.time() - start}')
-
-    method_name = 'Causal Forest'
-    start = time.time()
-    cate_est_cf = causalforest.causalforest('Y', 'T', df_data, gen_skf=split_strategy)
-    times[method_name] = time.time() - start
+    # method_name = 'Prognostic Score Matching'
+    # start = time.time()
+    # cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_data,
+    #                                                k_est=k_est, gen_skf=split_strategy)
+    # times[method_name] = time.time() - start
+    #
+    # df_err_prog = pd.DataFrame()
+    # df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
+    # df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+    # df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
+    # df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
+    # df_err = df_err.append(df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+    # if print_progress:
+    #     print(f'{method_name} complete: {time.time() - start}')
+    #
+    # method_name = 'BART'
+    # start = time.time()
+    # cate_est_bart = bart.bart('Y', 'T', df_data, gen_skf=split_strategy)
+    # times[method_name] = time.time() - start
+    #
+    # df_err_bart = pd.DataFrame()
+    # df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
+    # df_err_bart['Relative Error (%)'] = np.abs(
+    #     (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+    # df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
+    # df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
+    # df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+    # if print_progress:
+    #     print(f'{method_name} complete: {time.time() - start}')
+    #
+    # method_name = 'Causal Forest'
+    # start = time.time()
+    # cate_est_cf = causalforest.causalforest('Y', 'T', df_data, gen_skf=split_strategy)
+    # times[method_name] = time.time() - start
 
     df_err_cf = pd.DataFrame()
     df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
