@@ -14,7 +14,7 @@ all_acic_2018_files = [f.replace('.csv', '') for f in set([c.split('/')[-1].repl
 n_samples_per_split = 5000
 all_acic_2018_files = [f for f in all_acic_2018_files if f != '95baaf5faf2e421eb112e22c7fedfd7a']
 
-all_acic_2018_files = ['9d8c8568b0ac4ea4a123d89d0b057105']
+all_acic_2018_files = ['2e474ffd411b4fb085245e72de71c19a.csv2e474ffd411b4fb085245e72de71c19a']
 # for acic_file in all_acic_2019_files:
 #     acic_year = 'acic_2019'
 #     n_splits = 3
