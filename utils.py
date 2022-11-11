@@ -15,8 +15,8 @@ def get_match_groups(df_estimation, k, covariates, treatment, M, return_original
     X = df_estimation[covariates].to_numpy()
     T = df_estimation[treatment].to_numpy()
     X = M[M > 0] * X[:, M > 0]
-    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(X[T == 0])
-    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(X[T == 1])
+    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 0])
+    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 1])
     control_dist, control_mg = control_nn.kneighbors(X, return_distance=True)
     treatment_dist, treatment_mg = treatment_nn.kneighbors(X, return_distance=True)
     control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
@@ -34,8 +34,8 @@ def sample_match_group(df_estimation, sample_idx, k, covariates, treatment, M, c
     X = M[M > 0] * df_estimation[covariates[M > 0]].to_numpy()
     T = df_estimation[treatment].to_numpy()
     this_sample = X[sample_idx, :].reshape(1, -1)
-    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(X[T == 0])
-    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(X[T == 1])
+    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 0])
+    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 1])
     if combine_mg:
         return pd.concat([df_estimation.loc[df_estimation['T'] == 0].iloc[control_nn.kneighbors(this_sample, return_distance=False).reshape(-1)],
                df_estimation.loc[df_estimation['T'] == 1].iloc[treatment_nn.kneighbors(this_sample, return_distance=False).reshape(-1)]])
