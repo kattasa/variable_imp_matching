@@ -32,6 +32,7 @@ n_splits = int(os.getenv('N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
 malts_max = int(os.getenv('MALTS_MAX'))
 
+nn_retries = 5  # for some reason I keep getting a KNN internal error. until i found cause, try retries
 
 config = {'n_splits': n_splits, 'k_est': k_est}
 
@@ -75,7 +76,16 @@ method_name = 'LASSO Coefficient Matching'
 start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_lcm_data, n_splits=n_splits, n_repeats=1)
 lcm.fit(double_model=False)
-lcm.MG(k=k_est)
+attempt = 0
+while attempt < nn_retries:
+    try:
+        lcm.MG(k=k_est)
+        break
+    except RuntimeError as e:
+        print(f'{method_name} attempt {attempt+1}: {e}')
+        attempt +=1
+        if attempt == nn_retries:
+            raise e
 lcm.CATE(cate_methods=['linear_pruned'], augmented=False)
 times[method_name] = time.time() - start
 
@@ -93,12 +103,20 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 
 if run_malts:
     method_name = 'MALTS Matching'
-    start = time.time()
-    m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est,
-                         n_splits=n_splits, estimator='linear', smooth_cate=False,
-                         gen_skf=split_strategy)
-    times[method_name] = time.time() - start
-
+    attempt = 0
+    while attempt < nn_retries:
+        try:
+            start = time.time()
+            m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est,
+                                 n_splits=n_splits, estimator='linear', smooth_cate=False,
+                                 gen_skf=split_strategy)
+            times[method_name] = time.time() - start
+            break
+        except RuntimeError as e:
+            print(f'{method_name} attempt {attempt+1}: {e}')
+            attempt += 1
+            if attempt == nn_retries:
+                raise e
     cate_df = m.CATE_df
     cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
     cate_df['True_CATE'] = df_true['TE'].to_numpy()
@@ -109,11 +127,19 @@ if run_malts:
     print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'Prognostic Score Matching'
-start = time.time()
-cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_data,
-                                               k_est=k_est, gen_skf=split_strategy)
-times[method_name] = time.time() - start
-
+attempt = 0
+while attempt < nn_retries:
+    try:
+        start = time.time()
+        cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_data,
+                                                       k_est=k_est, gen_skf=split_strategy)
+        times[method_name] = time.time() - start
+        break
+    except RuntimeError as e:
+        print(f'{method_name} attempt {attempt + 1}: {e}')
+        attempt += 1
+        if attempt == nn_retries:
+            raise e
 df_err_prog = pd.DataFrame()
 df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
 df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
