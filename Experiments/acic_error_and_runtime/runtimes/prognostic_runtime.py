@@ -6,6 +6,8 @@ import time
 
 from other_methods.prognostic import Prognostic
 
+np.random.seed(0)
+
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]
 split_num = int(os.getenv('SPLIT_NUM'))
 k_est = int(os.getenv('K_EST'))

@@ -89,10 +89,12 @@ class LCM:
             M_hat = M_hat if not np.all(M_hat == 0) else np.ones(self.p)
         self.M = (M_hat / np.sum(M_hat)) * self.p
         if return_score:
-            return (model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])) * \
-                   (np.sum(self.T == 0)/ self.T.shape[0]) + \
-                   (model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])) * \
-                   (np.sum(self.T == 1) / self.T.shape[0]) if double_model else model.score(self.X, self.Y)
+            if double_model:
+                return (model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])) * \
+                       (np.sum(self.T == 0)/ self.T.shape[0]) + \
+                       (model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])) * \
+                       (np.sum(self.T == 1) / self.T.shape[0]) if double_model else model.score(self.X, self.Y)
+            return model.score(self.X, self.Y)
 
     def get_matched_groups(self, df_estimation, k=10, return_original_idx=False, check_est_df=False):
         """Get the match groups for a given
