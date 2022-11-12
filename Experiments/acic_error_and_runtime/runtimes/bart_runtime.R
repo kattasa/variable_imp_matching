@@ -9,7 +9,7 @@ SPLIT_NUM <- Sys.getenv("SPLIT_NUM")
 acic_results_folder <- paste(RESULTS_FOLDER, ACIC_FOLDER, sep="/")
 split_num = strtoi(SPLIT_NUM)
 
-source_python("/Users/qlanners/projects/linear_coef_matching/Experiments/acic_error_and_runtime/runtimes/pickle_load_split.py")
+source_python("/hpc/home/qml/linear_coef_matching/Experiments/acic_error_and_runtime/runtimes/pickle_load_split.py")
 
 idx <- pickle_load_split(acic_results_folder, split_num)
 
