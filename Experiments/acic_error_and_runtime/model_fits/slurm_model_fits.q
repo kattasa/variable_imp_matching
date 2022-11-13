@@ -24,7 +24,7 @@ for f in $folders; do
     while [ $counter -lt $iters ]
     do
       split_num=0
-      while [ $split_num -lt $n_splits
+      while [ $split_num -lt $n_splits ]
       do
         sbatch -o "${RESULTS_FOLDER}/${f}/lcm_model_fit_scores/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/lcm_model_fit_scores/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,RESULTS_FOLDER slurm_lcm_model_fit.q
         ((split_num++))
