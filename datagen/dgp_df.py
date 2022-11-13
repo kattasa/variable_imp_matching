@@ -151,20 +151,20 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
 
 def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     if os.path.isfile(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv'):
-        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv')
+        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv').set_index('sample_id')
         with open(f'{ACIC_2018_FOLDER}/covariates/x_discrete.csv') as d:
             discrete = d.read().replace('\n', '').split(',')
         with open(f'{ACIC_2018_FOLDER}/covariates/x_dummy.csv') as d:
             dummy_cols = d.read().replace('\n', '').split(',')
     else:
-        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv')
+        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv').set_index('sample_id')
         df, discrete, dummy_cols = clean_2018_covariates(df)
     df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}.csv')
     df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}_cf.csv')
     df_cf = df_cf[['sample_id', 'y0', 'y1']]
     x_cols = [c for c in df.columns if c != 'sample_id']
-    df = df.join(df_results.set_index('sample_id'), on='sample_id', how='inner')
-    df = df.join(df_cf.set_index('sample_id'), on='sample_id', how='inner')
+    df = df.join(df_results.set_index('sample_id'), how='inner')
+    df = df.join(df_cf.set_index('sample_id'), how='inner')
     df = df.rename(columns={'z': 'T', 'y': 'Y', 'y0': 'Y0_true', 'y1': 'Y1_true'})
     df['TE'] = df['Y1_true'] - df['Y0_true']
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])

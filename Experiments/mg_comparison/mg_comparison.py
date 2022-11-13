@@ -1,59 +1,49 @@
 import json
 import numpy as np
+import os
 import pandas as pd
 import time
-
-import pymalts
+import warnings
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import seaborn as sns
 
-import sys
-sys.path.append("..")
-from helpers import get_data, create_folder
-sys.path.append("..")
-from MALTS.amect import Amect
-from other_methods.prognostic import prognostic
+from Experiments.helpers import get_data
+from other_methods import pymalts, bart, causalforest, prognostic
+from src.linear_coef_matching_mf import LCM_MF
+import pickle
 
-data = 'dense_continuous'
-num_samples = 20000
-num_train = 2500
-k_est = 50
+warnings.filterwarnings("ignore")
+np.random.seed(0)
 
-nci = 45
-ndi = 0
-ncu = 300
-ndu = 0
-
+acic_folder = '/Users/qlanners/projects/linear_coef_matching/Experiments/acic_error_and_runtime/Results/acic_2018-2e474ffd411b4fb085245e72de71c19a_000'
 print_progress = True
-config = {'k_est': k_est}
-df_train, df_est, df_true, discrete, config = get_data(data, num_samples, config, imp_c=nci, imp_d=ndi, unimp_c=ncu,
-                                                       unimp_d=ndu, n_train=num_train)
 
-save_folder = create_folder('mg_comp', print_progress)
-with open(f'{save_folder}/config.txt', 'w') as f:
-    json.dump(config, f, indent=2)
 
-start = time.time()
-ad_m = Amect('Y', 'T', df_train)
-ad_m.fit()
-if print_progress:
-    print(f'AdMALTS fit {time.time() - start}')
-    print(f'MC Nonzero weights: {np.sum(ad_m.M_C != 0)}')
-    print(f'MC >0.5 weights: {np.sum(ad_m.M_C > 0.5)}')
-c_mg, t_mg, _, _ = ad_m.get_matched_groups(df_est, k=k_est)
-print(f'MG: {time.time() - start}')
-a_cate = ad_m.CATE(df_est, c_mg, t_mg, method='mean')
-print(f'Mean CATE: {time.time() - start}')
-a_cate = ad_m.CATE(df_est, c_mg, t_mg, method='linear_pruned')
-print(f'Linear CATE: {time.time() - start}')
+with open(f'{acic_folder}/config.txt') as c:
+    config = json.loads(c.read())
+n_splits = config['n_splits']
+k_est = config['k_est']
 
-py_m = pymalts.malts('Y', 'T', df_train, discrete)
-py_m.fit()
-if print_progress:
-    print(f'MALTS fit {time.time() - start}')
+df_data =pd.read_csv(f'{acic_folder}/df_data.csv', index_col=0)
+df_lcm_data =pd.read_csv(f'{acic_folder}/df_lcm_data.csv', index_col=0)
 
-prog = prognostic('Y', 'T', df_train, 'lasso')
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_lcm_data, n_splits=n_splits, n_repeats=1)
+lcm.fit(double_model=False)
+print(f'Nonzero weights: {[np.sum(m > 0) for m in lcm.M_list]}')
+print(np.array(lcm.covariates)[np.argsort(-lcm.M_list[0])][:8])
+# lcm.MG(k=k_est)
+# if print_progress:
+#     print(f'M Nonzero weights: {np.sum(ad_m.M_C != 0)}')
+#     print(f'MC >0.5 weights: {np.sum(ad_m.M_C > 0.5)}')
+
+# py_m = pymalts.malts('Y', 'T', df_train, discrete)
+# py_m.fit()
+# if print_progress:
+#     print(f'MALTS fit {time.time() - start}')
+
+prog = prognostic.prognostic_cv('Y', 'T', df_data, k_est=k_est, gen_skf=lcm.gen_skf)
 if print_progress:
     print(f'Prognostic fit {time.time() - start}')
 
