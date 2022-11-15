@@ -17,8 +17,8 @@ k_est = int(os.getenv('K_EST'))
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]
 
-df_train = pd.read_csv(f'{acic_results_folder}/df_lcm_data.csv', index_col=0).loc[train_idx].reset_index(drop=True)
-df_est = pd.read_csv(f'{acic_results_folder}/df_lcm_data.csv', index_col=0).loc[est_idx].reset_index(drop=True)
+df_train = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[train_idx].reset_index(drop=True)
+df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[est_idx].reset_index(drop=True)
 
 start = time.time()
 lcm = LCM(outcome='Y', treatment='T', data=df_train)

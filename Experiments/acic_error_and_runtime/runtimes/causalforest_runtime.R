@@ -13,10 +13,10 @@ source_python("/hpc/home/qml/linear_coef_matching/Experiments/acic_error_and_run
 
 idx <- pickle_load_split(acic_results_folder, split_num)
 
-df_train <- read.csv(paste(acic_results_folder, "df_data.csv", sep=""))[unlist(idx[2]),]
+df_train <- read.csv(paste(acic_results_folder, "df_dummy_data.csv", sep=""))[unlist(idx[2]),]
 df_train <- subset(df_train, select = -c(X) )
 
-sample <- read.csv(paste(acic_results_folder, "df_data.csv", sep=""))[sample(unlist(idx[2]), 1),]
+sample <- read.csv(paste(acic_results_folder, "df_dummy_data.csv", sep=""))[sample(unlist(idx[2]), 1),]
 sample <- subset(sample, select = -c(X,T,Y) )
 
 

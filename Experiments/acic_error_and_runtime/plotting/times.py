@@ -60,13 +60,15 @@ for f in all_folders:
         all_times = all_times.join(pd.DataFrame([times], index=[label]).T)
 
 all_times = all_times.reset_index().melt(id_vars=['index'])
-all_times.columns = ['Method', 'ACIC File', 'Runtime']
-all_times = all_times.sort_values('ACIC File')
+all_times.columns = ['Method', 'ACIC File', 'Single CATE Runtime (s)']
+all_times[['acic_year', 'acic_file_no']] = all_times['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
+all_times = all_times.sort_values(['acic_year', 'acic_file_no'])
+all_times = all_times.drop(columns=['acic_year', 'acic_file_no'])
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-ax = sns.catplot(data=all_times[all_times['Method'] != 'MALTS Matching'], x="ACIC File", y="Runtime", hue="Method", kind="bar")
+ax = sns.catplot(data=all_times, x="ACIC File", y="Single CATE Runtime (s)", hue="Method", kind="bar")
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.show()

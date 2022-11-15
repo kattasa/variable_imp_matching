@@ -44,8 +44,6 @@ print(np.array(lcm.covariates)[np.argsort(-lcm.M_list[0])][:8])
 #     print(f'MALTS fit {time.time() - start}')
 
 prog = prognostic.prognostic_cv('Y', 'T', df_data, k_est=k_est, gen_skf=lcm.gen_skf)
-if print_progress:
-    print(f'Prognostic fit {time.time() - start}')
 
 a_mg = ad_m.get_matched_groups(df_est, k=k_est)
 m_mg = py_m.get_matched_groups(df_est, k=k_est)

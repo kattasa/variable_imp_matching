@@ -120,13 +120,14 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
         rename_cols[f'V{i+1}'] = f'X{i}'
         x_cols.append(f'X{i}')
     df = df.rename(columns=rename_cols)
-    discrete = []
+    binary = []
+    categorical = []
     dummy_cols = []
     for i in range(len(x_cols)):
         if df.iloc[:, 2 + i].unique().shape[0] <= 2:
-            discrete.append(f'X{i}')
+            binary.append(f'X{i}')
         elif df.iloc[:, 2 + i].unique().shape[0] <= dummy_cutoff and df.iloc[:, 2 + i].dtype == int:
-            discrete.append(f'X{i}')
+            categorical.append(f'X{i}')
             dummy_cols.append(pd.get_dummies(df.iloc[:, 2+i]))
     dummy_cols = pd.concat(dummy_cols, axis=1)
     dummy_cols.columns = [f'X{i}' for i in range(len(x_cols), len(x_cols)+dummy_cols.shape[1])]
@@ -139,35 +140,39 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
     df_cf = df_cf.rename(columns={'EY1': 'Y1_true', 'EY0': 'Y0_true'})
     df_cf['TE'] = df_cf['Y1_true'] - df_cf['Y0_true']
     df = pd.concat([df, df_cf], axis=1)
-    df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+    continuous = [x for x in x_cols if x not in binary + categorical + list(dummy_cols.columns)]
+    df[continuous] = StandardScaler().fit_transform(df[continuous])
 
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols,\
-           discrete, list(dummy_cols.columns)
+           binary, categorical, list(dummy_cols.columns)
 
 
 def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     if os.path.isfile(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv'):
         df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv').set_index('sample_id')
-        with open(f'{ACIC_2018_FOLDER}/covariates/x_discrete.csv') as d:
-            discrete = d.read().replace('\n', '').split(',')
+        with open(f'{ACIC_2018_FOLDER}/covariates/x_binary.csv') as d:
+            binary = d.read().replace('\n', '').split(',')
+        with open(f'{ACIC_2018_FOLDER}/covariates/x_categorical.csv') as d:
+            categorical = d.read().replace('\n', '').split(',')
         with open(f'{ACIC_2018_FOLDER}/covariates/x_dummy.csv') as d:
             dummy_cols = d.read().replace('\n', '').split(',')
     else:
         df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv').set_index('sample_id')
-        df, discrete, dummy_cols = clean_2018_covariates(df)
+        df, binary, categorical, dummy_cols = clean_2018_covariates(df)
     df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}.csv')
     df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}_cf.csv')
     df_cf = df_cf[['sample_id', 'y0', 'y1']]
     x_cols = [c for c in df.columns if c != 'sample_id']
+    continuous = [x for x in x_cols if x not in binary + categorical + dummy_cols]
     df = df.join(df_results.set_index('sample_id'), how='inner')
     df = df.join(df_cf.set_index('sample_id'), how='inner')
     df = df.rename(columns={'z': 'T', 'y': 'Y', 'y0': 'Y0_true', 'y1': 'Y1_true'})
     df['TE'] = df['Y1_true'] - df['Y0_true']
-    df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+    df[continuous] = StandardScaler().fit_transform(df[continuous])
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)
     else:
@@ -177,7 +182,7 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, \
-           discrete, dummy_cols
+           binary, categorical, dummy_cols
 
 
 def dgp_acic_2022_df(track=2):
@@ -253,23 +258,30 @@ def clean_2018_covariates(df):
     edited_cols = ['sample_id']
 
     ordinal_unknowns_cols = [list(df.columns).index(i) for i in ordinal_unknowns.keys()]
+    print('a')
     for k, v in ordinal_unknowns.items():
         df.loc[df[k] == v, k] = np.nan
     df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df)[:, ordinal_unknowns_cols]
     edited_cols += ordinal_unknowns_cols
+    print('1')
 
+    binary = []
     for c in df.columns:
         if len(df[c].unique()) == 2:
             df[c] = df[c].map(dict(zip(set(df[c].unique()), [0, 1])))
             edited_cols.append(c)
+            binary.append(c)
+    print('b')
     df[int_type] = df[int_type].astype('int64')
     df[float_type] = df[float_type].astype('float32')
     edited_cols += int_type + float_type
 
-    discrete = [c for c in df.columns if c not in edited_cols]
-    new_df = pd.concat([df, pd.get_dummies(df[discrete], columns=discrete)], axis=1)
-    dummy_cols = [c for c in new_df.columns if c not in edited_cols+discrete]
+    categorical = [c for c in df.columns if c not in edited_cols]
+    print('c')
+    new_df = pd.concat([df, pd.get_dummies(df[categorical], columns=categorical)], axis=1)
+    dummy_cols = [c for c in new_df.columns if c not in edited_cols+categorical]
+    print('d')
 
-    return new_df, discrete, dummy_cols
+    return new_df, binary, categorical, dummy_cols
 
 

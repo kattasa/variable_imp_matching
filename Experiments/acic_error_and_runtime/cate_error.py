@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
-from Experiments.helpers import get_data
+from Experiments.helpers import get_acic_data
 from other_methods import pymalts, bart, causalforest, prognostic
 from src.linear_coef_matching_mf import LCM_MF
 import pickle
@@ -45,7 +45,7 @@ print(f'Running {acic_year} file {acic_file}...')
 
 total_time = time.time()
 
-df_data, df_true, discrete, dummy_cols = get_data(data=acic_year, config={'acic_file': acic_file, 'n_train': 0})
+df_data, df_true, binary, categorical, dummy_cols = get_acic_data(year=acic_year, file=acic_file, n_train=0)
 df_true.to_csv(f'{save_folder}/df_true.csv')
 
 if acic_year == 'acic_2018':
@@ -58,23 +58,25 @@ if df_data.shape[0] > malts_max:
     run_malts = False
 
 
-df_lcm_data = df_data.copy(deep=True)
+df_dummy_data = df_data.copy(deep=True)
 if dummy_cols is not None:
     df_data = df_data.drop(columns=dummy_cols)
-    df_lcm_data = df_lcm_data.drop(columns=discrete)
+    df_dummy_data = df_dummy_data.drop(columns=categorical)
     with open(f'{save_folder}/dummy_cols.txt', 'w') as f:
         f.write(str(dummy_cols))
-    df_lcm_data.to_csv(f'{save_folder}/df_lcm_data.csv')
+    df_dummy_data.to_csv(f'{save_folder}/df_dummy_data.csv')
 df_data.to_csv(f'{save_folder}/df_data.csv')
-with open(f'{save_folder}/discrete_cols.txt', 'w') as f:
-    f.write(str(discrete))
+with open(f'{save_folder}/binary_cols.txt', 'w') as f:
+    f.write(str(binary))
+with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
+    f.write(str(categorical))
 
 
 times = {}
 
 method_name = 'LASSO Coefficient Matching'
 start = time.time()
-lcm = LCM_MF(outcome='Y', treatment='T', data=df_lcm_data, n_splits=n_splits, n_repeats=1)
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
 lcm.fit(double_model=False)
 attempt = 0
 while attempt < nn_retries:
@@ -107,7 +109,7 @@ if run_malts:
     while attempt < nn_retries:
         try:
             start = time.time()
-            m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est,
+            m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
                                  n_splits=n_splits, estimator='linear', smooth_cate=False,
                                  gen_skf=split_strategy)
             times[method_name] = time.time() - start
@@ -131,7 +133,7 @@ attempt = 0
 while attempt < nn_retries:
     try:
         start = time.time()
-        cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_data,
+        cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
                                                        k_est=k_est, gen_skf=split_strategy)
         times[method_name] = time.time() - start
         break
@@ -150,7 +152,7 @@ print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'BART'
 start = time.time()
-cate_est_bart = bart.bart('Y', 'T', df_data, gen_skf=split_strategy)
+cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy)
 times[method_name] = time.time() - start
 
 df_err_bart = pd.DataFrame()
@@ -164,7 +166,7 @@ print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'Causal Forest'
 start = time.time()
-cate_est_cf = causalforest.causalforest('Y', 'T', df_data, gen_skf=split_strategy)
+cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
 times[method_name] = time.time() - start
 
 df_err_cf = pd.DataFrame()
