@@ -20,7 +20,7 @@ memory=$"16G"
 
 for n_samples in 250 500;
 do
-  save_dir=$"{RESULTS_FOLDER}/${n_samples}_samples"
+  save_dir="${RESULTS_FOLDER}/${n_samples}_samples"
   mkdir $save_dir
   sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=SAVE_FOLDER=$save_dir,N_SAMPLES=$n_samples,N_SPLITS,N_REPEATS,N_ITERS,K_EST,PYTHONPATH,R_HOME slurm_coverage.q
   ((acic_file++))
