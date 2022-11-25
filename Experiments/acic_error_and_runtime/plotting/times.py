@@ -65,10 +65,27 @@ all_times[['acic_year', 'acic_file_no']] = all_times['ACIC File'].str.split(expa
 all_times = all_times.sort_values(['acic_year', 'acic_file_no'])
 all_times = all_times.drop(columns=['acic_year', 'acic_file_no'])
 
+plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
 ax = sns.catplot(data=all_times, x="ACIC File", y="Single CATE Runtime (s)", hue="Method", kind="bar")
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
-plt.show()
+plt.legend(loc='upper right', prop={'size': 10})
+plt.yscale('log')
+plt.savefig('plots/acic_cate_runtimes.png')
+
+rankings = all_times.sort_values(['ACIC File', 'Single CATE Runtime (s)'],ascending=True)
+n_methods = rankings['Method'].nunique()
+rankings['Ranking'] = list(range(1, n_methods+1))*(rankings.shape[0] // n_methods)
+rankings = rankings[~rankings['Single CATE Runtime (s)'].isna()]
+
+plt.figure()
+sns.set_context("paper")
+sns.set_style("darkgrid")
+sns.set(font_scale=1)
+sns.boxplot(data=rankings, x="Ranking", y="Method")
+plt.xticks(rotation=65, horizontalalignment='right')
+plt.tight_layout()
+plt.savefig('plots/acic_cate_runtimes_ranking.png')

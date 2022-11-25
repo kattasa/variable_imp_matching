@@ -27,7 +27,7 @@ def get_acic_data(year, file, n_train):
 
 def get_data(data, config):
     if 'dense' in data:
-        df_train, df_data, df_true, x_cols, discrete = dgp_dense_mixed_endo_df(config['num_samples'], config['imp_c'],
+        df_train, df_data, df_true, x_cols, binary = dgp_dense_mixed_endo_df(config['num_samples'], config['imp_c'],
                                                                                config['imp_d'], config['unimp_c'],
                                                                                config['unimp_d'],
                                                                                n_train=config['n_train'])
@@ -40,5 +40,5 @@ def get_data(data, config):
                                                               n_imp=config['imp_c'], n_unimp=config['unimp_c'],
                                                               n_train=config['n_train'])
     if config['n_train'] > 0:
-        return df_train, df_data, df_true, discrete
-    return df_data, df_true, discrete
+        return df_train, df_data, df_true, binary
+    return df_data, df_true, binary

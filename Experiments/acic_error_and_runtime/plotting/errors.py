@@ -29,16 +29,33 @@ for f in all_folders:
         failed_files.append(f.split('/')[-2])
 
 all_errors = all_errors.reset_index().melt(id_vars=['index'])
-all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%)']
+all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%) (log)']
 all_errors[['acic_year', 'acic_file_no']] = all_errors['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
 all_errors = all_errors.sort_values(['acic_year', 'acic_file_no'])
 all_errors = all_errors.drop(columns=['acic_year', 'acic_file_no'])
 
+plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-ax = sns.catplot(data=all_errors, x="ACIC File", y="Median Relative Error (%)", hue="Method", kind="bar")
+sns.catplot(data=all_errors, x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", kind="bar", legend=False,
+            aspect=3/2)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
+plt.legend(loc='upper right', prop={'size': 10})
 plt.yscale('log')
-plt.show()
+plt.savefig('plots/acic_cate_errors.png')
+
+rankings = all_errors.sort_values(['ACIC File','Median Relative Error (%) (log)'],ascending=True)
+n_methods = rankings['Method'].nunique()
+rankings['Ranking'] = list(range(1, n_methods+1))*(rankings.shape[0] // n_methods)
+rankings = rankings[~rankings['Median Relative Error (%) (log)'].isna()]
+
+plt.figure()
+sns.set_context("paper")
+sns.set_style("darkgrid")
+sns.set(font_scale=1)
+sns.boxplot(data=rankings, x="Ranking", y="Method")
+plt.xticks(rotation=65, horizontalalignment='right')
+plt.tight_layout()
+plt.savefig('plots/acic_cate_errors_ranking.png')

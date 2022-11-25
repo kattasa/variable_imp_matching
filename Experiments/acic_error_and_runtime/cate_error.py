@@ -16,7 +16,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from Experiments.helpers import get_acic_data
-from other_methods import pymalts, bart, causalforest, prognostic
+from other_methods import pymalts, bart, causalforest, prognostic, doubleml
 from src.linear_coef_matching_mf import LCM_MF
 import pickle
 
@@ -102,6 +102,22 @@ print(f'{method_name} method complete: {time.time() - start}')
 split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
+
+
+method_name = 'DoubleML'
+start = time.time()
+cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+times[method_name] = time.time() - start
+
+# df_err_bart = pd.DataFrame()
+# df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
+# df_err_bart['Relative Error (%)'] = np.abs(
+#     (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+# df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
+# df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
+# df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+# print(f'{method_name} complete: {time.time() - start}')
+
 
 if run_malts:
     method_name = 'MALTS Matching'

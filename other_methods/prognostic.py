@@ -5,8 +5,9 @@ Created on Mon Feb 24 15:01:21 2020
 @author: harshparikh
 """
 
-import sklearn.ensemble as ensemble
+import numpy as np
 import pandas as pd
+import sklearn.ensemble as ensemble
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.neighbors import NearestNeighbors
@@ -53,10 +54,10 @@ class Prognostic:
             hat_Y[T_est == 1].reshape(-1, 1))
         _, c_mg = control_nn.kneighbors(hat_Y.reshape(-1, 1))
         yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean(axis=1)
-        c_mg = pd.DataFrame(df_est[T_est == 0].index[c_mg], index=df_est.index)
+        c_mg = pd.DataFrame(np.array(df_est.loc[T_est == 0].index)[c_mg])
         _, t_mg = treatment_nn.kneighbors(hat_Y.reshape(-1, 1))
         yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean(axis=1)
-        t_mg = pd.DataFrame(df_est[T_est == 1].index[t_mg], index=df_est.index)
+        t_mg = pd.DataFrame(np.array(df_est.loc[T_est == 1].index)[t_mg])
         df_mg = pd.DataFrame([yc, yt, T_est]).T
         df_mg.columns = ['Yc', 'Yt', 'T']
         df_mg['CATE'] = df_mg['Yt'] - df_mg['Yc']

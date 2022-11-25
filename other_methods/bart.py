@@ -43,11 +43,13 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
         #
         Xtest = df_est[covariates].to_numpy()
         bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False)
+        # bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, ntree=500, ndpost=10000)
         if discrete_outcome:
             y_c_hat_bart = norm.cdf(bart_res_c[2]).mean(axis=0)
         else:
             y_c_hat_bart = np.array(bart_res_c[7])
         bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False)
+        # bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, ntree=500, ndpost=10000)
         if discrete_outcome:
             y_t_hat_bart = norm.cdf(bart_res_t[2]).mean(axis=0)
         else:
@@ -69,7 +71,7 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
     if result == 'full':
-        return cate_est, control_preds, treatment_preds
+        return cate_est, control_preds.sort_index(), treatment_preds.sort_index()
     return cate_est
 
 def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False):

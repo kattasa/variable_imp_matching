@@ -66,14 +66,14 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     df = pd.DataFrame(np.hstack([x, x2]), columns = list( ['X%d'%(j) for j in range(num_cov_dense + num_covs_unimportant)] ))
     df['Y'] = y
     df['T'] = T
-    discrete = ['X%d'%(j) for j in range(num_cont_imp,num_cov_dense)] + ['X%d'%(j) for j in range(num_cov_dense + num_cont_unimp, num_cov_dense + num_covs_unimportant)]
+    binary = ['X%d'%(j) for j in range(num_cont_imp,num_cov_dense)] + ['X%d'%(j) for j in range(num_cov_dense + num_cont_unimp, num_cov_dense + num_covs_unimportant)]
     df_true = pd.DataFrame()
     df_true['Y1'] = y1
     df_true['Y0'] = y0
     df_true['TE'] = te
     df_true['Y0_true'] = y0_true
     df_true['Y1_true'] = y1_true
-    return df, df_true, discrete
+    return df, df_true, binary
 
 
 def dgp_friedman(n):

@@ -17,9 +17,9 @@ class LCM_MF:
 
         self.col_order = [*self.covariates, self.treatment, self.outcome]
         self.data = data[self.col_order].reset_index(drop=True)
+        self.binary = self.data[self.outcome].nunique() == 2
 
         skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
-        self.propensity_model = None
         self.gen_skf = list(skf.split(data, data[treatment]))
         self.M_list = []
         self.model_prop_score_list = []
@@ -31,17 +31,23 @@ class LCM_MF:
         self.T_MG_distance = []
         self.cates_list = []
         self.cate_df = None
+        self.est_C_list = []
+        self.est_T_list = []
 
-    def fit(self, params=None, double_model=False):
+    def fit(self, params=None, double_model=False, augmented_est=None):
         self.M_list = []
         self.col_orders = []
         for est_idx, train_idx in self.gen_skf:
             df_train = self.data.loc[train_idx]
 
-            m = LCM(outcome=self.outcome, treatment=self.treatment, data=df_train)
+            m = LCM(outcome=self.outcome, treatment=self.treatment, data=df_train, binary=self.binary)
             m.fit(params=params, double_model=double_model)
             self.M_list.append(m.M)
             self.col_orders.append(m.col_order)
+            m.augment(augmented_est)
+            self.est_C_list.append(m.est_C)
+            self.est_T_list.append(m.est_T)
+
 
     def MG(self, k=80, treatment=None):
         if treatment is None:
@@ -66,7 +72,10 @@ class LCM_MF:
             self.T_MG_distance.append(treatment_dist)
             i += 1
 
-    def CATE(self, cate_methods=['linear'], augmented=False, outcome=None, treatment=None):
+    def CATE(self, cate_methods=None, outcome=None, treatment=None, precomputed_control_preds=None,
+             precomputed_treatment_preds=None):
+        if cate_methods is None:
+            cate_methods = [['linear_pruned', False]]
         if outcome is None:
             outcome = self.outcome
         if treatment is None:
@@ -76,10 +85,19 @@ class LCM_MF:
         for est_idx, train_idx in self.gen_skf:
             df_estimation = self.data.loc[est_idx]
             cates = []
-            for method in cate_methods:
+            if (precomputed_control_preds is not None)  and (precomputed_treatment_preds is not None):
+                control_preds = np.array(precomputed_control_preds[i])
+                treatment_preds = np.array(precomputed_treatment_preds[i])
+            elif self.binary:
+                control_preds = self.est_C_list[i].predict_proba(df_estimation[self.covariates])[:, 1]
+                treatment_preds = self.est_T_list[i].predict_proba(df_estimation[self.covariates])[:, 1]
+            else:
+                control_preds = self.est_C_list[i].predict(df_estimation[self.covariates])
+                treatment_preds = self.est_T_list[i].predict(df_estimation[self.covariates])
+            for method, augmented in cate_methods:
                 cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method, self.covariates,
-                                       outcome, treatment, None, None, self.M_list[i],
-                                       augmented=augmented, control_preds=None, treatment_preds=None,
+                                       outcome, treatment, self.M_list[i], augmented=augmented,
+                                       control_preds=control_preds, treatment_preds=treatment_preds,
                                        check_est_df=False)
                              )
             cates = pd.DataFrame(cates).T
@@ -89,9 +107,9 @@ class LCM_MF:
         self.cate_df = pd.concat(self.cates_list, axis=1).sort_index()
         self.cate_df['avg.CATE'] = self.cate_df.mean(axis=1)
         self.cate_df['std.CATE'] = self.cate_df.iloc[:, :-1].std(axis=1)
-        for method in cate_methods:
-            self.cate_df[f'avg.CATE_{method}'] = self.cate_df[f'CATE_{method}'].mean(axis=1)
-            self.cate_df[f'std.CATE_{method}'] = self.cate_df[f'CATE_{method}'].std(axis=1)
+        for method, augmented in cate_methods:
+            self.cate_df[f'avg.CATE_{method}{"_augmented" if augmented else ""}'] = self.cate_df[f'CATE_{method}{"_augmented" if augmented else ""}'].mean(axis=1)
+            self.cate_df[f'std.CATE_{method}{"_augmented" if augmented else ""}'] = self.cate_df[f'CATE_{method}{"_augmented" if augmented else ""}'].std(axis=1)
         self.cate_df[self.outcome] = self.data[self.outcome]
         self.cate_df[self.treatment] = self.data[self.treatment]
 

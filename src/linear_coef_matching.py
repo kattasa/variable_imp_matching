@@ -7,6 +7,8 @@ Created on Sat May 14 2022
 """
 import numpy as np
 
+from sklearn.base import clone as clone_est
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 import sklearn.linear_model as linear
 
 from utils import get_match_groups, get_CATES
@@ -56,7 +58,7 @@ class LCM:
     check_df_estimation(df_estimation):
         checks df_estimation is properly formatted.
     """
-    def __init__(self, outcome, treatment, data):
+    def __init__(self, outcome, treatment, data, binary=False):
         self.n, self.p =data.shape
         self.p -= 2
         self.outcome = outcome
@@ -64,10 +66,15 @@ class LCM:
         self.covariates = [c for c in data.columns if c not in [outcome, treatment]]
         self.col_order = [*self.covariates, self.treatment, self.outcome]
         data = data[self.col_order]
+        self.binary = binary
         self.X = data[self.col_order[:-1]].to_numpy()
         self.T = data[self.treatment].to_numpy()
         self.Y = data[self.outcome].to_numpy()
         self.M = None
+        self.M_C = None
+        self.M_T = None
+        self.est_C = None
+        self.est_T = None
 
     def fit(self, params=None, double_model=False, return_score=False, random_state=0):
         if params is None:
@@ -76,25 +83,18 @@ class LCM:
         if double_model:
             model_C = linear.Lasso(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
             model_T = linear.Lasso(**params).fit(self.X[self.T == 1, :-1], self.Y_T[self.T == 1])
+            M_C_hat = np.abs(model_C.coef_).reshape(-1,)
+            M_T_hat = np.abs(model_T.coef_).reshape(-1,)
+            self.M_C = M_C_hat / np.sum(M_C_hat) * self.p if not np.all(M_C_hat == 0) else np.ones(self.p)
+            self.M_T = M_T_hat / np.sum(M_T_hat) * self.p if not np.all(M_T_hat == 0) else np.ones(self.p)
         else:
             model = linear.Lasso(**params).fit(self.X, self.Y)
-        if double_model:
-            M_C_hat = np.abs(self.model_C.coef_).reshape(-1,)
-            M_T_hat = np.abs(self.model_T.coef_).reshape(-1,)
-            M_C_hat = M_C_hat / np.sum(M_C_hat) if not np.all(M_C_hat == 0) else np.zeros(self.p)
-            M_T_hat = M_T_hat / np.sum(M_T_hat) if not np.all(M_T_hat == 0) else np.zeros(self.p)
-            M_hat = (M_C_hat * (np.sum(self.T == 0) / self.T.shape[0])) + \
-                    (M_T_hat * (np.sum(self.T == 0) / self.T.shape[0]))
-        else:
             M_hat = np.abs(model.coef_[:-1]).reshape(-1,)
-            M_hat = M_hat if not np.all(M_hat == 0) else np.ones(self.p)
-        self.M = (M_hat / np.sum(M_hat)) * self.p
+            self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
         if return_score:
             if double_model:
-                return (model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])) * \
-                       (np.sum(self.T == 0)/ self.T.shape[0]) + \
-                       (model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])) * \
-                       (np.sum(self.T == 1) / self.T.shape[0]) if double_model else model.score(self.X, self.Y)
+                return model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0]), \
+                       model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])
             return model.score(self.X, self.Y)
 
     def get_matched_groups(self, df_estimation, k=10, return_original_idx=False, check_est_df=False):
@@ -109,13 +109,33 @@ class LCM:
                                 return_original_idx=return_original_idx, check_est_df=check_est_df)
 
     def CATE(self, df_estimation, control_match_groups=None, treatment_match_groups=None, k=10, method='mean',
-             augmented=True, check_est_df=False):
+             augmented=True, control_preds=None, treatment_preds=None, check_est_df=False):
         if (control_match_groups is None) or (treatment_match_groups is None):
             control_match_groups, treatment_match_groups, _, _ = self.get_matched_groups(df_estimation=df_estimation,
                                                                                          k=k, return_original_idx=False,
                                                                                          check_est_df=check_est_df)
+        if augmented and ((control_preds is None) or (treatment_preds is None)):
+            if self.binary:
+                control_preds = self.est_C.predict_proba(df_estimation[self.covariates])[:, 1]
+                treatment_preds = self.est_T.predict_proba(df_estimation[self.covariates])[:, 1]
+            else:
+                control_preds = self.est_C.predict(df_estimation[self.covariates])
+                treatment_preds = self.est_T.predict(df_estimation[self.covariates])
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
-                         self.covariates, self.outcome, self.treatment, self.model_C, self.model_T, self.M,
-                         augmented=augmented, control_preds=None, treatment_preds=None, check_est_df=check_est_df)
+                         self.covariates, self.outcome, self.treatment, self.M, augmented=augmented,
+                         control_preds=control_preds, treatment_preds=treatment_preds, check_est_df=check_est_df)
+
+    def augment(self, estimator=None):
+        if estimator is None and self.binary:
+            estimator = GradientBoostingClassifier()
+        elif estimator is None:
+            estimator = GradientBoostingRegressor()
+        self.est_C = estimator
+        self.est_T = clone_est(self.est_C)
+        self.est_C.fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
+        self.est_T.fit(self.X[self.T == 1, :-1], self.Y[self.T == 1])
+        # print(f'C score: {self.est_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])}')
+        # print(f'T score: {self.est_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])}')
+
 
 

@@ -11,7 +11,7 @@ k_est_mean = 15
 k_est_linear = 60
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
@@ -24,27 +24,27 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    'acic_2019',
+    # 'acic_2019',
     # 'news'
 ]
 
 all_acic_2018_files = [f.replace('.csv', '') for f in set([c.split('/')[-1].replace('_cf', '') for c in
                                                            glob.glob(f"{os.getenv('ACIC_2018_FOLDER')}/*.csv")])]
 n_samples_per_split = 1000
-all_acic_2019_files = list(range(1, 9))
-all_acic_2019_files = [1]
+# all_acic_2019_files = list(range(1, 9))
+all_acic_2019_files = [3, 4, 7, 8]
 
 
 methods_config = {
-    'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None, 'augmented': [False],
-                             'methods': ['linear_pruned']},
+    'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
+                             'methods': [['linear_pruned', False], ['double_linear_pruned', True]]},
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
     # 'manhatten_pruned': {'params': None, 'methods': ['mean', 'linear']},
     # 'propensity': None,
     # 'genmatch': None,
-    'prognostic': None,
-    # 'bart': None,
+    # 'prognostic': None,
+    'bart': None,
     # 'causal_forest': None
 }
 
@@ -74,22 +74,28 @@ for data in datasets:
         dataset_config['imp_c'] = 10
         dataset_config['unimp_c'] = 90
 
-    # if data == 'news':
-    #     for file_num in range(7, 8):
-    #         n_splits = 4
-    #         dataset_config['news_file'] = f'topic_doc_mean_n5000_k3477_seed_{file_num}'
+    if data == 'ihdp':
+        n_splits = 25
+        dataset_config['ihdp_file'] = 100
 
-    for acic_file in all_acic_2019_files:
-        dataset_config['acic_file'] = acic_file
-        if acic_file == 8:
-            n_splits = 3
-        else:
-            n_splits = 4
+    cate_error_test(dataset=data, n_splits=n_splits, dataset_config=dataset_config, methods_config=methods_config,
+                    k_est_mean=k_est_mean, k_est_linear=k_est_linear,
+                    print_progress=print_progress, iters=iters, custom_iters=None)
+    #
+    # for acic_file in all_acic_2019_files:
+    #     dataset_config['acic_file'] = acic_file
+    #     n_splits = 3
+    #
+    #     cate_error_test(dataset=data, n_splits=n_splits, dataset_config=dataset_config, methods_config=methods_config,
+    #                     k_est_mean=k_est_mean, k_est_linear=k_est_linear,
+    #                     print_progress=print_progress, iters=iters, custom_iters=None)
+
+
     # for acic_file in all_acic_2018_files:
     #     dataset_config['acic_file'] = acic_file
     #     n_splits = pd.read_csv(f"{os.getenv('ACIC_2018_FOLDER')}/{acic_file}.csv").shape[0] // n_samples_per_split
-    #     n_splits = max(min(n_splits, 5), 2)
+    #     n_splits = max(min(n_splits, 5), 3)
     #     print(f'Running ACIC File {acic_file} in {n_splits} splits...')
-        cate_error_test(dataset=data, n_splits=n_splits, dataset_config=dataset_config, methods_config=methods_config,
-                        k_est_mean=k_est_mean, k_est_linear=k_est_linear,
-                        print_progress=print_progress, iters=iters, custom_iters=None)
+    #     cate_error_test(dataset=data, n_splits=n_splits, dataset_config=dataset_config, methods_config=methods_config,
+    #                     k_est_mean=k_est_mean, k_est_linear=k_est_linear,
+    #                     print_progress=print_progress, iters=iters, custom_iters=None)
