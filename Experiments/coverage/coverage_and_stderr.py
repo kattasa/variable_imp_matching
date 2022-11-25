@@ -38,8 +38,8 @@ def u(x):
         T.append(t)
     return np.array(T)
 
-df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=15, num_disc_imp=0,
-                                                       num_cont_unimp=25, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
+df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=5, num_disc_imp=0,
+                                                       num_cont_unimp=10, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
 
 x_cols = [c for c in df.columns if 'X' in c]
 original_x_cols = df[x_cols].iloc[:, :15].to_numpy()
@@ -71,10 +71,10 @@ for i in range(n_iters):
     lcm.gen_skf = split_strategy
     lcm.fit(double_model=False)
     lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=[['linear_pruned', False], ['double_linear_pruned', True]],
+    lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
              precomputed_control_preds=bart_control_preds,
              precomputed_treatment_preds=bart_treatment_preds)
-    lcm_cates.append(lcm.cate_df['CATE_linear_pruned'])
+    lcm_cates.append(lcm.cate_df['CATE_double_linear_pruned'])
     augmented_lcm_cates.append(lcm.cate_df['CATE_double_linear_pruned_augmented'])
 
     print(f'Iter {i+1}: {time.time() - start}')

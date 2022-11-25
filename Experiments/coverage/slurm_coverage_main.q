@@ -11,7 +11,7 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 export N_SPLITS=2
 export N_REPEATS=40
 export N_ITERS=100
-export K_EST=40
+export K_EST=20
 
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
