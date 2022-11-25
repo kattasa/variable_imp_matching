@@ -38,8 +38,8 @@ def u(x):
         T.append(t)
     return np.array(T)
 
-df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=5, num_disc_imp=0,
-                                                       num_cont_unimp=10, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
+df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=15, num_disc_imp=0,
+                                                       num_cont_unimp=25, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
 
 x_cols = [c for c in df.columns if 'X' in c]
 original_x_cols = df[x_cols].iloc[:, :15].to_numpy()
@@ -77,7 +77,7 @@ for i in range(n_iters):
     lcm_cates.append(lcm.cate_df['CATE_linear_pruned'])
     augmented_lcm_cates.append(lcm.cate_df['CATE_double_linear_pruned_augmented'])
 
-    print(f'{i+1}: {time.time() - start}')
+    print(f'Iter {i+1}: {time.time() - start}')
 
 ate_dof = (n_splits * n_repeats) - 1
 cate_dof = ((n_splits - 1)*n_repeats) - 1
@@ -132,8 +132,6 @@ aug_lcm_cate_df['Method'] = 'Augmented LCM'
 cate_df = pd.concat([bart_cate_df, lcm_cate_df, aug_lcm_cate_df])
 cate_df.index = cate_df.index.rename('sample')
 cate_df = cate_df.reset_index()
-
-print('hi')
 
 df_true.to_csv(f'{save_folder}/df_true.csv')
 ate_df.to_csv(f'{save_folder}/ate_df.csv')
