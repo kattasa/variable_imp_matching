@@ -88,7 +88,7 @@ while attempt < nn_retries:
         attempt +=1
         if attempt == nn_retries:
             raise e
-lcm.CATE(cate_methods=['linear_pruned'], augmented=False)
+lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
 
 cate_df = lcm.cate_df
@@ -104,10 +104,10 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
 
-method_name = 'DoubleML'
-start = time.time()
-cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy)
-times[method_name] = time.time() - start
+# method_name = 'DoubleML'
+# start = time.time()
+# cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+# times[method_name] = time.time() - start
 
 # df_err_bart = pd.DataFrame()
 # df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
@@ -125,9 +125,12 @@ if run_malts:
     while attempt < nn_retries:
         try:
             start = time.time()
+            lcm2 = LCM_MF(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=1)
+            lcm2.gen_skf = split_strategy
+            lcm2.fit(double_model=False)
             m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
                                  n_splits=n_splits, estimator='linear', smooth_cate=False,
-                                 gen_skf=split_strategy)
+                                 gen_skf=split_strategy, M_init=lcm2.M_list)
             times[method_name] = time.time() - start
             break
         except RuntimeError as e:

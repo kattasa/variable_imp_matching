@@ -110,9 +110,9 @@ class malts:
         cons2 = 1e+25 * np.sum((np.concatenate((Mc, Md)) < 0))
         return delta + reg + cons1 + cons2
 
-    def fit(self, method='COBYLA'):
+    def fit(self, method='COBYLA', M_init=None):
         # np.random.seed(0)
-        M_init = np.ones((self.p,))
+        M_init = np.ones((self.p,)) if M_init is None else M_init
         res = opt.minimize(self.objective, x0=M_init, method=method)
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
@@ -273,7 +273,8 @@ class malts:
 
 class malts_mf:
     def __init__(self, outcome, treatment, data, discrete=[], C=1, k_tr=15, k_est=50, estimator='linear',
-                 smooth_cate=True, reweight=False, n_splits=5, n_repeats=1, output_format='brief', gen_skf=None):
+                 smooth_cate=True, reweight=False, n_splits=5, n_repeats=1, output_format='brief', gen_skf=None,
+                 M_init=None):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -283,6 +284,7 @@ class malts_mf:
         self.discrete = discrete
         self.continuous = list(set(data.columns).difference(set([outcome] + [treatment] + discrete)))
         self.reweight = reweight
+        self.M_init = M_init
 
         if gen_skf is None:
             skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
@@ -301,11 +303,12 @@ class malts_mf:
             df_est = data.iloc[est_idx]
             m = malts(outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr,
                       reweight=self.reweight)
-            m.fit()
+            m.fit(M_init=self.M_init[i])
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est, k_est)
             self.MG_list.append(mg)
             self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg, model=estimator)], join='outer', axis=1)
+            i += 1
 
         for i in range(n_splits * n_repeats):
             mg_i = self.MG_list[i]
