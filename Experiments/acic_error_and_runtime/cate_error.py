@@ -16,7 +16,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from Experiments.helpers import get_acic_data
-from other_methods import pymalts, bart, causalforest, prognostic, doubleml
+from other_methods import pymalts, bart, causalforest, prognostic
 from src.linear_coef_matching_mf import LCM_MF
 import pickle
 
