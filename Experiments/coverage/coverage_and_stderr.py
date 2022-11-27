@@ -29,6 +29,8 @@ n_repeats = int(os.getenv('N_REPEATS'))
 n_iters = int(os.getenv('N_ITERS'))
 k_est = int(os.getenv('K_EST'))
 
+x_imp = 5
+x_unimp = 10
 
 def u(x):
     T = []
@@ -38,11 +40,11 @@ def u(x):
         T.append(t)
     return np.array(T)
 
-df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=5, num_disc_imp=0,
-                                                       num_cont_unimp=10, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
+df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=x_imp, num_disc_imp=0,
+                                                       num_cont_unimp=x_unimp, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
 
 x_cols = [c for c in df.columns if 'X' in c]
-original_x_cols = df[x_cols].iloc[:, :15].to_numpy()
+original_x_cols = df[x_cols].iloc[:, :x_imp].to_numpy()
 df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 bart_cates = []
 lcm_cates = []

@@ -10,13 +10,13 @@ export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 export N_SPLITS=2
 export N_REPEATS=40
-export N_ITERS=100
-export K_EST=20
+export N_ITERS=50
+export K_EST=25
 
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
-memory=$"16G"
+memory=$"32G"
 
 for n_samples in 250 500 1000 2500 5000;
 do

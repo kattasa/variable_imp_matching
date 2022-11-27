@@ -238,8 +238,7 @@ def dgp_lalonde():
     df_assess = df_assess.rename(columns={'treat': 'T', 're78': 'Y'})
     x_cols = [c for c in df_assess.columns if c not in ['T', 'Y']]
     discrete = ['black', 'hispanic', 'married', 'nodegree']
-    ate = df_assess['Y'].mean()
-    return None, df_assess.reset_index(drop=True), ate, x_cols, discrete
+    return df_assess.reset_index(drop=True), x_cols, discrete
 
     # psid_control = pd.read_stata(‘http: // www.nber.org / ~rdehejia / data / psid_controls.dta’)
     # psid_control2 = pd.read_stata(‘http://www.nber.org/~rdehejia/data/psid_controls2.dta’)

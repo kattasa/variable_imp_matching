@@ -303,7 +303,8 @@ class malts_mf:
             df_est = data.iloc[est_idx]
             m = malts(outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr,
                       reweight=self.reweight)
-            m.fit(M_init=self.M_init[i])
+            m_init = self.M_init[i] if self.M_init is not None else None
+            m.fit(M_init=m_init)
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est, k_est)
             self.MG_list.append(mg)
