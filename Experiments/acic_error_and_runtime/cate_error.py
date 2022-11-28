@@ -125,12 +125,12 @@ if run_malts:
     while attempt < nn_retries:
         try:
             start = time.time()
-            lcm2 = LCM_MF(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=1)
-            lcm2.gen_skf = split_strategy
-            lcm2.fit(double_model=False)
-            m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
+            # lcm2 = LCM_MF(outcome='Y', treatment='T', data=df_data, n_splits=n_splits, n_repeats=1)
+            # lcm2.gen_skf = split_strategy
+            # lcm2.fit(double_model=False)
+            m = pymalts.malts_mf('Y', 'T', data=df_dummy_data, discrete=dummy_cols, k_tr=15, k_est=k_est,
                                  n_splits=n_splits, estimator='linear', smooth_cate=False,
-                                 gen_skf=split_strategy, M_init=lcm2.M_list)
+                                 gen_skf=split_strategy, M_init=lcm.M_list)
             times[method_name] = time.time() - start
             break
         except RuntimeError as e:

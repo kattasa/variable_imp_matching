@@ -233,9 +233,11 @@ def dgp_news(news_file, perc_train=None, n_train=None):
 
 
 def dgp_lalonde():
-    df_assess = pd.read_stata('http://www.nber.org/~rdehejia/data/nsw.dta')
-    df_assess = df_assess.drop(columns=['data_id'])
-    df_assess = df_assess.rename(columns={'treat': 'T', 're78': 'Y'})
+    # df_assess = pd.read_stata('http://www.nber.org/~rdehejia/data/nsw.dta')
+    # df_assess = df_assess.drop(columns=['data_id'])
+    # df_assess = df_assess.rename(columns={'treat': 'T', 're78': 'Y'})
+    # df_assess.to_csv('/Users/qlanners/projects/linear_coef_matching/datagen/lalonde.csv', index=False)
+    df_assess = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/lalonde.csv')
     x_cols = [c for c in df_assess.columns if c not in ['T', 'Y']]
     discrete = ['black', 'hispanic', 'married', 'nodegree']
     return df_assess.reset_index(drop=True), x_cols, discrete
