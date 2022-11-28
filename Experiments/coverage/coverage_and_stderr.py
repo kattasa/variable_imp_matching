@@ -29,8 +29,8 @@ n_repeats = int(os.getenv('N_REPEATS'))
 n_iters = int(os.getenv('N_ITERS'))
 k_est = int(os.getenv('K_EST'))
 
-x_imp = 5
-x_unimp = 10
+x_imp = 2
+x_unimp = 0
 
 def u(x):
     T = []
