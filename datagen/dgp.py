@@ -20,8 +20,8 @@ def construct_sec_order(arr):
     for a in arr:
         tmp = []
         for i in range(num_cov_sec):
-            for j in range(num_cov_sec):
-                tmp.append(a[i] * a[j])
+            for j in range(i+1, num_cov_sec):
+                tmp.append( a[i] * a[j] )
         second_order_feature.append(tmp)
     return np.array(second_order_feature)
 
@@ -40,10 +40,10 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     xc = np.random.normal(1, std, size=(num_samples, num_cont_imp))
     xd = np.random.binomial(1, 0.5, size=(num_samples, num_disc_imp))
     x = np.hstack((xc, xd))
-    
+
     errors_y0 = np.random.normal(0, 1, size=num_samples)
     errors_y1 = np.random.normal(0, 1, size=num_samples)
-    
+
     num_cov_dense = num_cont_imp + num_disc_imp
     dense_bs_sign = np.random.choice([-1, 1], num_cov_dense)
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]

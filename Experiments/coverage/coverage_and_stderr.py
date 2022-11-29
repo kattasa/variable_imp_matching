@@ -11,7 +11,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 from sklearn.model_selection import RepeatedStratifiedKFold
 
-from datagen.dgp import data_generation_dense_mixed_endo
+from datagen.dgp_df import dgp_dense_mixed_endo_df
 from other_methods import bart
 from src.linear_coef_matching_mf import LCM_MF
 import scipy.stats as st
@@ -29,30 +29,19 @@ n_repeats = int(os.getenv('N_REPEATS'))
 n_iters = int(os.getenv('N_ITERS'))
 k_est = int(os.getenv('K_EST'))
 
-x_imp = 2
-x_unimp = 0
+x_imp = 5
+x_unimp = 10
 
-def u(x):
-    T = []
-    for row in x:
-        l = sp.expit(np.sum(row[:2]) - 2 + np.random.normal(0, 1))
-        t = int(l > 0.5)
-        T.append(t)
-    return np.array(T)
+_, df, df_true, x_cols, binary = dgp_dense_mixed_endo_df(n=n_samples, nci=x_imp, ndi=0, ncu=x_unimp, ndu=0, std=1.5,
+                                                         t_imp=2, overlap=1000, n_train=0)
 
-df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples, num_cont_imp=x_imp, num_disc_imp=0,
-                                                       num_cont_unimp=x_unimp, num_disc_unimp=0, std=1.5, t_imp=2, overlap=1)
-
-x_cols = [c for c in df.columns if 'X' in c]
-original_x_cols = df[x_cols].iloc[:, :x_imp].to_numpy()
-df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 bart_cates = []
 lcm_cates = []
 augmented_lcm_cates = []
 
 start = time.time()
 for i in range(n_iters):
-    new_T = u(original_x_cols)
+    new_T = np.random.binomial(1, 0.5, size=(n_samples,))  # randomize T
     df['T'] = new_T
     df['Y'] = (new_T * df_true['Y1']) + ((1 - new_T) * df_true['Y0'])
 
