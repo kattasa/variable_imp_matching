@@ -93,11 +93,9 @@ class LCM:
                 model = linear.Lasso(**params).fit(self.X, self.Y)
                 M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
             elif method == 'tree':
-                if self.binary:
-                    model = tree.DecisionTreeClassifier(max_depth=4, min_samples_leaf=0.03).fit(self.X, self.Y)
-                else:
-                    model = tree.DecisionTreeRegressor(max_depth=4, min_samples_leaf=0.03).fit(self.X, self.Y)
-                M_hat = np.abs(model.feature_importances_[:-1].reshape(-1,))
+                model = tree.DecisionTreeRegressor().fit(self.X, self.Y)
+                M_hat = model.feature_importances_[:-1].reshape(-1,)
+                M_hat = np.where(M_hat > 0.01, M_hat, 0)
             self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
         if return_score:
             if double_model:
