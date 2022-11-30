@@ -79,7 +79,7 @@ class LCM:
 
     def fit(self, method='linear', params=None, double_model=False, return_score=False, random_state=0):
         if params is None:
-            params = {'alpha': 1}
+            params = {'alpha': 0.1}
         params['random_state'] = random_state
         if double_model:
             model_C = linear.Lasso(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
