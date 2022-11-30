@@ -10,6 +10,7 @@ import numpy as np
 from sklearn.base import clone as clone_est
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 import sklearn.linear_model as linear
+import sklearn.tree as tree
 
 from utils import get_match_groups, get_CATES
 
@@ -76,7 +77,7 @@ class LCM:
         self.est_C = None
         self.est_T = None
 
-    def fit(self, params=None, double_model=False, return_score=False, random_state=0):
+    def fit(self, method='linear', params=None, double_model=False, return_score=False, random_state=0):
         if params is None:
             params = {'alpha': 1}
         params['random_state'] = random_state
@@ -88,8 +89,15 @@ class LCM:
             self.M_C = M_C_hat / np.sum(M_C_hat) * self.p if not np.all(M_C_hat == 0) else np.ones(self.p)
             self.M_T = M_T_hat / np.sum(M_T_hat) * self.p if not np.all(M_T_hat == 0) else np.ones(self.p)
         else:
-            model = linear.Lasso(**params).fit(self.X, self.Y)
-            M_hat = np.abs(model.coef_[:-1]).reshape(-1,)
+            if method == 'linear':
+                model = linear.Lasso(**params).fit(self.X, self.Y)
+                M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
+            elif method == 'tree':
+                if self.binary:
+                    model = tree.DecisionTreeClassifier(max_depth=4, min_samples_leaf=0.03).fit(self.X, self.Y)
+                else:
+                    model = tree.DecisionTreeRegressor(max_depth=4, min_samples_leaf=0.03).fit(self.X, self.Y)
+                M_hat = np.abs(model.feature_importances_[:-1].reshape(-1,))
             self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
         if return_score:
             if double_model:

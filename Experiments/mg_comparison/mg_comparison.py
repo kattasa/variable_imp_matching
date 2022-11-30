@@ -20,9 +20,9 @@ np.random.seed(0)
 
 
 df_data, x_cols, discrete = dgp_lalonde()
-n_splits = 5
+n_splits = 2
 n_repeats = 1
-k_est = 25
+k_est = 10
 
 ate = 886
 
@@ -34,8 +34,8 @@ print('.')
 
 split_strategy = lcm.gen_skf
 
-m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est, n_splits=n_splits,
-                     estimator='linear', smooth_cate=False, gen_skf=split_strategy)
+# m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=discrete, k_tr=15, k_est=k_est, n_splits=n_splits,
+#                      estimator='linear', smooth_cate=False, gen_skf=split_strategy)
 
 cate_est_prog, prog_c_mg, prog_t_mg = prognostic.prognostic_cv('Y', 'T', df_data, k_est=k_est, gen_skf=split_strategy)
 

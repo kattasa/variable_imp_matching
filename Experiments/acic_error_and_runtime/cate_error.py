@@ -77,7 +77,7 @@ times = {}
 method_name = 'LASSO Coefficient Matching'
 start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
-lcm.fit(double_model=False)
+lcm.fit(method='linear', double_model=False)
 attempt = 0
 while attempt < nn_retries:
     try:
@@ -103,6 +103,32 @@ split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
+
+method_name = 'Tree Feature Importance Matching'
+start = time.time()
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
+lcm.gen_skf = split_strategy
+lcm.fit(method='tree', double_model=False)
+attempt = 0
+while attempt < nn_retries:
+    try:
+        lcm.MG(k=k_est)
+        break
+    except RuntimeError as e:
+        print(f'{method_name} attempt {attempt+1}: {e}')
+        attempt +=1
+        if attempt == nn_retries:
+            raise e
+lcm.CATE(cate_methods=[['linear_pruned', False]])
+times[method_name] = time.time() - start
+
+cate_df = lcm.cate_df
+cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+cate_df['True_CATE'] = df_true['TE'].to_numpy()
+cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
+print(f'{method_name} method complete: {time.time() - start}')
 
 # method_name = 'DoubleML'
 # start = time.time()

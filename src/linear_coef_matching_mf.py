@@ -34,14 +34,14 @@ class LCM_MF:
         self.est_C_list = []
         self.est_T_list = []
 
-    def fit(self, params=None, double_model=False, augmented_est=None):
+    def fit(self, method='linear', params=None, double_model=False, augmented_est=None):
         self.M_list = []
         self.col_orders = []
         for est_idx, train_idx in self.gen_skf:
             df_train = self.data.loc[train_idx]
 
             m = LCM(outcome=self.outcome, treatment=self.treatment, data=df_train, binary=self.binary)
-            m.fit(params=params, double_model=double_model)
+            m.fit(method=method, params=params, double_model=double_model)
             self.M_list.append(m.M)
             self.col_orders.append(m.col_order)
             m.augment(augmented_est)
