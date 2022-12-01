@@ -6,6 +6,5 @@ datagen/news
 Experiments/dcc_runs
 .idea/
 Experiments/cate_error/Results
-Experiments/acic_error_and_runtime/Results
-Experiments/acic_error_and_runtime/Results_Tree
+Experiments/acic_error_and_runtime/Results*
 Experiments/coverage/Results

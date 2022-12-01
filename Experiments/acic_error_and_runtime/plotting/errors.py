@@ -8,7 +8,7 @@ import seaborn as sns
 all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
 
 q = 0.5
-methods = ['LASSO Coefficient Matching', 'MALTS Matching', 'Prognostic Score Matching', 'BART', 'Causal Forest']
+methods = ['LASSO Coefficient Matching', 'MALTS Matching', 'Prognostic Score Matching', 'DoubleML', 'BART', 'Causal Forest']
 all_errors = pd.DataFrame([], index=methods)
 failed_files = []
 name_to_label = {}
