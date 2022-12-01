@@ -8,7 +8,7 @@ import seaborn as sns
 all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
 
 q = 0.5
-methods = ['LASSO Coefficient Matching', 'Tree Feature Importance Matching', 'MALTS Matching', 'Prognostic Score Matching', 'BART', 'Causal Forest']
+methods = ['LASSO Coefficient Matching', 'MALTS Matching', 'Prognostic Score Matching', 'BART', 'Causal Forest']
 all_errors = pd.DataFrame([], index=methods)
 failed_files = []
 name_to_label = {}
@@ -59,3 +59,10 @@ sns.boxplot(data=rankings, x="Ranking", y="Method")
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig('plots/acic_cate_errors_ranking_tree2.png')
+
+perc_from_best = all_errors.copy(deep=True)
+for a in perc_from_best['ACIC File'].unique():
+    min = perc_from_best[perc_from_best['ACIC File'] == a]['Median Relative Error (%) (log)'].min()
+    perc_from_best.loc[perc_from_best['ACIC File'] == a, 'Median Relative Error (%) (log)'] = (perc_from_best[perc_from_best['ACIC File'] == a]['Median Relative Error (%) (log)'] - min) / min
+
+perc_from_best = perc_from_best.rename(columns={'Median Relative Error (%) (log)': 'Median Relative Error From Best Method (%)'})

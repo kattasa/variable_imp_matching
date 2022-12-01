@@ -49,8 +49,11 @@ df_data, df_true, binary, categorical, dummy_cols = get_acic_data(year=acic_year
 df_true.to_csv(f'{save_folder}/df_true.csv')
 
 if acic_year == 'acic_2018':
-    new_n_splits = df_data.shape[0] // n_samples_per_split
-    n_splits = max(min(new_n_splits, 10), n_splits)
+    if df_data.shape[0] < 2000:
+        n_splits = 2
+    else:
+        new_n_splits = df_data.shape[0] // n_samples_per_split
+        n_splits = max(min(new_n_splits, 10), n_splits)
 
 run_malts = True
 if df_data.shape[0] > malts_max:
@@ -88,7 +91,7 @@ while attempt < nn_retries:
         attempt +=1
         if attempt == nn_retries:
             raise e
-lcm.CATE(cate_methods=[['linear_pruned', False]])
+lcm.CATE(cate_methods=[['mean', False]])
 times[method_name] = time.time() - start
 
 cate_df = lcm.cate_df
@@ -119,7 +122,7 @@ while attempt < nn_retries:
         attempt +=1
         if attempt == nn_retries:
             raise e
-lcm.CATE(cate_methods=[['linear_pruned', False]])
+lcm.CATE(cate_methods=[['mean', False]])
 times[method_name] = time.time() - start
 
 cate_df = lcm.cate_df
@@ -192,32 +195,32 @@ df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
 df_err = df_err.append(df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
 print(f'{method_name} complete: {time.time() - start}')
 
-method_name = 'BART'
-start = time.time()
-cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy)
-times[method_name] = time.time() - start
-
-df_err_bart = pd.DataFrame()
-df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
-df_err_bart['Relative Error (%)'] = np.abs(
-    (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
-df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
-df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-print(f'{method_name} complete: {time.time() - start}')
-
-method_name = 'Causal Forest'
-start = time.time()
-cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
-times[method_name] = time.time() - start
-
-df_err_cf = pd.DataFrame()
-df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
-df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
-df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
-df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-print(f'{method_name} complete: {time.time() - start}')
+# method_name = 'BART'
+# start = time.time()
+# cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+# times[method_name] = time.time() - start
+#
+# df_err_bart = pd.DataFrame()
+# df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
+# df_err_bart['Relative Error (%)'] = np.abs(
+#     (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+# df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
+# df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
+# df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+# print(f'{method_name} complete: {time.time() - start}')
+#
+# method_name = 'Causal Forest'
+# start = time.time()
+# cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+# times[method_name] = time.time() - start
+#
+# df_err_cf = pd.DataFrame()
+# df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
+# df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+# df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
+# df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
+# df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+# print(f'{method_name} complete: {time.time() - start}')
 
 df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
 

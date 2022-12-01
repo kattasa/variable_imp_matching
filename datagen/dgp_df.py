@@ -264,7 +264,7 @@ def clean_2018_covariates(df):
     for k, v in ordinal_unknowns.items():
         df.loc[df[k] == v, k] = np.nan
     df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df)[:, ordinal_unknowns_cols]
-    edited_cols += ordinal_unknowns_cols
+    edited_cols += list(ordinal_unknowns.keys())
     print('1')
 
     binary = []

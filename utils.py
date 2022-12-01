@@ -121,7 +121,7 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
 
 
 def linear_cate(mg):
-    return LinearRegression().fit(mg[:, :-1], mg[:, -1]).coef_[-1]
+    return RidgeCV().fit(mg[:, :-1], mg[:, -1]).coef_[-1]
 
 
 def dual_linear_cate(c_mg, t_mg, this_sample):
