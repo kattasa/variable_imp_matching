@@ -60,9 +60,11 @@ plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig('plots/acic_cate_errors_ranking_tree2.png')
 
-perc_from_best = all_errors.copy(deep=True)
-for a in perc_from_best['ACIC File'].unique():
-    min = perc_from_best[perc_from_best['ACIC File'] == a]['Median Relative Error (%) (log)'].min()
-    perc_from_best.loc[perc_from_best['ACIC File'] == a, 'Median Relative Error (%) (log)'] = (perc_from_best[perc_from_best['ACIC File'] == a]['Median Relative Error (%) (log)'] - min) / min
-
-perc_from_best = perc_from_best.rename(columns={'Median Relative Error (%) (log)': 'Median Relative Error From Best Method (%)'})
+plt.figure()
+sns.set_context("paper")
+sns.set_style("darkgrid")
+sns.set(font_scale=1)
+sns.boxplot(data=all_errors, x="Median Relative Error (%) (log)", y="Method")
+plt.xticks(rotation=65, horizontalalignment='right')
+plt.tight_layout()
+plt.savefig('plots/acic_cate_errors_by_method_tree2.png')

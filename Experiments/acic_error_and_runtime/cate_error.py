@@ -16,7 +16,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from Experiments.helpers import get_acic_data
-from other_methods import pymalts, bart, causalforest, prognostic
+from other_methods import pymalts, bart, causalforest, prognostic, doubleml
 from src.linear_coef_matching_mf import LCM_MF
 import pickle
 
@@ -81,17 +81,8 @@ method_name = 'LASSO Coefficient Matching'
 start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
 lcm.fit(method='linear', double_model=False)
-attempt = 0
-while attempt < nn_retries:
-    try:
-        lcm.MG(k=k_est)
-        break
-    except RuntimeError as e:
-        print(f'{method_name} attempt {attempt+1}: {e}')
-        attempt +=1
-        if attempt == nn_retries:
-            raise e
-lcm.CATE(cate_methods=[['mean', False]])
+lcm.MG(k=k_est)
+lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
 
 cate_df = lcm.cate_df
@@ -112,17 +103,8 @@ start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
 lcm.gen_skf = split_strategy
 lcm.fit(method='tree', double_model=False)
-attempt = 0
-while attempt < nn_retries:
-    try:
-        lcm.MG(k=k_est)
-        break
-    except RuntimeError as e:
-        print(f'{method_name} attempt {attempt+1}: {e}')
-        attempt +=1
-        if attempt == nn_retries:
-            raise e
-lcm.CATE(cate_methods=[['mean', False]])
+lcm.MG(k=k_est)
+lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
 
 cate_df = lcm.cate_df
@@ -133,37 +115,13 @@ cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
 df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
 print(f'{method_name} method complete: {time.time() - start}')
 
-# method_name = 'DoubleML'
-# start = time.time()
-# cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy)
-# times[method_name] = time.time() - start
-
-# df_err_bart = pd.DataFrame()
-# df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
-# df_err_bart['Relative Error (%)'] = np.abs(
-#     (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-# df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
-# df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-# print(f'{method_name} complete: {time.time() - start}')
-
-
 if run_malts:
     method_name = 'MALTS Matching'
-    attempt = 0
-    while attempt < nn_retries:
-        try:
-            start = time.time()
-            m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
-                                 n_splits=n_splits, estimator='linear', smooth_cate=False,
-                                 gen_skf=split_strategy)
-            times[method_name] = time.time() - start
-            break
-        except RuntimeError as e:
-            print(f'{method_name} attempt {attempt+1}: {e}')
-            attempt += 1
-            if attempt == nn_retries:
-                raise e
+    start = time.time()
+    m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
+                         n_splits=n_splits, estimator='linear', smooth_cate=False,
+                         gen_skf=split_strategy)
+    times[method_name] = time.time() - start
     cate_df = m.CATE_df
     cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
     cate_df['True_CATE'] = df_true['TE'].to_numpy()
@@ -174,19 +132,10 @@ if run_malts:
     print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'Prognostic Score Matching'
-attempt = 0
-while attempt < nn_retries:
-    try:
-        start = time.time()
-        cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
-                                                       k_est=k_est, gen_skf=split_strategy)
-        times[method_name] = time.time() - start
-        break
-    except RuntimeError as e:
-        print(f'{method_name} attempt {attempt + 1}: {e}')
-        attempt += 1
-        if attempt == nn_retries:
-            raise e
+start = time.time()
+cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
+                                               k_est=k_est, gen_skf=split_strategy)
+times[method_name] = time.time() - start
 df_err_prog = pd.DataFrame()
 df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
 df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
@@ -195,32 +144,46 @@ df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
 df_err = df_err.append(df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
 print(f'{method_name} complete: {time.time() - start}')
 
-# method_name = 'BART'
-# start = time.time()
-# cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy)
-# times[method_name] = time.time() - start
-#
-# df_err_bart = pd.DataFrame()
-# df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
-# df_err_bart['Relative Error (%)'] = np.abs(
-#     (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-# df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
-# df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-# print(f'{method_name} complete: {time.time() - start}')
-#
-# method_name = 'Causal Forest'
-# start = time.time()
-# cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
-# times[method_name] = time.time() - start
-#
-# df_err_cf = pd.DataFrame()
-# df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
-# df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-# df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
-# df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
-# print(f'{method_name} complete: {time.time() - start}')
+method_name = 'DoubleML'
+start = time.time()
+cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+times[method_name] = time.time() - start
+
+df_err_doubleml = pd.DataFrame()
+df_err_doubleml['Method'] = [method_name for i in range(cate_est_doubleml.shape[0])]
+df_err_doubleml['Relative Error (%)'] = np.abs(
+    (cate_est_doubleml['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+df_err_doubleml['True_CATE'] = df_true['TE'].to_numpy()
+df_err_doubleml['Est_CATE'] = cate_est_doubleml['avg.CATE'].to_numpy()
+df_err = df_err.append(df_err_doubleml[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+print(f'{method_name} complete: {time.time() - start}')
+
+method_name = 'BART'
+start = time.time()
+cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+times[method_name] = time.time() - start
+
+df_err_bart = pd.DataFrame()
+df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
+df_err_bart['Relative Error (%)'] = np.abs(
+    (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
+df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
+df_err = df_err.append(df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+print(f'{method_name} complete: {time.time() - start}')
+
+method_name = 'Causal Forest'
+start = time.time()
+cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+times[method_name] = time.time() - start
+
+df_err_cf = pd.DataFrame()
+df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
+df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
+df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
+df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+print(f'{method_name} complete: {time.time() - start}')
 
 df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
 
