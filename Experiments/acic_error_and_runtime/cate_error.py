@@ -32,8 +32,6 @@ n_splits = int(os.getenv('N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
 malts_max = int(os.getenv('MALTS_MAX'))
 
-nn_retries = 5  # for some reason I keep getting a KNN internal error. until i found cause, try retries
-
 config = {'n_splits': n_splits, 'k_est': k_est}
 
 with open(f'{save_folder}/config.txt', 'w') as f:
