@@ -1,4 +1,4 @@
-from econml.dml import LinearDML
+from econml.dml import LinearDML, SparseLinearDML
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -18,7 +18,7 @@ def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None):
         T = np.array(df_train.loc[:, treatment])
         X_est = np.array(df_est.loc[:, covariates])
         est = LinearDML(discrete_treatment=True, featurizer=None, linear_first_stages=False)
-        est.fit(Y=Y, T=T, X=X)
+        est.fit(Y=Y, T=T, X=X, W=X)
         this_te_est = est.effect(X=X_est)
         this_index = df_est.index
         cate_est_i = pd.DataFrame(this_te_est, index=this_index, columns=['CATE'])
@@ -33,6 +33,6 @@ def doubleml_sample(outcome, treatment, df_train, sample, covariates):
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = SparseLinearDML(discrete_treatment=True)
+    est = LinearDML(discrete_treatment=True, featurizer=None, linear_first_stages=False)
     est.fit(Y=Y, T=T, X=X)
     return est.effect(sample)
