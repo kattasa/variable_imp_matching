@@ -2,7 +2,6 @@ from econml.dml import SparseLinearDML
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
-import time
 
 
 def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None):
@@ -19,15 +18,8 @@ def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None):
         T = np.array(df_train.loc[:, treatment])
         X_est = np.array(df_est.loc[:, covariates])
         est = SparseLinearDML(discrete_treatment=True)
-        print('1')
-        start = time.time()
         est.fit(Y=Y, T=T, X=X)
-        print('2')
-        print(time.time() - start)
-        start = time.time()
         this_te_est = est.effect(X=X_est)
-        print('3')
-        print(time.time() - start)
         this_index = df_est.index
         cate_est_i = pd.DataFrame(this_te_est, index=this_index, columns=['CATE'])
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
