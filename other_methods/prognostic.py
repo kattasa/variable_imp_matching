@@ -14,7 +14,7 @@ from sklearn.neighbors import NearestNeighbors
 
 
 class Prognostic:
-    def __init__(self, Y, T, df, binary=False, random_state=0):
+    def __init__(self, Y, T, df, binary=False, random_state=None):
         self.Y = Y
         self.T = T
         self.df = df
@@ -66,7 +66,7 @@ class Prognostic:
         return df_mg, c_mg, t_mg
 
 
-def prognostic_cv(outcome, treatment, data, k_est=1, n_splits=5, gen_skf=None):
+def prognostic_cv(outcome, treatment, data, k_est=1, n_splits=5, gen_skf=None, random_state=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -77,7 +77,7 @@ def prognostic_cv(outcome, treatment, data, k_est=1, n_splits=5, gen_skf=None):
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
-        prog = Prognostic(outcome, treatment, df_train, binary=binary)
+        prog = Prognostic(outcome, treatment, df_train, binary=binary, random_state=random_state)
         prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est, binary=binary)
         control_mgs.append(c_mgs)
         treatment_mgs.append(t_mgs)

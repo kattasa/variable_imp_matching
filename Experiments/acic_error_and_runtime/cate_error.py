@@ -10,18 +10,19 @@ import os
 import pandas as pd
 import time
 import warnings
+np.random.seed(0)
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
 from Experiments.helpers import get_acic_data
-from other_methods import pymalts, bart, causalforest, prognostic, doubleml, drlearner
+from other_methods import pymalts, bart, causalforest, prognostic, doubleml, drlearner, causalforest2
 from src.linear_coef_matching_mf import LCM_MF
 import pickle
 
 warnings.filterwarnings("ignore")
-np.random.seed(0)
+random_state = 0
 
 
 acic_year = os.getenv('ACIC_YEAR').replace("'", '').replace('"', '')
@@ -77,7 +78,7 @@ times = {}
 
 method_name = 'LASSO Coefficient Matching'
 start = time.time()
-lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
 lcm.fit(method='linear', double_model=False)
 lcm.MG(k=k_est)
 lcm.CATE(cate_methods=[['linear_pruned', False]])
@@ -98,9 +99,9 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 
 method_name = 'Tree Feature Importance Matching'
 start = time.time()
-lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
 lcm.gen_skf = split_strategy
-lcm.fit(method='tree', double_model=False)
+lcm.fit(method='tree', params={'max_depth': 4}, double_model=False)
 lcm.MG(k=k_est)
 lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
@@ -115,7 +116,7 @@ print(f'{method_name} method complete: {time.time() - start}')
 
 method_name = 'Manhattan with Feature Selection'
 start = time.time()
-lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1)
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
 lcm.gen_skf = split_strategy
 lcm.fit(method='manhattan', double_model=False)
 lcm.MG(k=k_est)
@@ -135,7 +136,7 @@ if run_malts:
     start = time.time()
     m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
                          n_splits=n_splits, estimator='linear', smooth_cate=False,
-                         gen_skf=split_strategy)
+                         gen_skf=split_strategy, random_state=random_state)
     times[method_name] = time.time() - start
     cate_df = m.CATE_df
     cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
@@ -149,7 +150,7 @@ if run_malts:
 method_name = 'Prognostic Score Matching'
 start = time.time()
 cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
-                                               k_est=k_est, gen_skf=split_strategy)
+                                               k_est=k_est, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 df_err_prog = pd.DataFrame()
 df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
@@ -161,7 +162,7 @@ print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'DoubleML'
 start = time.time()
-cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 
 df_err_doubleml = pd.DataFrame()
@@ -175,7 +176,7 @@ print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'DRLearner'
 start = time.time()
-cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 
 df_err_drlearner = pd.DataFrame()
@@ -204,6 +205,19 @@ print(f'{method_name} complete: {time.time() - start}')
 method_name = 'Causal Forest'
 start = time.time()
 cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+times[method_name] = time.time() - start
+
+df_err_cf = pd.DataFrame()
+df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
+df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
+df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
+df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
+print(f'{method_name} complete: {time.time() - start}')
+
+method_name = 'Causal Forest 2'
+start = time.time()
+cate_est_cf = causalforest2.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 
 df_err_cf = pd.DataFrame()

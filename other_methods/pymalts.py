@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore")
 
 
 class malts:
-    def __init__(self, outcome, treatment, data, discrete=[], C=1, k=10, reweight=False):
+    def __init__(self, outcome, treatment, data, discrete=[], C=1, k=10, reweight=False, random_state=None):
         # np.random.seed(0)
         self.C = C  # coefficient to regularozation term
         self.k = k
@@ -31,6 +31,7 @@ class malts:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
+        self.random_state = random_state
         self.continuous = list(set(data.columns).difference(set([outcome] + [treatment] + discrete)))
         # splitting the data into control and treated units
         self.df_T = data.loc[data[treatment] == 1]
@@ -210,13 +211,13 @@ class malts:
                     cate[k] = {'CATE': yt - yc, 'outcome': v.loc['query'][self.outcome],
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
                 if model == 'linear':
-                    yc = lm.Ridge().fit(X=matched_X_C, y=matched_Y_C)
-                    yt = lm.Ridge().fit(X=matched_X_T, y=matched_Y_T)
+                    yc = lm.Ridge(random_state=self.random_state).fit(X=matched_X_C, y=matched_Y_C)
+                    yt = lm.Ridge(random_state=self.random_state).fit(X=matched_X_T, y=matched_Y_T)
                     cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome': v.loc['query'][self.outcome],
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
                 if model == 'RF':
-                    yc = ensemble.RandomForestRegressor().fit(X=matched_X_C, y=matched_Y_C)
-                    yt = ensemble.RandomForestRegressor().fit(X=matched_X_T, y=matched_Y_T)
+                    yc = ensemble.RandomForestRegressor(random_state=self.random_state).fit(X=matched_X_C, y=matched_Y_C)
+                    yt = ensemble.RandomForestRegressor(random_state=self.random_state).fit(X=matched_X_T, y=matched_Y_T)
                     cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome': v.loc['query'][self.outcome],
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
         return pd.DataFrame.from_dict(cate, orient='index')
@@ -274,7 +275,7 @@ class malts:
 class malts_mf:
     def __init__(self, outcome, treatment, data, discrete=[], C=1, k_tr=15, k_est=50, estimator='linear',
                  smooth_cate=True, reweight=False, n_splits=5, n_repeats=1, output_format='brief', gen_skf=None,
-                 M_init=None):
+                 M_init=None, random_state=None):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -287,7 +288,7 @@ class malts_mf:
         self.M_init = M_init
 
         if gen_skf is None:
-            skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
+            skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
             gen_skf = skf.split(data, data[treatment])
         else:
             self.n_splits = len(gen_skf)
@@ -302,7 +303,7 @@ class malts_mf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
             m = malts(outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr,
-                      reweight=self.reweight)
+                      reweight=self.reweight, random_state=random_state)
             m_init = self.M_init[i] if self.M_init is not None else None
             m.fit(M_init=m_init)
             self.M_opt_list.append(m.M_opt)
@@ -328,10 +329,10 @@ class malts_mf:
         LOWER_ALPHA = 0.05
         UPPER_ALPHA = 0.95
         # Each model has to be separate
-        lower_model = ensemble.GradientBoostingRegressor(loss='quantile', alpha=LOWER_ALPHA)
+        lower_model = ensemble.GradientBoostingRegressor(loss='quantile', alpha=LOWER_ALPHA, random_state=random_state)
         # The mid model will use the default loss
-        mid_model = ensemble.GradientBoostingRegressor(loss="ls")
-        upper_model = ensemble.GradientBoostingRegressor(loss="quantile", alpha=UPPER_ALPHA)
+        mid_model = ensemble.GradientBoostingRegressor(loss="ls", random_state=random_state)
+        upper_model = ensemble.GradientBoostingRegressor(loss="quantile", alpha=UPPER_ALPHA, random_state=random_state)
 
         try:
             lower_model.fit(data[self.continuous + self.discrete], cate_df['avg.CATE'])

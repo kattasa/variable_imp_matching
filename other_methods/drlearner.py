@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
 
-def drlearner(outcome, treatment, data, n_splits=2, gen_skf=None):
+def drlearner(outcome, treatment, data, n_splits=2, gen_skf=None, random_state=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -17,7 +17,7 @@ def drlearner(outcome, treatment, data, n_splits=2, gen_skf=None):
         Y = np.array(df_train.loc[:, outcome])
         T = np.array(df_train.loc[:, treatment])
         X_est = np.array(df_est.loc[:, covariates])
-        est = LinearDRLearner(featurizer=None)
+        est = LinearDRLearner(featurizer=None, random_state=random_state)
         est.fit(Y=Y, T=T, X=X, W=X)
         this_te_est = est.effect(X=X_est)
         this_index = df_est.index
@@ -29,10 +29,10 @@ def drlearner(outcome, treatment, data, n_splits=2, gen_skf=None):
     cate_est['std.CATE'] = cate_est.std(axis=1)
     return cate_est
 
-def drlearner_sample(outcome, treatment, df_train, sample, covariates):
+def drlearner_sample(outcome, treatment, df_train, sample, covariates, random_state=None):
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = LinearDRLearner(featurizer=None)
+    est = LinearDRLearner(featurizer=None, random_state=random_state)
     est.fit(Y=Y, T=T, X=X, W=X)
     return est.effect(sample)

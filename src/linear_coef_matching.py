@@ -59,7 +59,7 @@ class LCM:
     check_df_estimation(df_estimation):
         checks df_estimation is properly formatted.
     """
-    def __init__(self, outcome, treatment, data, binary=False):
+    def __init__(self, outcome, treatment, data, binary=False, random_state=None):
         self.n, self.p =data.shape
         self.p -= 2
         self.outcome = outcome
@@ -76,27 +76,28 @@ class LCM:
         self.M_T = None
         self.est_C = None
         self.est_T = None
+        self.random_state = random_state
 
-    def fit(self, method='linear', params=None, double_model=False, return_score=False, random_state=0):
+    def fit(self, method='linear', params=None, double_model=False, return_score=False):
         if params is None:
-            params = {'alpha': 0.1}
-        params['random_state'] = random_state
+            params = {}
+        params['random_state'] = self.random_state
         if double_model:
-            model_C = linear.Lasso(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
-            model_T = linear.Lasso(**params).fit(self.X[self.T == 1, :-1], self.Y_T[self.T == 1])
+            model_C = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
+            model_T = linear.LassoCV(**params).fit(self.X[self.T == 1, :-1], self.Y_T[self.T == 1])
             M_C_hat = np.abs(model_C.coef_).reshape(-1,)
             M_T_hat = np.abs(model_T.coef_).reshape(-1,)
             self.M_C = M_C_hat / np.sum(M_C_hat) * self.p if not np.all(M_C_hat == 0) else np.ones(self.p)
             self.M_T = M_T_hat / np.sum(M_T_hat) * self.p if not np.all(M_T_hat == 0) else np.ones(self.p)
         else:
             if method == 'linear':
-                model = linear.LassoCV().fit(self.X, self.Y)
+                model = linear.LassoCV(**params).fit(self.X, self.Y)
                 M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
             elif method == 'tree':
-                model = tree.DecisionTreeRegressor(max_depth=4).fit(self.X, self.Y)
+                model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
                 M_hat = model.feature_importances_[:-1].reshape(-1,)
             elif method == 'manhattan':
-                model = linear.LassoCV().fit(self.X, self.Y)
+                model = linear.LassoCV(**params).fit(self.X, self.Y)
                 M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
                 M_hat = np.where(M_hat > 0, 1, 0)
             self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
@@ -132,13 +133,14 @@ class LCM:
                 treatment_preds = self.est_T.predict(df_estimation[self.covariates])
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
                          self.covariates, self.outcome, self.treatment, self.M, augmented=augmented,
-                         control_preds=control_preds, treatment_preds=treatment_preds, check_est_df=check_est_df)
+                         control_preds=control_preds, treatment_preds=treatment_preds, check_est_df=check_est_df,
+                         random_state=self.random_state)
 
     def augment(self, estimator=None):
         if estimator is None and self.binary:
-            estimator = GradientBoostingClassifier()
+            estimator = GradientBoostingClassifier(random_state=self.random_state)
         elif estimator is None:
-            estimator = GradientBoostingRegressor()
+            estimator = GradientBoostingRegressor(random_state=self.random_state)
         self.est_C = estimator
         self.est_T = clone_est(self.est_C)
         self.est_C.fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])

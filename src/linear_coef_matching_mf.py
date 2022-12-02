@@ -33,6 +33,7 @@ class LCM_MF:
         self.cate_df = None
         self.est_C_list = []
         self.est_T_list = []
+        self.random_state = random_state
 
     def fit(self, method='linear', params=None, double_model=False, augmented_est=None):
         self.M_list = []
@@ -40,7 +41,8 @@ class LCM_MF:
         for est_idx, train_idx in self.gen_skf:
             df_train = self.data.loc[train_idx]
 
-            m = LCM(outcome=self.outcome, treatment=self.treatment, data=df_train, binary=self.binary)
+            m = LCM(outcome=self.outcome, treatment=self.treatment, data=df_train, binary=self.binary,
+                    random_state=self.random_state)
             m.fit(method=method, params=params, double_model=double_model)
             self.M_list.append(m.M)
             self.col_orders.append(m.col_order)
@@ -98,7 +100,7 @@ class LCM_MF:
                 cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method, self.covariates,
                                        outcome, treatment, self.M_list[i], augmented=augmented,
                                        control_preds=control_preds, treatment_preds=treatment_preds,
-                                       check_est_df=False)
+                                       check_est_df=False, random_state=self.random_state)
                              )
             cates = pd.DataFrame(cates).T
             self.cates_list.append(cates.copy(deep=True))

@@ -49,15 +49,15 @@ def sample_linear_cate(mg, covariates, M, treatment, outcome, prune=True):
         imp_covs = prune_covariates(covariates, M)
     else:
         imp_covs = covariates
-    return LinearRegression().fit(mg[imp_covs + [treatment]].to_numpy(), mg[outcome].to_numpy()).coef_[-1]
+    return RidgeCV().fit(mg[imp_covs + [treatment]].to_numpy(), mg[outcome].to_numpy()).coef_[-1]
 
 def sample_double_linear_cate(c_mg, t_mg, sample, covariates, M, outcome, prune=True):
     if prune:
         imp_covs = prune_covariates(covariates, M)
     else:
         imp_covs = covariates
-    return Ridge().fit(t_mg[imp_covs].to_numpy(), t_mg[outcome].to_numpy()).predict(sample)[0] - \
-           Ridge().fit(c_mg[imp_covs].to_numpy(), c_mg[outcome].to_numpy()).predict(sample)[0]
+    return RidgeCV().fit(t_mg[imp_covs].to_numpy(), t_mg[outcome].to_numpy()).predict(sample)[0] - \
+           RidgeCV().fit(c_mg[imp_covs].to_numpy(), c_mg[outcome].to_numpy()).predict(sample)[0]
 
 
 
@@ -81,7 +81,7 @@ def mg_to_training_set(df_estimation, control_mg, treatment_mg, covariates, trea
 
 
 def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, treatment, M,
-              augmented=False, control_preds=None, treatment_preds=None, check_est_df=True):
+              augmented=False, control_preds=None, treatment_preds=None, check_est_df=True, random_state=None):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
     df_estimation, old_idx = check_mg_indices(df_estimation, control_mg.shape[0], treatment_mg.shape[0])
@@ -108,7 +108,7 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
                 mg_cates = np.array([dual_linear_cate(control_mg[i, :, :], treatment_mg[i, :, :], samples[i].reshape(1, -1)) for i in
                                      range(mg.shape[0])])
             elif method == 'rf':
-                mg_cates = np.array([rf_cate(control_mg[i, :, :], treatment_mg[i, :, :], samples[i].reshape(1, -1)) for i in
+                mg_cates = np.array([rf_cate(control_mg[i, :, :], treatment_mg[i, :, :], samples[i].reshape(1, -1), random_state=random_state) for i in
                                      range(mg.shape[0])])
         else:
             raise Exception(f'CATE Method type {method} not supported. Supported methods are: mean, linear, '
@@ -131,9 +131,9 @@ def dual_linear_cate(c_mg, t_mg, this_sample):
            mc.predict(this_sample)[0]
 
 
-def rf_cate(c_mg, t_mg, this_sample):
-    mc = RFR().fit(c_mg[:, :-2], c_mg[:, -1])
-    mt = RFR().fit(t_mg[:, :-2], t_mg[:, -1])
+def rf_cate(c_mg, t_mg, this_sample, random_state=None):
+    mc = RFR(random_state=random_state).fit(c_mg[:, :-2], c_mg[:, -1])
+    mt = RFR(random_state=random_state).fit(t_mg[:, :-2], t_mg[:, -1])
     return mt.predict(this_sample)[0] - \
            mc.predict(this_sample)[0]
 
