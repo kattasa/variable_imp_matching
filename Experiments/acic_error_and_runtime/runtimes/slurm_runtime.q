@@ -11,7 +11,7 @@ export ACIC_2019_FOLDER=/work/qml/acic_2019
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
-memory=$"8G"
+memory=$"16G"
 k_est=60
 random_state=0
 cd $RESULTS_FOLDER
