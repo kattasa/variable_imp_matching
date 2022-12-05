@@ -8,7 +8,18 @@ import seaborn as sns
 all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
 
 q = 0.5
-methods = ['LASSO Coefficient Matching', 'Tree Feature Importance Matching']
+methods = [
+    'LASSO Coefficient Matching',
+    # 'Tree Feature Importance Matching',
+    'Manhattan with Feature Selection',
+    'MALTS Matching',
+    'Prognostic Score Matching',
+    'BART',
+    'DoubleML',
+    'DRLearner',
+    'Causal Forest',
+    'Causal Forest 2'
+]
 all_errors = pd.DataFrame([], index=methods)
 failed_files = []
 name_to_label = {}
@@ -44,7 +55,7 @@ plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.legend(loc='upper right', prop={'size': 10})
 plt.yscale('log')
-plt.savefig('plots/acic_cate_errors_tree2.png')
+plt.savefig('plots/acic_cate_errors_main.png')
 
 rankings = all_errors.sort_values(['ACIC File','Median Relative Error (%) (log)'],ascending=True)
 n_methods = rankings['Method'].nunique()
@@ -58,7 +69,7 @@ sns.set(font_scale=1)
 sns.boxplot(data=rankings, x="Ranking", y="Method")
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
-plt.savefig('plots/acic_cate_errors_ranking_tree2.png')
+plt.savefig('plots/acic_cate_errors_ranking_main.png')
 
 plt.figure()
 sns.set_context("paper")
@@ -67,4 +78,12 @@ sns.set(font_scale=1)
 sns.boxplot(data=all_errors, x="Median Relative Error (%) (log)", y="Method")
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
-plt.savefig('plots/acic_cate_errors_by_method_tree2.png')
+plt.savefig('plots/acic_cate_errors_by_method_main.png')
+
+rename_methods = {
+    "BART": "T-Learner BART",
+    "Causal Forest 2": "Causasl Forest DML",
+    "Manhattan with Feature Selection": "Equal Weighted LASSO Matching",
+    "DoubleML": "Linear DoubleML",
+    "DRLearner": "Linear DRLearner"
+}

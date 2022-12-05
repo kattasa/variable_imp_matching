@@ -239,6 +239,7 @@ def dgp_lalonde():
     # df_assess = df_assess.rename(columns={'treat': 'T', 're78': 'Y'})
     # df_assess.to_csv('/Users/qlanners/projects/linear_coef_matching/datagen/lalonde.csv', index=False)
     df_assess = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/lalonde.csv')
+    df_assess['Y'] = np.log(df_assess['Y'] + 1)
     x_cols = [c for c in df_assess.columns if c not in ['T', 'Y']]
     discrete = ['black', 'hispanic', 'married', 'nodegree']
     return df_assess.reset_index(drop=True), x_cols, discrete
