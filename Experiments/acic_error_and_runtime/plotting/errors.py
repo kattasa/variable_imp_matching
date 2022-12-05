@@ -38,6 +38,8 @@ for f in all_folders:
         name_to_label[f.split('/')[-2]] = label
     else:
         failed_files.append(f.split('/')[-2])
+        print(f.split('/')[-2])
+        print('NOOOOOOOO')
 
 all_errors = all_errors.reset_index().melt(id_vars=['index'])
 all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%) (log)']

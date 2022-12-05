@@ -78,7 +78,7 @@ class LCM:
         self.est_T = None
         self.random_state = random_state
 
-    def fit(self, method='linear', params=None, double_model=False, return_score=False):
+    def fit(self, method='linear', equal_weights=False, params=None, double_model=False, return_score=False):
         if params is None:
             params = {}
         params['random_state'] = self.random_state
@@ -96,9 +96,9 @@ class LCM:
             elif method == 'tree':
                 model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
                 M_hat = model.feature_importances_[:-1].reshape(-1,)
-            elif method == 'manhattan':
-                model = linear.LassoCV(**params).fit(self.X, self.Y)
-                M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
+            else:
+                raise Exception(f'Fit method not supported.')
+            if equal_weights:
                 M_hat = np.where(M_hat > 0, 1, 0)
             self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
         if return_score:

@@ -38,5 +38,4 @@ if (binary) {
 } else {
   cate <- mean(dbarts::bart(as.matrix(Xt), as.matrix(Yt), as.matrix(sample), verbose=FALSE)[8][1]) - mean(dbarts::bart(as.matrix(Xc), as.matrix(Yc), as.matrix(sample), verbose=FALSE)[8][1])
 }
-total_time <- Sys.time() - start
-cat(as.character(as.numeric(total_time)), '\n')
+cat(as.character(as.numeric(Sys.time() - start)), '\n')

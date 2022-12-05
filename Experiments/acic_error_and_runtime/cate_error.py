@@ -17,7 +17,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from Experiments.helpers import get_acic_data
-from other_methods import pymalts, bart, causalforest, prognostic, doubleml, drlearner, causalforest2
+from other_methods import pymalts, bart, causalforest, prognostic, doubleml, drlearner, causalforest_dml
 from src.linear_coef_matching_mf import LCM_MF
 import pickle
 
@@ -79,7 +79,7 @@ times = {}
 method_name = 'LASSO Coefficient Matching'
 start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
-lcm.fit(method='linear', double_model=False)
+lcm.fit(method='linear')
 lcm.MG(k=k_est)
 lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
@@ -101,7 +101,7 @@ method_name = 'Tree Feature Importance Matching'
 start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
 lcm.gen_skf = split_strategy
-lcm.fit(method='tree', params={'max_depth': 4}, double_model=False)
+lcm.fit(method='tree', params={'max_depth': 4})
 lcm.MG(k=k_est)
 lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
@@ -114,11 +114,11 @@ cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
 df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
 print(f'{method_name} method complete: {time.time() - start}')
 
-method_name = 'Manhattan with Feature Selection'
+method_name = 'Equal Weighted LASSO Matching'
 start = time.time()
 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
 lcm.gen_skf = split_strategy
-lcm.fit(method='manhattan', double_model=False)
+lcm.fit(method='linear', equal_weights=True)
 lcm.MG(k=k_est)
 lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
@@ -215,9 +215,9 @@ df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
 df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']])
 print(f'{method_name} complete: {time.time() - start}')
 
-method_name = 'Causal Forest 2'
+method_name = 'Causal Forest DML'
 start = time.time()
-cate_est_cf = causalforest2.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+cate_est_cf = causalforest_dml.causalforest_dml('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 
 df_err_cf = pd.DataFrame()

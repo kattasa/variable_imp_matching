@@ -29,6 +29,7 @@ def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None, random_state=No
     cate_est['std.CATE'] = cate_est.std(axis=1)
     return cate_est
 
+
 def doubleml_sample(outcome, treatment, df_train, sample, covariates, random_state=None):
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])

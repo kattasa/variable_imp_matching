@@ -28,5 +28,4 @@ X = subset(df_train, select = -c(T,Y))
 crf <- grf::causal_forest(X, Ycrf, Tcrf)
 tauhat = predict(crf, sample)
 
-total_time <- Sys.time() - start
-cat(as.character(as.numeric(total_time)), '\n')
+cat(as.character(as.numeric(Sys.time() - start)), '\n')
