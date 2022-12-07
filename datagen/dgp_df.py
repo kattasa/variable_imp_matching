@@ -10,6 +10,8 @@ from sklearn.impute import IterativeImputer
 from datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction,dgp_friedman, data_generation_dense_mixed_endo, \
     dgp_sine, dgp_non_linear_mixed, dgp_polynomials, dgp_test
 
+np.random.seed(0)
+
 IHDP_FOLDER = os.getenv('IHDP_FOLDER')
 
 ACIC_2018_FOLDER = os.getenv('ACIC_2018_FOLDER')
@@ -261,29 +263,27 @@ def clean_2018_covariates(df):
     edited_cols = ['sample_id']
 
     ordinal_unknowns_cols = [list(df.columns).index(i) for i in ordinal_unknowns.keys()]
-    print('a')
-    for k, v in ordinal_unknowns.items():
-        df.loc[df[k] == v, k] = np.nan
-    df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df)[:, ordinal_unknowns_cols]
-    edited_cols += list(ordinal_unknowns.keys())
-    print('1')
-
     binary = []
+    for k, v in ordinal_unknowns.items():
+        new_col = f'{k}_missing'
+        binary.append(new_col)
+        df.loc[:, new_col] = 0
+        df.loc[df[k] == v, new_col] = 1
+        df.loc[df[k] == v, k] = np.nan
+    df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df[df.columns.difference(binary)])[:, ordinal_unknowns_cols]
+    edited_cols += list(ordinal_unknowns.keys())
+
     for c in df.columns:
         if len(df[c].unique()) == 2:
             df[c] = df[c].map(dict(zip(set(df[c].unique()), [0, 1])))
-            edited_cols.append(c)
             binary.append(c)
-    print('b')
     df[int_type] = df[int_type].astype('int64')
     df[float_type] = df[float_type].astype('float32')
-    edited_cols += int_type + float_type
+    edited_cols += int_type + float_type + binary
 
     categorical = [c for c in df.columns if c not in edited_cols]
-    print('c')
     new_df = pd.concat([df, pd.get_dummies(df[categorical], columns=categorical)], axis=1)
     dummy_cols = [c for c in new_df.columns if c not in edited_cols+categorical]
-    print('d')
 
     return new_df, binary, categorical, dummy_cols
 

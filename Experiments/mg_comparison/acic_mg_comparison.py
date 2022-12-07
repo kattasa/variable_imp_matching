@@ -1,30 +1,24 @@
-
-
-import json
 import numpy as np
 import os
 import shutil
 import pandas as pd
-import time
 import warnings
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import seaborn as sns
 
-from Experiments.helpers import get_data
-from other_methods import pymalts, prognostic
+from other_methods import prognostic
 from src.linear_coef_matching import LCM
 import pickle
-import time
-import random
 
 warnings.filterwarnings("ignore")
 np.random.seed(0)
 random_state = 0
 
 n_imp_covs = 10
-only_pos = True
+only_pos = False
+binary_y_label = 'MG % Match'
+cont_y_label = 'MG Average Difference'
 
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]
 split_num = int(os.getenv('SPLIT_NUM'))
@@ -34,21 +28,22 @@ with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]
 
 acic_name = acic_results_folder.split('_')[-2].split('-')[-1]
-save_folder = f'Results/{acic_name}_only_pos'
+save_folder = f'Results/{acic_name}{"_only_pos" if only_pos else ""}'
 if os.path.exists(save_folder):
     shutil.rmtree(save_folder)
 os.makedirs(save_folder)
 
 df_train = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[train_idx].reset_index(drop=True)
 df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[est_idx].reset_index(drop=True)
+df_true = pd.read_csv(f'{acic_results_folder}/df_true.csv', index_col=0).loc[est_idx].reset_index(drop=True)
 
 lcm = LCM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
-lcm.fit(method='linear', double_model=False)
+lcm.fit(method='linear')
 lcm_c_mg, lcm_t_mg, _, _ = lcm.get_matched_groups(df_est, k=k_est)
 print('LCM done')
 
 ewl = LCM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
-ewl.fit(method='manhattan', double_model=False)
+ewl.fit(method='linear', equal_weights=True)
 ewl_c_mg, ewl_t_mg, _, _ = ewl.get_matched_groups(df_est, k=k_est)
 print('EWL done')
 
@@ -78,9 +73,11 @@ print(f'Prog Rankings: {prog_rank}')
 int_types = np.array(imp_covs)[list(df_est[imp_covs].nunique() <= 2)]
 float_types = np.array(imp_covs)[list(df_est[imp_covs].nunique() > 2)]
 if len(float_types) > 0:
+    from sklearn.experimental import enable_iterative_imputer
+    from sklearn.impute import IterativeImputer
     sample_ids = pd.read_csv(
         f'/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/{acic_name}.csv')
-    df = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/covariates/x.csv')
+    df = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/covariates/x_imputed.csv')
     df = df.join(pd.DataFrame(sample_ids).set_index('sample_id'), on='sample_id', how='inner').reset_index(drop=True)
     df = df.loc[est_idx].reset_index(drop=True)
     df_est[float_types] = df[float_types]
@@ -136,8 +133,8 @@ ewl_diffs['Method'] = 'Equal Weighted\nLASSO Matching'
 prog_diffs['Method'] = 'Prognostic Score\nMatching'
 binary_sims = pd.concat([lcm_diffs, ewl_diffs, prog_diffs])
 binary_sims[int_types] = (k_est - binary_sims[int_types]) / k_est
-binary_sims = pd.melt(binary_sims, id_vars=['Method'])
-binary_sims = binary_sims.rename(columns={'variable': 'Binary Covariate', 'value': 'MG % Match'})
+binary_sims = pd.melt(binary_sims, id_vars=['Method']).dropna(subset=['value'])
+binary_sims = binary_sims.rename(columns={'variable': 'Binary Covariate', 'value': binary_y_label})
 
 if len(float_types) > 0:
     lcm_std = {i: np.array([]) for i in float_types}
@@ -145,28 +142,28 @@ if len(float_types) > 0:
     prog_std = {i: np.array([]) for i in float_types}
     for i in float_types:
         lcm_std[i] = np.concatenate([lcm_std[i],
-                                     np.std(np.transpose(df_est[i].to_numpy()[lcm_c_mg.T.to_numpy()] -
-                                                         df_est[i].to_numpy()), axis=1)
+                                     np.mean(np.abs(np.transpose(df_est[i].to_numpy()[lcm_c_mg.T.to_numpy()] -
+                                                         df_est[i].to_numpy())), axis=1)
                                      ])
         lcm_std[i] = np.concatenate([lcm_std[i],
-                                     np.std(np.transpose(df_est[i].to_numpy()[lcm_t_mg.T.to_numpy()] -
-                                                         df_est[i].to_numpy()), axis=1)
+                                     np.mean(np.abs(np.transpose(df_est[i].to_numpy()[lcm_t_mg.T.to_numpy()] -
+                                                         df_est[i].to_numpy())), axis=1)
                                      ])
         ewl_std[i] = np.concatenate([ewl_std[i],
-                                     np.std(np.transpose(df_est[i].to_numpy()[ewl_c_mg.T.to_numpy()] -
-                                                         df_est[i].to_numpy()), axis=1)
+                                     np.mean(np.abs(np.transpose(df_est[i].to_numpy()[ewl_c_mg.T.to_numpy()] -
+                                                         df_est[i].to_numpy())), axis=1)
                                      ])
         ewl_std[i] = np.concatenate([ewl_std[i],
-                                     np.std(np.transpose(df_est[i].to_numpy()[ewl_t_mg.T.to_numpy()] -
-                                                         df_est[i].to_numpy()), axis=1)
+                                     np.mean(np.abs(np.transpose(df_est[i].to_numpy()[ewl_t_mg.T.to_numpy()] -
+                                                         df_est[i].to_numpy())), axis=1)
                                      ])
         prog_std[i] = np.concatenate([prog_std[i],
-                                     np.std(np.transpose(df_est[i].to_numpy()[prog_c_mg.T.to_numpy()] -
-                                                         df_est[i].to_numpy()), axis=1)
+                                     np.mean(np.abs(np.transpose(df_est[i].to_numpy()[prog_c_mg.T.to_numpy()] -
+                                                         df_est[i].to_numpy())), axis=1)
                                      ])
         prog_std[i] = np.concatenate([prog_std[i],
-                                     np.std(np.transpose(df_est[i].to_numpy()[prog_t_mg.T.to_numpy()] -
-                                                         df_est[i].to_numpy()), axis=1)
+                                     np.mean(np.abs(np.transpose(df_est[i].to_numpy()[prog_t_mg.T.to_numpy()] -
+                                                         df_est[i].to_numpy())), axis=1)
                                      ])
     lcm_std = pd.DataFrame(lcm_std)
     ewl_std = pd.DataFrame(ewl_std)
@@ -176,63 +173,68 @@ if len(float_types) > 0:
     prog_std['Method'] = 'Prognostic Score\nMatching'
     cont_sims = pd.concat([lcm_std, ewl_std, prog_std])
     cont_sims = pd.melt(cont_sims, id_vars=['Method'])
-    cont_sims = cont_sims.rename(columns={'variable': 'Continuous Covariate', 'value': 'MG Standard Deviation'})
+    cont_sims = cont_sims.rename(columns={'variable': 'Continuous Covariate', 'value': cont_y_label})
 
 if (len(int_types) > 0) & (len(float_types) > 0):
     fig, axes = plt.subplots(1, 2)
-    fig.suptitle('Important Covariate Similarity within Match Groups')
-    sns.barplot(ax=axes[0], data=binary_sims, x='Binary Covariate', y='MG % Match', hue='Method')
-    sns.boxplot(ax=axes[1], data=cont_sims, x='Continuous Covariate', y='MG Standard Deviation', hue='Method')
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-    axes[0].get_legend().remove()
-    plt.tight_layout()
+    sns.barplot(ax=axes[0], data=binary_sims, x='Binary Covariate', y=binary_y_label, hue='Method')
+    sns.boxplot(ax=axes[1], data=cont_sims, x='Continuous Covariate', y=cont_y_label, hue='Method')
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='right', bbox_to_anchor=(0.95, 1.05), ncol=3)
+    for ax in axes:
+        ax.get_legend().remove()
+    fig.tight_layout()
     fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
 elif len(int_types) > 0:
     fig = plt.figure()
-    fig.suptitle('Important Covariate Similarity within Match Groups')
-    sns.barplot(data=binary_sims, x='Binary Covariate', y='MG % Match', hue='Method')
-    plt.ylim(0.75, 1.02)
+    sns.barplot(data=binary_sims, x='Binary Covariate', y=binary_y_label, hue='Method')
+    plt.ylim(0.95, 1.002)
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
     plt.tight_layout()
     fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
 elif len(float_types) > 0:
     fig = plt.figure()
-    fig.suptitle('Important Covariate Similarity within Match Groups')
-    sns.boxplot(data=cont_sims, x='Continuous Covariate', y='MG Standard Deviation', hue='Method')
+    sns.boxplot(data=cont_sims, x='Continuous Covariate', y=cont_y_label, hue='Method')
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
     plt.tight_layout()
     fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
 
-sample = 0
+
+df_est = df_est.join(df_true[['Y0_true', 'Y1_true']])
+df_est.to_csv(f'{save_folder}/full_df.csv')
+
+sample = np.random.choice(df_est[df_est['cig_rec_0'] == 1].index)
 
 this_sample = df_est.loc[sample]
 if this_sample['T'] == 0:
-    prog_sample_mg = prog_t_mg.loc[sample][:10]
-    lcm_sample_mg = lcm_t_mg.loc[sample][:10]
-    ewl_sample_mg = ewl_t_mg.loc[sample][:10]
+    prog_sample_mg = prog_t_mg.loc[sample][:]
+    lcm_sample_mg = lcm_t_mg.loc[sample][:5]
+    ewl_sample_mg = ewl_t_mg.loc[sample][:5]
 else:
-    prog_sample_mg = prog_c_mg.loc[sample][:10]
-    lcm_sample_mg = lcm_c_mg.loc[sample][:10]
-    ewl_sample_mg = ewl_c_mg.loc[sample][:10]
+    prog_sample_mg = prog_c_mg.loc[sample][:5]
+    lcm_sample_mg = lcm_c_mg.loc[sample][:5]
+    ewl_sample_mg = ewl_c_mg.loc[sample][:5]
 
 lcm_unimp_covs = np.array(lcm.covariates)[lcm.M == 0]
 prog_unimp_covs = np.array(prog.cov)[prog.hc.feature_importances_ == 0]
 unimp_covs = [c for c in lcm_unimp_covs if c in prog_unimp_covs]
-random.shuffle(unimp_covs)
+covs_by_nunique = list(df_est.nunique().sort_values(ascending=False).index)
+unimp_covs = [c for c in covs_by_nunique if c in unimp_covs]
 unimp_covs = unimp_covs[:len(imp_covs)]
 
-focus_covs = imp_covs + unimp_covs
+focus_cols = imp_covs + unimp_covs + ['T', 'Y0_true', 'Y1_true', 'Y']
 
-lcm_sample_mg = df_est.loc[lcm_sample_mg, focus_covs]
-ewl_sample_mg = df_est.loc[ewl_sample_mg, focus_covs]
-prog_sample_mg = df_est.loc[prog_sample_mg, focus_covs]
+this_sample = df_est.loc[[sample], focus_cols]
+lcm_sample_mg = df_est.loc[lcm_sample_mg, focus_cols]
+ewl_sample_mg = df_est.loc[ewl_sample_mg, focus_cols]
+prog_sample_mg = df_est.loc[prog_sample_mg, focus_cols]
+this_sample['Method'] = 'Sample'
 lcm_sample_mg['Method'] = 'Linear Coefficient Matching'
 ewl_sample_mg['Method'] = 'Equal Weighted LASSO Matching'
 prog_sample_mg['Method'] = 'Prognostic Score Matching'
 
-sample_mg = pd.concat([lcm_sample_mg, ewl_sample_mg, prog_sample_mg])
-
-this_sample[focus_covs + ['T']].to_csv(f'{save_folder}/sample.csv')
+sample_mg = pd.concat([this_sample, lcm_sample_mg, ewl_sample_mg, prog_sample_mg])
+sample_mg = sample_mg[['Method'] + focus_cols]
 sample_mg.to_csv(f'{save_folder}/sample_mg.csv')
 
 cov_summary = pd.DataFrame(columns=['Info'] +imp_covs)

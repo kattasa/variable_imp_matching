@@ -2,7 +2,7 @@ from glob import glob
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+import matplotlib
 import seaborn as sns
 
 all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
@@ -20,6 +20,30 @@ methods = [
     'Causal Forest',
     'Causal Forest 2'
 ]
+
+rename_methods = {
+    "BART": "T-Learner BART",
+    "Causal Forest 2": "Causal Forest\nDML",
+    'LASSO Coefficient Matching': 'LASSO Coefficient\nMatching',
+    "Manhattan with Feature Selection": "Equal Weighted\nLASSO Matching",
+    'Prognostic Score Matching': 'Prognostic Score\nMatching',
+    "DoubleML": "Linear DoubleML",
+    "DRLearner": "Linear DRLearner"
+}
+
+order = [
+    'LASSO Coefficient\nMatching',
+    "Equal Weighted\nLASSO Matching",
+    # 'Tree Feature Importance Matching',
+    'MALTS Matching',
+    'Prognostic Score\nMatching',
+    "T-Learner BART",
+    'Causal Forest',
+    "Causal Forest\nDML",
+    'Linear DoubleML',
+    'Linear DRLearner'
+]
+
 all_errors = pd.DataFrame([], index=methods)
 failed_files = []
 name_to_label = {}
@@ -38,28 +62,40 @@ for f in all_folders:
         name_to_label[f.split('/')[-2]] = label
     else:
         failed_files.append(f.split('/')[-2])
-        print(f.split('/')[-2])
-        print('NOOOOOOOO')
+        print(f"Failed: {f.split('/')[-2]}")
 
 all_errors = all_errors.reset_index().melt(id_vars=['index'])
 all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%) (log)']
 all_errors[['acic_year', 'acic_file_no']] = all_errors['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
 all_errors = all_errors.sort_values(['acic_year', 'acic_file_no'])
-all_errors = all_errors.drop(columns=['acic_year', 'acic_file_no'])
+all_errors['Method'] = all_errors['Method'].apply(lambda x: rename_methods[x] if x in rename_methods.keys() else x)
 
-plt.figure()
+
+matplotlib.rcParams.update({'font.size': 12})
+plt.style.use(['seaborn-darkgrid'])
+fig, axes = plt.subplots(2, 1, figsize=(15, 15))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
-sns.catplot(data=all_errors, x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", kind="bar", legend=False,
-            aspect=3/2)
-plt.xticks(rotation=65, horizontalalignment='right')
-plt.tight_layout()
-plt.legend(loc='upper right', prop={'size': 10})
-plt.yscale('log')
-plt.savefig('plots/acic_cate_errors_main.png')
+sns.set(font_scale=1.5)
+b1 = sns.barplot(data=all_errors[(all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] <= 15)],
+            x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[0])
+b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15)) | (all_errors['acic_year'] == 2019)],
+            x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[1])
 
-rankings = all_errors.sort_values(['ACIC File','Median Relative Error (%) (log)'],ascending=True)
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, loc='right', bbox_to_anchor=(1.2, 0.5))
+for ax in axes:
+    ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
+    ax.set_yscale('log')
+    ax.get_legend().remove()
+b1.set(xlabel=None, ylabel=None)
+b2.set(xlabel=None, ylabel=None)
+fig.text(0.5, -0.01, 'ACIC File', ha='center')
+fig.text(-0.01, 0.5, 'Median Relative Error (%)', va='center', rotation='vertical')
+fig.tight_layout()
+fig.savefig('plots/acic_cate_errors_main.png', bbox_inches='tight')
+
+rankings = all_errors.sort_values(['ACIC File', 'Median Relative Error (%) (log)'],ascending=True)
 n_methods = rankings['Method'].nunique()
 rankings['Ranking'] = list(range(1, n_methods+1))*(rankings.shape[0] // n_methods)
 rankings = rankings[~rankings['Median Relative Error (%) (log)'].isna()]
@@ -68,7 +104,7 @@ plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-sns.boxplot(data=rankings, x="Ranking", y="Method")
+sns.boxplot(data=rankings, x="Ranking", y="Method", order=order)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig('plots/acic_cate_errors_ranking_main.png')
@@ -77,15 +113,7 @@ plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-sns.boxplot(data=all_errors, x="Median Relative Error (%) (log)", y="Method")
+sns.boxplot(data=all_errors, x="Median Relative Error (%) (log)", y="Method", order=order)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig('plots/acic_cate_errors_by_method_main.png')
-
-rename_methods = {
-    "BART": "T-Learner BART",
-    "Causal Forest 2": "Causasl Forest DML",
-    "Manhattan with Feature Selection": "Equal Weighted LASSO Matching",
-    "DoubleML": "Linear DoubleML",
-    "DRLearner": "Linear DRLearner"
-}

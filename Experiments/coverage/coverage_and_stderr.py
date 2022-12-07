@@ -1,22 +1,16 @@
 
-import json
 import numpy as np
 import os
 import pandas as pd
 import time
 import warnings
 
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import seaborn as sns
 from sklearn.model_selection import RepeatedStratifiedKFold
 
 from datagen.dgp_df import dgp_dense_mixed_endo_df
 from other_methods import bart
 from src.linear_coef_matching_mf import LCM_MF
 import scipy.stats as st
-import scipy.special as sp
-from sklearn.preprocessing import StandardScaler
 
 
 warnings.filterwarnings("ignore")
@@ -51,7 +45,7 @@ for i in range(n_iters):
     cate_est_bart, bart_control_preds, bart_treatment_preds = bart.bart('Y', 'T', df,
                                                                         gen_skf=split_strategy,
                                                                         n_splits=n_splits, result='full')
-    bart_cates.append(cate_est_bart['CATE'])
+    bart_cates.append([cate_est_bart.iloc[:, (n_splits)*i:(n_splits)*2].mean().mean() for i in range(n_repeats)])
 
     bart_control_preds = bart_control_preds.T
     bart_treatment_preds = bart_treatment_preds.T
@@ -62,11 +56,11 @@ for i in range(n_iters):
     lcm.gen_skf = split_strategy
     lcm.fit(double_model=False)
     lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
+    lcm.CATE(cate_methods=[['linear_pruned', False], ['linear_pruned', True]],
              precomputed_control_preds=bart_control_preds,
              precomputed_treatment_preds=bart_treatment_preds)
-    lcm_cates.append(lcm.cate_df['CATE_double_linear_pruned'])
-    augmented_lcm_cates.append(lcm.cate_df['CATE_double_linear_pruned_augmented'])
+    lcm_cates.append(lcm.cate_df['CATE_linear_pruned'])
+    augmented_lcm_cates.append(lcm.cate_df['CATE_linear_pruned_augmented'])
 
     print(f'Iter {i+1}: {time.time() - start}')
 
