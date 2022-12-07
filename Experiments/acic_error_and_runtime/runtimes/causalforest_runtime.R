@@ -4,7 +4,7 @@ suppressWarnings(library(grf))
 RESULTS_FOLDER <- Sys.getenv("RESULTS_FOLDER")
 ACIC_FOLDER <- Sys.getenv("ACIC_FOLDER")
 SPLIT_NUM <- Sys.getenv("SPLIT_NUM")
-
+RANDOM_STATE <- Sys.getenv("RANDOM_STATE")
 
 acic_results_folder <- paste(RESULTS_FOLDER, ACIC_FOLDER, sep="/")
 split_num = strtoi(SPLIT_NUM)
@@ -25,7 +25,7 @@ start <- Sys.time()
 Ycrf = df_train$Y
 Tcrf = df_train$T
 X = subset(df_train, select = -c(T,Y))
-crf <- grf::causal_forest(X, Ycrf, Tcrf)
+crf <- grf::causal_forest(X, Ycrf, Tcrf, seed=RANDOM_STATE)
 tauhat = predict(crf, sample)
 
 cat(as.character(as.numeric(Sys.time() - start)), '\n')

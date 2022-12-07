@@ -12,8 +12,8 @@ from src.linear_coef_matching import LCM
 import pickle
 
 warnings.filterwarnings("ignore")
-np.random.seed(0)
-random_state = 0
+np.random.seed(1)
+random_state = 1
 
 n_imp_covs = 10
 only_pos = False
@@ -77,7 +77,7 @@ if len(float_types) > 0:
     from sklearn.impute import IterativeImputer
     sample_ids = pd.read_csv(
         f'/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/{acic_name}.csv')
-    df = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/covariates/x_imputed.csv')
+    df = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/covariates/x_preprocessed.csv')
     df = df.join(pd.DataFrame(sample_ids).set_index('sample_id'), on='sample_id', how='inner').reset_index(drop=True)
     df = df.loc[est_idx].reset_index(drop=True)
     df_est[float_types] = df[float_types]

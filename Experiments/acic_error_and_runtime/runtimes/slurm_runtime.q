@@ -13,7 +13,7 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
 memory=$"16G"
 k_est=60
-random_state=0
+random_state=1
 cd $RESULTS_FOLDER
 folders=$(ls -d */)
 cd -
@@ -45,8 +45,8 @@ for f in $folders; do
         sbatch -o "${RESULTS_FOLDER}/${f}/equal_lcm_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/equal_lcm_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,RANDOM_STATE=$random_state,LCM_METHOD="linear",LCM_EQUAL_WEIGHTS=1,PYTHONPATH,RESULTS_FOLDER slurm_lcm_runtime.q
         sbatch -o "${RESULTS_FOLDER}/${f}/malts_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/malts_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,RANDOM_STATE=$random_state,PYTHONPATH,RESULTS_FOLDER slurm_malts_runtime.q
         sbatch -o "${RESULTS_FOLDER}/${f}/prognostic_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/prognostic_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,K_EST=$k_est,RANDOM_STATE=$random_state,PYTHONPATH,RESULTS_FOLDER slurm_prognostic_runtime.q
-        sbatch -o "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_bart_runtime.q
-        sbatch -o "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_causalforest_runtime.q
+        sbatch -o "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/bart_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,RANDOM_STATE=$random_state,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_bart_runtime.q
+        sbatch -o "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/causalforest_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,RANDOM_STATE=$random_state,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_causalforest_runtime.q
         sbatch -o "${RESULTS_FOLDER}/${f}/causalforest_dml_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/causalforest_dml_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,RANDOM_STATE=$random_state,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_causalforest_dml_runtime.q
         sbatch -o "${RESULTS_FOLDER}/${f}/doubleml_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/doubleml_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,RANDOM_STATE=$random_state,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_doubleml_runtime.q
         sbatch -o "${RESULTS_FOLDER}/${f}/drlearner_fit_times/${split_num}_${counter}.txt" -e "${RESULTS_FOLDER}/${f}/drlearner_fit_times/${split_num}_${counter}.err" --mem="$memory" --export=ACIC_FOLDER="$f",SPLIT_NUM=$split_num,RANDOM_STATE=$random_state,PYTHONPATH,R_HOME,RESULTS_FOLDER slurm_drlearner_runtime.q

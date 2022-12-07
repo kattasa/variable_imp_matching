@@ -10,7 +10,6 @@ import os
 import pandas as pd
 import time
 import warnings
-np.random.seed(0)
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -22,7 +21,8 @@ from src.linear_coef_matching_mf import LCM_MF
 import pickle
 
 warnings.filterwarnings("ignore")
-random_state = 0
+np.random.seed(1)
+random_state = 1
 
 
 acic_year = os.getenv('ACIC_YEAR').replace("'", '').replace('"', '')
@@ -190,7 +190,7 @@ print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'BART'
 start = time.time()
-cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 
 df_err_bart = pd.DataFrame()
@@ -204,7 +204,7 @@ print(f'{method_name} complete: {time.time() - start}')
 
 method_name = 'Causal Forest'
 start = time.time()
-cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy)
+cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
 times[method_name] = time.time() - start
 
 df_err_cf = pd.DataFrame()

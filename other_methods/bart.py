@@ -19,7 +19,7 @@ utils = importr('utils')
 dbarts = importr('dbarts')
 
 
-def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
+def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None, random_state=0):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -42,13 +42,13 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
         Yt = np.array(df_train.loc[df_train[treatment] == 1, outcome])
         #
         Xtest = df_est[covariates].to_numpy()
-        bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False)
+        bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, seed=random_state)
         # bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, ntree=500, ndpost=10000)
         if discrete_outcome:
             y_c_hat_bart = norm.cdf(bart_res_c[2]).mean(axis=0)
         else:
             y_c_hat_bart = np.array(bart_res_c[7])
-        bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False)
+        bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, seed=random_state)
         # bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, ntree=500, ndpost=10000)
         if discrete_outcome:
             y_t_hat_bart = norm.cdf(bart_res_t[2]).mean(axis=0)
@@ -74,7 +74,8 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None):
         return cate_est, control_preds.sort_index(), treatment_preds.sort_index()
     return cate_est
 
-def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False):
+
+def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False, random_state=0):
     Xc = np.array(df_train.loc[df_train[treatment] == 0, covariates])
     Yc = np.array(df_train.loc[df_train[treatment] == 0, outcome])
 
@@ -84,7 +85,7 @@ def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False):
     if binary:
         # for some reason bart can't do one sample inference with binary outcome. so we add a dummy sample
         sample = np.concatenate([sample, np.zeros(shape=sample.shape)], axis=0)
-        return norm.cdf(dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[2][:, 0]).mean() - \
-               norm.cdf(dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[2][:, 0]).mean()
-    return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False)[7][0] - \
-           dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False)[7][0]
+        return norm.cdf(dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False, seed=random_state)[2][:, 0]).mean() - \
+               norm.cdf(dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, seed=random_state)[2][:, 0]).mean()
+    return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False, seed=random_state)[7][0] - \
+           dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, seed=random_state)[7][0]
