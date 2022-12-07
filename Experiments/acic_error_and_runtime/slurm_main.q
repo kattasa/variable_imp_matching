@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 #SBATCH --get-user-env
-#SBATCH --output=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results2/slurm_%A.out
-#SBATCH --error=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results2/slurm_%A.err
+#SBATCH --output=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results/slurm_%A.out
+#SBATCH --error=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results/slurm_%A.err
 #SBATCH --mem=2G
 
-export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results2
+export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results
 export ACIC_2018_FOLDER=/work/qml/acic_2018
 export ACIC_2019_FOLDER=/work/qml/acic_2019
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
