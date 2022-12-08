@@ -80,7 +80,7 @@ class LCM:
 
     def fit(self, method='linear', equal_weights=False, params=None, double_model=False, return_score=False):
         if params is None:
-            params = {}
+            params = {'max_iter': 10000}
         params['random_state'] = self.random_state
         if double_model:
             model_C = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])

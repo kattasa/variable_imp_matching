@@ -22,9 +22,11 @@ class Prognostic:
         self.df_c = df.loc[df[T] == 0]
         self.Xc, self.Yc = self.df_c[self.cov], self.df_c[Y]
         if binary:
-            self.hc = ensemble.GradientBoostingClassifier(random_state=random_state).fit(self.Xc, self.Yc)
+            self.hc = ensemble.GradientBoostingClassifier(n_estimators=1000,
+                                                          random_state=random_state).fit(self.Xc, self.Yc)
         else:
-            self.hc = ensemble.GradientBoostingRegressor(random_state=random_state).fit(self.Xc, self.Yc)
+            self.hc = ensemble.GradientBoostingRegressor(n_estimators=1000,
+                                                         random_state=random_state).fit(self.Xc, self.Yc)
 
     def get_sample_cate(self, df_est, sample_idx, k=10, binary=False):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
