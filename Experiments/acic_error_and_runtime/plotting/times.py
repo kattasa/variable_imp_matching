@@ -10,8 +10,48 @@ import seaborn as sns
 all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
 
 n_repeats = 25
+plot_name = '_results_main'
 q = 0.5
-methods = ['LASSO Coefficient Matching', 'MALTS Matching', 'Prognostic Score Matching', 'BART', 'Causal Forest']
+methods = [
+    'LASSO Coefficient Matching',
+    # 'Tree Feature Importance Matching',
+    'Manhattan with Feature Selection',
+    # 'Equal Weighted LASSO Matching',
+    'MALTS Matching',
+    'Prognostic Score Matching',
+    'BART',
+    'DoubleML',
+    'DRLearner',
+    'Causal Forest',
+    'Causal Forest 2'
+    # 'Causal Forest DML'
+]
+
+rename_methods = {
+    "BART": "T-Learner BART",
+    "Causal Forest 2": "Causal Forest\nDML",
+    # "Causal Forest DML": "Causal Forest\nDML",
+    # 'LASSO Coefficient Matching': 'LASSO Coefficient\nMatching',
+    "Manhattan with Feature Selection": "Equal Weighted\nLASSO Matching",
+    "Equal Weighted LASSO Matching": "Equal Weighted\nLASSO Matching",
+    'Prognostic Score Matching': 'Prognostic Score\nMatching',
+    "DoubleML": "Linear DoubleML",
+    "DRLearner": "Linear DRLearner"
+}
+
+order = [
+    'LASSO Coefficient\nMatching',
+    "Equal Weighted\nLASSO Matching",
+    # 'Tree Feature Importance Matching',
+    'MALTS Matching',
+    'Prognostic Score\nMatching',
+    "T-Learner BART",
+    'Causal Forest',
+    "Causal Forest\nDML",
+    'Linear DoubleML',
+    'Linear DRLearner'
+]
+
 all_times = pd.DataFrame([], index=methods)
 failed_files = {}
 name_to_label = {}
@@ -19,8 +59,14 @@ methods_dirs = {
     'BART': 'bart_fit_times',
     'Causal Forest': 'causalforest_fit_times',
     'LASSO Coefficient Matching': 'lcm_fit_times',
+    'Manhattan with Feature Selection': 'equal_lcm_fit_times',
+    # 'Equal Weighted LASSO Matching': 'lcm_fit_times',
     'MALTS Matching': 'malts_fit_times',
-    'Prognostic Score Matching': 'prognostic_fit_times'
+    'Prognostic Score Matching': 'prognostic_fit_times',
+    'DoubleML': 'doubleml_fit_times',
+    'DRLearner': 'drlearner_fit_times',
+    'Causal Forest 2': 'causalforest_dml_fit_times'
+    # 'Causal Forest DML': 'causalforest_dml_fit_times
 }
 
 acic_2018_file_no = 1
@@ -63,27 +109,28 @@ all_times = all_times.reset_index().melt(id_vars=['index'])
 all_times.columns = ['Method', 'ACIC File', 'Single CATE Runtime (s)']
 all_times[['acic_year', 'acic_file_no']] = all_times['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
 all_times = all_times.sort_values(['acic_year', 'acic_file_no'])
-all_times = all_times.drop(columns=['acic_year', 'acic_file_no'])
+all_times['Method'] = all_times['Method'].apply(lambda x: rename_methods[x] if x in rename_methods.keys() else x)
 
 plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-ax = sns.catplot(data=all_times, x="ACIC File", y="Single CATE Runtime (s)", hue="Method", kind="bar")
+ax = sns.catplot(data=all_times, x="ACIC File", y="Single CATE Runtime (s)", hue="Method", kind="bar", hue_order=order)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.legend(loc='upper right', prop={'size': 10})
 plt.yscale('log')
-plt.savefig('plots/acic_cate_runtimes.png')
+plt.savefig(f'plots/acic_cate_runtimes{plot_name}.png')
 
 plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-sns.boxplot(data=all_times[all_times['Method'] != 'MALTS Matching'], x="Single CATE Runtime (s)", y="Method")
+sns.boxplot(data=all_times[all_times['Method'] != 'MALTS Matching'], x="Single CATE Runtime (s)", y="Method",
+            order=order)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
-plt.savefig('plots/acic_cate_runtimes_by_method.png')
+plt.savefig(f'plots/acic_cate_runtimes_by_method{plot_name}.png')
 
 rankings = all_times.sort_values(['ACIC File', 'Single CATE Runtime (s)'],ascending=True)
 n_methods = rankings['Method'].nunique()
@@ -94,7 +141,7 @@ plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-sns.boxplot(data=rankings, x="Ranking", y="Method")
+sns.boxplot(data=rankings, x="Ranking", y="Method", order=order)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
-plt.savefig('plots/acic_cate_runtimes_ranking.png')
+plt.savefig(f'plots/acic_cate_runtimes_ranking{plot_name}.png')

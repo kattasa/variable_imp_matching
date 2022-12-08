@@ -6,6 +6,7 @@ import warnings
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.model_selection import train_test_split
 
 from other_methods import prognostic
 from src.linear_coef_matching import LCM
@@ -26,6 +27,7 @@ k_est = int(os.getenv('K_EST'))
 
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]
+
 
 acic_name = acic_results_folder.split('_')[-2].split('-')[-1]
 save_folder = f'Results/{acic_name}{"_only_pos" if only_pos else ""}'
@@ -207,7 +209,7 @@ sample = np.random.choice(df_est[df_est['cig_rec_0'] == 1].index)
 
 this_sample = df_est.loc[sample]
 if this_sample['T'] == 0:
-    prog_sample_mg = prog_t_mg.loc[sample][:]
+    prog_sample_mg = prog_t_mg.loc[sample][:5]
     lcm_sample_mg = lcm_t_mg.loc[sample][:5]
     ewl_sample_mg = ewl_t_mg.loc[sample][:5]
 else:
