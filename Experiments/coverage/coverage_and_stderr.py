@@ -59,7 +59,7 @@ for i in range(n_iters):
     lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
              precomputed_control_preds=bart_control_preds,
              precomputed_treatment_preds=bart_treatment_preds)
-    lcm_ates.append([lcm.cate_df['CATE_linear_pruned'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
+    lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
     augmented_lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned_augmented'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
 
     print(f'Iter {i+1}: {time.time() - start}')
