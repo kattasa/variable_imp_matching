@@ -43,13 +43,13 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None, ran
         #
         Xtest = df_est[covariates].to_numpy()
         # bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, seed=random_state)
-        bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, ntree=2000, ndpost=10000)
+        bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, ntree=400, ndpost=2000)
         if discrete_outcome:
             y_c_hat_bart = norm.cdf(bart_res_c[2]).mean(axis=0)
         else:
             y_c_hat_bart = np.array(bart_res_c[7])
         # bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, seed=random_state)
-        bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, ntree=2000, ndpost=10000)
+        bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, ntree=400, ndpost=2000)
         if discrete_outcome:
             y_t_hat_bart = norm.cdf(bart_res_t[2]).mean(axis=0)
         else:

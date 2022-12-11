@@ -22,7 +22,7 @@ def causalforest_dml(outcome, treatment, data, n_splits=2, gen_skf=None, random_
         X_est = np.array(df_est.loc[:, covariates])
         est = CausalForestDML(model_y=WeightedLassoCV(max_iter=10000),
                               model_t=LogisticRegressionCV(solver='sag', max_iter=1000),
-                              featurizer=None, treatment_featurizer=None, n_estimators=1000, random_state=random_state)
+                              featurizer=None, treatment_featurizer=None, n_estimators=200, random_state=random_state)
         est.fit(Y=Y, T=T, X=X, W=X)
         this_te_est = est.effect(X=X_est)
         this_index = df_est.index
