@@ -15,7 +15,6 @@ from sklearn import preprocessing
 
 def construct_sec_order(arr):
     # an intermediate data generation function used for generating second order information
-    arr -= 1
     second_order_feature = []
     num_cov_sec = len(arr[0])
     for a in arr:
@@ -28,7 +27,7 @@ def construct_sec_order(arr):
 
 
 def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp, num_disc_unimp, std=1.5,
-                                     t_imp=2, overlap=1):
+                                     t_imp=2, overlap=1, weights=None):
     def u(x):
         T = []
         second_T_term = t_imp * 1 if num_cont_imp >= 2 else t_imp * 0.5
@@ -50,6 +49,10 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]
 
     treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
+    if weights is not None:
+        for idx, w in weights:
+            dense_bs[idx] = w['control']
+            treatment_eff_coef[0] = w['treated']
     treatment_effect = np.dot(x, treatment_eff_coef)
     second = construct_sec_order(x)
     treatment_eff_sec = np.sum(second, axis=1)

@@ -84,7 +84,7 @@ class LCM:
         params['random_state'] = self.random_state
         if double_model:
             model_C = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
-            model_T = linear.LassoCV(**params).fit(self.X[self.T == 1, :-1], self.Y_T[self.T == 1])
+            model_T = linear.LassoCV(**params).fit(self.X[self.T == 1, :-1], self.Y[self.T == 1])
             M_C_hat = np.abs(model_C.coef_).reshape(-1,)
             M_T_hat = np.abs(model_T.coef_).reshape(-1,)
             self.M_C = M_C_hat / np.sum(M_C_hat) * self.p if not np.all(M_C_hat == 0) else np.ones(self.p)
@@ -115,7 +115,7 @@ class LCM:
         :param check_df:
         :return:
         """
-        return get_match_groups(df_estimation, k, self.covariates, self.treatment, M=self.M,
+        return get_match_groups(df_estimation, k, self.covariates, self.treatment, M=self.M, M_C=self.M_C, M_T=self.M_T,
                                 return_original_idx=return_original_idx, check_est_df=check_est_df)
 
     def CATE(self, df_estimation, control_match_groups=None, treatment_match_groups=None, k=10, method='mean',
@@ -131,8 +131,9 @@ class LCM:
             else:
                 control_preds = self.est_C.predict(df_estimation[self.covariates])
                 treatment_preds = self.est_T.predict(df_estimation[self.covariates])
+        this_M = self.M if self.M is not None else self.M_C + self.M_T
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
-                         self.covariates, self.outcome, self.treatment, self.M, augmented=augmented,
+                         self.covariates, self.outcome, self.treatment, this_M, augmented=augmented,
                          control_preds=control_preds, treatment_preds=treatment_preds, check_est_df=check_est_df,
                          random_state=self.random_state)
 

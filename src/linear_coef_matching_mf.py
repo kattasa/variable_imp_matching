@@ -22,6 +22,9 @@ class LCM_MF:
         skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
         self.gen_skf = list(skf.split(data, data[treatment]))
         self.M_list = []
+        self.M_C_list = []
+        self.M_T_list = []
+        self.double_model = None
         self.model_prop_score_list = []
         self.col_orders = []
         self.MG_size = None
@@ -37,6 +40,9 @@ class LCM_MF:
 
     def fit(self, method='linear', equal_weights=False, params=None, double_model=False, augmented_est=None):
         self.M_list = []
+        self.M_C_list = []
+        self.M_T_list = []
+        self.double_model = double_model
         self.col_orders = []
         for est_idx, train_idx in self.gen_skf:
             df_train = self.data.loc[train_idx]
@@ -44,6 +50,8 @@ class LCM_MF:
             m = LCM(outcome=self.outcome, treatment=self.treatment, data=df_train, binary=self.binary,
                     random_state=self.random_state)
             m.fit(method=method, equal_weights=equal_weights, params=params, double_model=double_model)
+            self.M_C_list.append(m.M_C)
+            self.M_T_list.append(m.M_T)
             self.M_list.append(m.M)
             self.col_orders.append(m.col_order)
             m.augment(augmented_est)
@@ -66,6 +74,8 @@ class LCM_MF:
             control_mg, treatment_mg, control_dist, treatment_dist = get_match_groups(df_estimation, k, self.covariates,
                                                                                       treatment,
                                                                                       M=self.M_list[i],
+                                                                                      M_C=self.M_C_list[i],
+                                                                                      M_T=self.M_T_list[i],
                                                                                       return_original_idx=False,
                                                                                       check_est_df=False)
             self.C_MG_list.append(control_mg)
@@ -97,8 +107,9 @@ class LCM_MF:
                 control_preds = self.est_C_list[i].predict(df_estimation[self.covariates])
                 treatment_preds = self.est_T_list[i].predict(df_estimation[self.covariates])
             for method, augmented in cate_methods:
+                this_M = self.M_list[i] if not self.double_model else self.M_C_list[i] + self.M_T_list[i]
                 cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method, self.covariates,
-                                       outcome, treatment, self.M_list[i], augmented=augmented,
+                                       outcome, treatment, this_M, augmented=augmented,
                                        control_preds=control_preds, treatment_preds=treatment_preds,
                                        check_est_df=False, random_state=self.random_state)
                              )

@@ -36,26 +36,26 @@ all_acic_2019_files = [3, 4,7,8]
 
 
 methods_config = {
-    'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
-                             'methods': [['double_linear_pruned', False], ['double_linear_pruned', True]]},
+    'linear_coef_matching': {'double_model': [False, True], 'n_repeats': 1, 'params': None,
+                             'methods': [['linear_pruned', False]]},
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
     # 'manhatten_pruned': {'params': None, 'methods': ['mean', 'linear']},
     # 'propensity': None,
     # 'genmatch': None,
     # 'prognostic': None,
-    'bart': None,
+    # 'bart': None,
     # 'causal_forest': None
 }
 
 for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
-        n_splits = 2
-        dataset_config['num_samples'] = 250
+        n_splits = 6
+        dataset_config['num_samples'] = 3000
         if 'continuous' in data:
-            dataset_config['imp_c'] = 5
-            dataset_config['unimp_c'] = 10
+            dataset_config['imp_c'] = 15
+            dataset_config['unimp_c'] = 25
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
