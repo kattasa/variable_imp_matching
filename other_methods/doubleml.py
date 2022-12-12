@@ -39,6 +39,8 @@ def doubleml_sample(outcome, treatment, df_train, sample, covariates, random_sta
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = LinearDML(discrete_treatment=True, featurizer=None, linear_first_stages=False, random_state=random_state)
+    est = LinearDML(model_y=WeightedLassoCV(max_iter=10000),
+                    model_t=LogisticRegressionCV(solver='sag', max_iter=1000),
+                    discrete_treatment=True, featurizer=None, linear_first_stages=False, random_state=random_state)
     est.fit(Y=Y, T=T, X=X, W=X)
     return est.effect(sample)

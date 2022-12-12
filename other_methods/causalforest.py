@@ -34,7 +34,7 @@ def causalforest(outcome, treatment, data, n_splits=2, result='brief', gen_skf=N
         X = df_train[covariates]
         Xtest = df_est[covariates]
 
-        crf = grf.causal_forest(X, Ycrf, Tcrf,  num_trees=4000, seed=random_state)
+        crf = grf.causal_forest(X, Ycrf, Tcrf, num_trees=4000, seed=random_state)
         tauhat = grf.predict_causal_forest(crf, Xtest)
         # t_hat_crf = np.array(tauhat[0])
         with localconverter(ro.default_converter + pandas2ri.converter):
@@ -57,7 +57,7 @@ def causalforest_sample(outcome, treatment, df_train, sample, covariates, random
     Tcrf = df_train[treatment]
     X = df_train[covariates]
 
-    crf = grf.causal_forest(X, Ycrf, Tcrf, seed=random_state)
+    crf = grf.causal_forest(X, Ycrf, Tcrf, num_trees=4000, seed=random_state)
     tauhat = grf.predict_causal_forest(crf, sample)
     with localconverter(ro.default_converter + pandas2ri.converter):
         tauhat = ro.conversion.rpy2py(tauhat)['predictions'][0]

@@ -39,6 +39,8 @@ def drlearner_sample(outcome, treatment, df_train, sample, covariates, random_st
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = LinearDRLearner(featurizer=None, random_state=random_state)
+    est = LinearDRLearner(model_propensity=LogisticRegressionCV(solver='sag', max_iter=1000),
+                          model_regression=WeightedLassoCV(max_iter=10000),
+                          featurizer=None, random_state=random_state)
     est.fit(Y=Y, T=T, X=X, W=X)
     return est.effect(sample)
