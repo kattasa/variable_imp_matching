@@ -15,6 +15,7 @@ from sklearn import preprocessing
 
 def construct_sec_order(arr):
     # an intermediate data generation function used for generating second order information
+    arr -= 1
     second_order_feature = []
     num_cov_sec = len(arr[0])
     for a in arr:
