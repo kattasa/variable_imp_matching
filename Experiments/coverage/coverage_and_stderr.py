@@ -66,14 +66,14 @@ for i in range(n_iters):
 ate_dof = n_repeats - 1
 ate = df_true['TE'].mean()
 
-bart_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=st.std(l)),
-                             st.std(l)] for l in bart_ates], columns=['lb', 'ub', 'stderr'])
+bart_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=np.std(l)),
+                             np.std(l)] for l in bart_ates], columns=['lb', 'ub', 'stdev'])
 
-lcm_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=st.std(l)),
-                            st.std(l)] for l in lcm_ates], columns=['lb', 'ub', 'stderr'])
+lcm_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=np.std(l)),
+                            np.std(l)] for l in lcm_ates], columns=['lb', 'ub', 'stdev'])
 
-aug_lcm_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=st.std(l)),
-                                st.std(l)] for l in augmented_lcm_ates], columns=['lb', 'ub', 'stderr'])
+aug_lcm_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=np.std(l)),
+                                np.std(l)] for l in augmented_lcm_ates], columns=['lb', 'ub', 'stdev'])
 
 bart_ate_df['coverage'] = ((bart_ate_df['lb'] <= ate) & (bart_ate_df['ub'] >= ate)).astype(int)
 lcm_ate_df['coverage'] = ((lcm_ate_df['lb'] <= ate) & (lcm_ate_df['ub'] >= ate)).astype(int)
