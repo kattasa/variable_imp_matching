@@ -6,19 +6,34 @@ from sklearn.ensemble import RandomForestRegressor as RFR, RandomForestClassifie
 from sklearn.linear_model import RidgeCV, LogisticRegressionCV, LinearRegression, LogisticRegression, Ridge
 from sklearn.neighbors import NearestNeighbors
 
+# X_C = X[:, M_C > 0]
+# X_T = X[:, M_T > 0]
+# M_C = M_C[M_C > 0]
+# M_T = M_T[M_T > 0]
+# control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_C * X_C[T == 0])
+# treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_T * X_T[T == 1])
+# control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
+# treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
+# control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
+# treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
+# control_dist = pd.DataFrame(control_dist)
+# treatment_dist = pd.DataFrame(treatment_dist)
+# if return_original_idx:
+#     control_dist.index = old_idx
+#     treatment_dist.index = old_idx
+#     return convert_idx(control_mg, old_idx), convert_idx(treatment_mg, old_idx), control_dist, treatment_dist
+# return control_mg, treatment_mg, control_dist, treatment_dist
 
-def get_match_groups(df_estimation, k, covariates, treatment, M, return_original_idx=True, check_est_df=True):
+
+def get_match_groups(df_estimation, k, covariates, treatment, M, M_C=None, M_T=None, return_original_idx=True,
+                     check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [treatment])
     old_idx = np.array(df_estimation.index)
     df_estimation = df_estimation.reset_index(drop=True)
     X = df_estimation[covariates].to_numpy()
     T = df_estimation[treatment].to_numpy()
-    X = M[M > 0] * X[:, M > 0]
-    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 0])
-    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == 1])
-    control_dist, control_mg = control_nn.kneighbors(X, return_distance=True)
-    treatment_dist, treatment_mg = treatment_nn.kneighbors(X, return_distance=True)
+    control_dist, control_mg, treatment_dist, treatment_mg = get_mg_from_M(X, T, M, M_C, M_T, k)
     control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
     treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
     control_dist = pd.DataFrame(control_dist)
@@ -28,6 +43,24 @@ def get_match_groups(df_estimation, k, covariates, treatment, M, return_original
         treatment_dist.index = old_idx
         return convert_idx(control_mg, old_idx), convert_idx(treatment_mg, old_idx), control_dist, treatment_dist
     return control_mg, treatment_mg, control_dist, treatment_dist
+
+
+def get_mg_from_M(X, T, M, M_C, M_T, k):
+    if M is not None:
+        X = M[M > 0] * X[:, M > 0]
+        control_dist, control_mg = get_nn(X, T, treatment=0, k=k)
+        treatment_dist, treatment_mg = get_nn(X, T, treatment=1, k=k)
+    else:
+        X_C = M_C[M_C > 0] * X[:, M_C > 0]
+        X_T = M_T[M_T > 0] * X[:, M_T > 0]
+        control_dist, control_mg = get_nn(X_C, T, treatment=0, k=k)
+        treatment_dist, treatment_mg = get_nn(X_T, T, treatment=1, k=k)
+    return control_dist, control_mg, treatment_dist, treatment_mg
+
+
+def get_nn(X, T, treatment, k):
+    nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(X[T == treatment])
+    return nn.kneighbors(X, return_distance=True)
 
 
 def sample_match_group(df_estimation, sample_idx, k, covariates, treatment, M, combine_mg=True):
@@ -51,6 +84,7 @@ def sample_linear_cate(mg, covariates, M, treatment, outcome, prune=True):
         imp_covs = covariates
     return RidgeCV().fit(mg[imp_covs + [treatment]].to_numpy(), mg[outcome].to_numpy()).coef_[-1]
 
+
 def sample_double_linear_cate(c_mg, t_mg, sample, covariates, M, outcome, prune=True):
     if prune:
         imp_covs = prune_covariates(covariates, M)
@@ -58,7 +92,6 @@ def sample_double_linear_cate(c_mg, t_mg, sample, covariates, M, outcome, prune=
         imp_covs = covariates
     return RidgeCV().fit(t_mg[imp_covs].to_numpy(), t_mg[outcome].to_numpy()).predict(sample)[0] - \
            RidgeCV().fit(c_mg[imp_covs].to_numpy(), c_mg[outcome].to_numpy()).predict(sample)[0]
-
 
 
 def convert_idx(mg, idx):

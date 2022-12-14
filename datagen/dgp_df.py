@@ -59,10 +59,11 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
 
 
-def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, std=1.5, t_imp=2, overlap=1, perc_train=None, n_train=None):
+def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, std=1.5, t_imp=2, overlap=1, perc_train=None, n_train=None,
+                            weights=None):
     df, df_true, binary = data_generation_dense_mixed_endo(num_samples=n, num_cont_imp=nci, num_disc_imp=ndi,
                                                            num_cont_unimp=ncu, num_disc_unimp=ndu, std=std,
-                                                           t_imp=t_imp, overlap=overlap)
+                                                           t_imp=t_imp, overlap=overlap, weights=weights)
     x_cols = [c for c in df.columns if 'X' in c]
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
     if perc_train:

@@ -130,9 +130,9 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
                         lcm.MG(k=e_method[1])
                         mg_time = time.time() - start
                     start = time.time()
-                    lcm.CATE(cate_methods=[e_method[0]], precomputed_control_preds=bart_control_preds,
-                             precomputed_treatment_preds=bart_treatment_preds)
-                    # lcm.CATE(cate_methods=[e_method[0]])
+                    # lcm.CATE(cate_methods=[e_method[0]], precomputed_control_preds=bart_control_preds,
+                    #          precomputed_treatment_preds=bart_treatment_preds)
+                    lcm.CATE(cate_methods=[e_method[0]])
                     times[method_name] = time.time() - start + fit_time + mg_time + init_time
                     cate_df = lcm.cate_df.sort_index()
                     cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
