@@ -101,11 +101,11 @@ class LCM_MF:
                 control_preds = np.array(precomputed_control_preds[i])
                 treatment_preds = np.array(precomputed_treatment_preds[i])
             elif self.binary:
-                control_preds = self.est_C_list[i].predict_proba(df_estimation[self.covariates])[:, 1]
-                treatment_preds = self.est_T_list[i].predict_proba(df_estimation[self.covariates])[:, 1]
+                control_preds = self.est_C_list[i].predict_proba(df_estimation[self.covariates].to_numpy())[:, 1]
+                treatment_preds = self.est_T_list[i].predict_proba(df_estimation[self.covariates].to_numpy())[:, 1]
             else:
-                control_preds = self.est_C_list[i].predict(df_estimation[self.covariates])
-                treatment_preds = self.est_T_list[i].predict(df_estimation[self.covariates])
+                control_preds = self.est_C_list[i].predict(df_estimation[self.covariates].to_numpy())
+                treatment_preds = self.est_T_list[i].predict(df_estimation[self.covariates].to_numpy())
             for method, augmented in cate_methods:
                 this_M = self.M_list[i] if not self.double_model else self.M_C_list[i] + self.M_T_list[i]
                 cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method, self.covariates,

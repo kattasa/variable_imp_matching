@@ -38,28 +38,29 @@ for i in range(n_iters):
     df['T'] = new_T
     df['Y'] = (new_T * df_true['Y1']) + ((1 - new_T) * df_true['Y0'])
 
-    skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=0)
-    split_strategy = list(skf.split(df, df['T']))
+    for t in range(n_repeats):
+        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=1, random_state=0)
+        split_strategy = list(skf.split(df, df['T']))
 
-    cate_est_bart, bart_control_preds, bart_treatment_preds = bart.bart('Y', 'T', df,
-                                                                        gen_skf=split_strategy,
-                                                                        n_splits=n_splits, result='full')
-    bart_ates.append([cate_est_bart.iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
+        cate_est_bart, bart_control_preds, bart_treatment_preds = bart.bart('Y', 'T', df,
+                                                                            gen_skf=split_strategy,
+                                                                            n_splits=n_splits, result='full')
+        bart_ates.append([cate_est_bart.iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
 
-    bart_control_preds = bart_control_preds.T
-    bart_treatment_preds = bart_treatment_preds.T
-    bart_control_preds = [bart_control_preds.iloc[i, :].dropna().tolist() for i in range(n_splits*n_repeats)]
-    bart_treatment_preds = [bart_treatment_preds.iloc[i, :].dropna().tolist() for i in range(n_splits*n_repeats)]
+        bart_control_preds = bart_control_preds.T
+        bart_treatment_preds = bart_treatment_preds.T
+        bart_control_preds = [bart_control_preds.iloc[i, :].dropna().tolist() for i in range(n_splits*n_repeats)]
+        bart_treatment_preds = [bart_treatment_preds.iloc[i, :].dropna().tolist() for i in range(n_splits*n_repeats)]
 
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df, n_splits=n_splits, n_repeats=n_repeats)
-    lcm.gen_skf = split_strategy
-    lcm.fit(double_model=False)
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
-             precomputed_control_preds=bart_control_preds,
-             precomputed_treatment_preds=bart_treatment_preds)
-    lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
-    augmented_lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned_augmented'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
+        lcm = LCM_MF(outcome='Y', treatment='T', data=df, n_splits=n_splits, n_repeats=n_repeats)
+        lcm.gen_skf = split_strategy
+        lcm.fit(double_model=False)
+        lcm.MG(k=k_est)
+        lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
+                 precomputed_control_preds=bart_control_preds,
+                 precomputed_treatment_preds=bart_treatment_preds)
+        lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
+        augmented_lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned_augmented'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
 
     print(f'Iter {i+1}: {time.time() - start}')
 

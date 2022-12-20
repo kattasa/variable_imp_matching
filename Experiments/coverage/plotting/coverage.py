@@ -10,7 +10,7 @@ q = 0.5
 all_ate = []
 
 for f in all_folders:
-    this_ate = pd.melt(pd.read_csv(f'{f}ate_df.csv').groupby('Method')[['coverage', 'stderr']].mean().reset_index(),
+    this_ate = pd.melt(pd.read_csv(f'{f}ate_df.csv').groupby('Method')[['coverage', 'stdev']].mean().reset_index(),
                        id_vars=['Method'])
     this_ate['# samples'] = int(f.split('/')[-2].split('_')[0])
     all_ate.append(this_ate.copy(deep=True))
@@ -18,7 +18,7 @@ for f in all_folders:
 all_ate = pd.concat(all_ate)
 
 all_ate_coverage = all_ate[all_ate['variable'] == 'coverage']
-all_ate_stderr = all_ate[all_ate['variable'] == 'stderr']
+all_ate_stdev = all_ate[all_ate['variable'] == 'stdev']
 
 
 plt.figure()
@@ -37,9 +37,9 @@ plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-sns.catplot(data=all_ate_stderr, x="# samples", y="value", hue="Method", kind="bar", legend=False,
+sns.catplot(data=all_ate_stdev, x="# samples", y="value", hue="Method", kind="bar", legend=False,
             aspect=3/2)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.legend(loc='upper right', prop={'size': 10})
-plt.savefig('plots/ate_stderr.png')
+plt.savefig('plots/ate_stdev.png')

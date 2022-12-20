@@ -1,4 +1,6 @@
+import numpy as np
 import os
+
 from datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, \
     dgp_ihdp_df, dgp_news, dgp_acic_2018_df
 
@@ -42,3 +44,16 @@ def get_data(data, config):
     if config['n_train'] > 0:
         return df_train, df_data, df_true, binary
     return df_data, df_true, binary
+
+
+def summarize_warnings(warning_list, method_name=None, print_warnings=True, return_warnings=False):
+    method_warnings = np.array(np.unique([f'{w.filename}{w.lineno}' for w in warning_list], return_index=True,
+                                         return_counts=True))[[1, 2]]
+    method_warnings = {warning_list[int(method_warnings[0][i])].message: method_warnings[1][i] for i in
+                       range(len(method_warnings[0]))}
+    if print_warnings and len(method_warnings) > 0:
+        print(f'{method_name} warnings:')
+        for k, v in method_warnings.items():
+            print(f'\t{v}: {k}')
+    if return_warnings:
+        return method_warnings

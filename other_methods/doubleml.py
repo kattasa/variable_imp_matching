@@ -1,4 +1,4 @@
-from econml.dml import LinearDML
+from econml.dml import LinearDML, SparseLinearDML
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -20,8 +20,8 @@ def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None, random_state=No
         Y = np.array(df_train.loc[:, outcome])
         T = np.array(df_train.loc[:, treatment])
         X_est = np.array(df_est.loc[:, covariates])
-        est = LinearDML(model_y=WeightedLassoCV(max_iter=10000),
-                        model_t=LogisticRegressionCV(solver='sag', max_iter=1000),
+        est = LinearDML(model_y=WeightedLassoCV(max_iter=5000),
+                        model_t=LogisticRegressionCV(solver='sag', max_iter=500),
                         discrete_treatment=True, featurizer=None, linear_first_stages=False, random_state=random_state)
         est.fit(Y=Y, T=T, X=X, W=X)
         this_te_est = est.effect(X=X_est)
@@ -39,8 +39,8 @@ def doubleml_sample(outcome, treatment, df_train, sample, covariates, random_sta
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = LinearDML(model_y=WeightedLassoCV(max_iter=10000),
-                    model_t=LogisticRegressionCV(solver='sag', max_iter=1000),
+    est = LinearDML(model_y=WeightedLassoCV(max_iter=5000),
+                    model_t=LogisticRegressionCV(solver='sag', max_iter=500),
                     discrete_treatment=True, featurizer=None, linear_first_stages=False, random_state=random_state)
     est.fit(Y=Y, T=T, X=X, W=X)
     return est.effect(sample)

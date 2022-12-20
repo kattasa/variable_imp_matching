@@ -17,13 +17,13 @@ import matplotlib.patches as patches
 from sklearn.model_selection import RepeatedStratifiedKFold
 import warnings
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
 
 class malts:
-    def __init__(self, outcome, treatment, data, discrete=[], C=1, k=10, reweight=False, random_state=None):
-        # np.random.seed(0)
-        self.C = C  # coefficient to regularozation term
+    def __init__(self, outcome, treatment, data, discrete=[], C=1, k=10, reweight=False, random_state=0):
+        np.random.seed(random_state)
+        self.C = C  # coefficient to regularization term
         self.k = k
         self.reweight = reweight
         self.n, self.p = data.shape

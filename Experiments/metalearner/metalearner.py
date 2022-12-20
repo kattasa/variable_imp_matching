@@ -14,18 +14,23 @@ from src.linear_coef_matching_mf import LCM_MF
 
 warnings.filterwarnings("ignore")
 
-k_est = 60
+k_est = 15
 est_method = ['linear_pruned', False]
 
-n_samples = 3000
-n_splits = 6
-x_imp = 5
-x_unimp = 95
+n_samples = 500
+n_splits = 5
+x_imp = 3
+x_unimp = 1
+t_imp = 3
 
-preset_weights = [[0, {'control': 0, 'treated': 50}]]
+preset_weights = [
+    [0, {'control': 2, 'treated': 0}],
+    [1, {'control': 0, 'treated': 2}],
+    [2, {'control': 1, 'treated': 1}]
+]
 
 _, df, df_true, x_cols, binary = dgp_dense_mixed_endo_df(n=n_samples, nci=x_imp, ndi=0, ncu=x_unimp, ndu=0, std=1.5,
-                                                         t_imp=2, overlap=1000, n_train=0, weights=preset_weights)
+                                                         t_imp=t_imp, overlap=1000, n_train=0, weights=preset_weights)
 
 sample_idx = df[(df['X0'].mean() + (2*df['X0'].std())) < df['X0']].index[0]
 

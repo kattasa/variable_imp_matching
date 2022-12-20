@@ -80,7 +80,7 @@ class LCM:
 
     def fit(self, method='linear', equal_weights=False, params=None, double_model=False, return_score=False):
         if params is None:
-            params = {'max_iter': 10000}
+            params = {'max_iter': 5000}
         params['random_state'] = self.random_state
         if double_model:
             model_C = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
@@ -126,11 +126,11 @@ class LCM:
                                                                                          check_est_df=check_est_df)
         if augmented and ((control_preds is None) or (treatment_preds is None)):
             if self.binary:
-                control_preds = self.est_C.predict_proba(df_estimation[self.covariates])[:, 1]
-                treatment_preds = self.est_T.predict_proba(df_estimation[self.covariates])[:, 1]
+                control_preds = self.est_C.predict_proba(df_estimation[self.covariates].to_numpy())[:, 1]
+                treatment_preds = self.est_T.predict_proba(df_estimation[self.covariates].to_numpy())[:, 1]
             else:
-                control_preds = self.est_C.predict(df_estimation[self.covariates])
-                treatment_preds = self.est_T.predict(df_estimation[self.covariates])
+                control_preds = self.est_C.predict(df_estimation[self.covariates].to_numpy())
+                treatment_preds = self.est_T.predict(df_estimation[self.covariates].to_numpy())
         this_M = self.M if self.M is not None else self.M_C + self.M_T
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
                          self.covariates, self.outcome, self.treatment, this_M, augmented=augmented,

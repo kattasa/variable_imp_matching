@@ -20,9 +20,9 @@ def causalforest_dml(outcome, treatment, data, n_splits=2, gen_skf=None, random_
         Y = np.array(df_train.loc[:, outcome])
         T = np.array(df_train.loc[:, treatment])
         X_est = np.array(df_est.loc[:, covariates])
-        est = CausalForestDML(model_y=WeightedLassoCV(max_iter=10000),
-                              model_t=LogisticRegressionCV(solver='sag', max_iter=1000),
-                              featurizer=None, treatment_featurizer=None, n_estimators=200, random_state=random_state)
+        est = CausalForestDML(model_y=WeightedLassoCV(max_iter=5000),
+                              model_t=LogisticRegressionCV(solver='sag', max_iter=500),
+                              featurizer=None, treatment_featurizer=None, random_state=random_state)
         est.fit(Y=Y, T=T, X=X, W=X)
         this_te_est = est.effect(X=X_est)
         this_index = df_est.index
@@ -39,8 +39,8 @@ def causalforest_dml_sample(outcome, treatment, df_train, sample, covariates, ra
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = CausalForestDML(model_y=WeightedLassoCV(max_iter=10000),
-                          model_t=LogisticRegressionCV(solver='sag', max_iter=1000),
-                          featurizer=None, treatment_featurizer=None, n_estimators=200, random_state=random_state)
+    est = CausalForestDML(model_y=WeightedLassoCV(max_iter=5000),
+                          model_t=LogisticRegressionCV(solver='sag', max_iter=500),
+                          featurizer=None, treatment_featurizer=None, random_state=random_state)
     est.fit(Y=Y, T=T, X=X, W=X)
     return est.effect(sample)

@@ -48,16 +48,21 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     dense_bs_sign = np.random.choice([-1, 1], num_cov_dense)
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]
 
-    treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
     if weights is not None:
         for idx, w in weights:
             dense_bs[idx] = w['control']
-            treatment_eff_coef[0] = w['treated']
+    y0_true = np.dot(x, np.array(dense_bs))
+
+    treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
+    if weights is not None:
+        for idx, w in weights:
+            dense_bs[idx] = 0
+            treatment_eff_coef[idx] = w['treated']
     treatment_effect = np.dot(x, treatment_eff_coef)
     second = construct_sec_order(x)
     treatment_eff_sec = np.sum(second, axis=1)
-    y0_true = np.dot(x, np.array(dense_bs))
     y1_true = np.dot(x, np.array(dense_bs)) + treatment_effect + treatment_eff_sec
+
     te = y1_true - y0_true
     y0 = y0_true + errors_y0
     y1 = y1_true + errors_y1

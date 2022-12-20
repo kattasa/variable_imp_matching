@@ -42,14 +42,12 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None, ran
         Yt = np.array(df_train.loc[df_train[treatment] == 1, outcome])
         #
         Xtest = df_est[covariates].to_numpy()
-        bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, ntree=400, ndpost=2000,
-                                 seed=random_state)
+        bart_res_c = dbarts.bart(Xc, Yc, Xtest, keeptrees=True, verbose=False, seed=random_state)
         if discrete_outcome:
             y_c_hat_bart = norm.cdf(bart_res_c[2]).mean(axis=0)
         else:
             y_c_hat_bart = np.array(bart_res_c[7])
-        bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, ntree=400, ndpost=2000,
-                                 seed=random_state)
+        bart_res_t = dbarts.bart(Xt, Yt, Xtest, keeptrees=True, verbose=False, seed=random_state)
         if discrete_outcome:
             y_t_hat_bart = norm.cdf(bart_res_t[2]).mean(axis=0)
         else:
@@ -85,11 +83,8 @@ def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False, 
     if binary:
         # for some reason bart can't do one sample inference with binary outcome. so we add a dummy sample
         sample = np.concatenate([sample, np.zeros(shape=sample.shape)], axis=0)
-        return norm.cdf(dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False, ntree=400, ndpost=2000,
+        return norm.cdf(dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False,
                                     seed=random_state)[2][:, 0]).mean() - \
-               norm.cdf(dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, ntree=400, ndpost=2000,
-                                    seed=random_state)[2][:, 0]).mean()
-    return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False, ntree=400, ndpost=2000,
-                       seed=random_state)[7][0] - \
-           dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, ntree=400, ndpost=2000,
-                       seed=random_state)[7][0]
+               norm.cdf(dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, seed=random_state)[2][:, 0]).mean()
+    return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False, seed=random_state)[7][0] - \
+           dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, seed=random_state)[7][0]

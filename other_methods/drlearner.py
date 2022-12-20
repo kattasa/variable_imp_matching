@@ -20,8 +20,8 @@ def drlearner(outcome, treatment, data, n_splits=2, gen_skf=None, random_state=N
         Y = np.array(df_train.loc[:, outcome])
         T = np.array(df_train.loc[:, treatment])
         X_est = np.array(df_est.loc[:, covariates])
-        est = LinearDRLearner(model_propensity=LogisticRegressionCV(solver='sag', max_iter=1000),
-                              model_regression=WeightedLassoCV(max_iter=10000),
+        est = LinearDRLearner(model_propensity=LogisticRegressionCV(solver='sag', max_iter=500),
+                              model_regression=WeightedLassoCV(max_iter=5000),
                               featurizer=None, random_state=random_state)
         est.fit(Y=Y, T=T, X=X, W=X)
         this_te_est = est.effect(X=X_est)
@@ -39,8 +39,8 @@ def drlearner_sample(outcome, treatment, df_train, sample, covariates, random_st
     X = np.array(df_train.loc[:, covariates])
     Y = np.array(df_train.loc[:, outcome])
     T = np.array(df_train.loc[:, treatment])
-    est = LinearDRLearner(model_propensity=LogisticRegressionCV(solver='sag', max_iter=1000),
-                          model_regression=WeightedLassoCV(max_iter=10000),
+    est = LinearDRLearner(model_propensity=LogisticRegressionCV(solver='sag', max_iter=500),
+                          model_regression=WeightedLassoCV(max_iter=5000),
                           featurizer=None, random_state=random_state)
     est.fit(Y=Y, T=T, X=X, W=X)
     return est.effect(sample)
