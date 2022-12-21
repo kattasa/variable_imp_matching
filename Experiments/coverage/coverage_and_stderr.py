@@ -1,8 +1,10 @@
+import copy
+
 import numpy as np
 import os
 import pandas as pd
+import rpy2
 import time
-import warnings
 
 from sklearn.model_selection import RepeatedStratifiedKFold
 
@@ -11,9 +13,6 @@ from other_methods import bart
 from src.linear_coef_matching_mf import LCM_MF
 import scipy.stats as st
 
-
-warnings.filterwarnings("ignore")
-np.random.seed(0)
 
 save_folder = os.getenv('SAVE_FOLDER').replace("'", '').replace('"', '')
 n_samples = int(os.getenv('N_SAMPLES'))
@@ -38,43 +37,57 @@ for i in range(n_iters):
     df['T'] = new_T
     df['Y'] = (new_T * df_true['Y1']) + ((1 - new_T) * df_true['Y0'])
 
-    for t in range(n_repeats):
-        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=1, random_state=0)
+    these_bart_ates = []
+    these_lcm_ates = []
+    these_augmented_lcm_ates = []
+    t = 0
+    while t < n_repeats:
+        random_state = np.random.randint(100000)
+        this_df = df.sample(frac=1, replace=True, random_state=random_state).reset_index(drop=True)
+        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=1, random_state=random_state)
         split_strategy = list(skf.split(df, df['T']))
 
-        cate_est_bart, bart_control_preds, bart_treatment_preds = bart.bart('Y', 'T', df,
-                                                                            gen_skf=split_strategy,
-                                                                            n_splits=n_splits, result='full')
-        bart_ates.append([cate_est_bart.iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
+        try:
+            cate_est_bart, bart_control_preds, bart_treatment_preds = bart.bart('Y', 'T', this_df,
+                                                                                gen_skf=split_strategy,
+                                                                                n_splits=n_splits, result='full')
+        except rpy2.rinterface_lib.embedded.RRuntimeError as e:
+            print(f'Bart runtime error')
+            continue
+        these_bart_ates.append(cate_est_bart['CATE'].mean().mean())
 
         bart_control_preds = bart_control_preds.T
         bart_treatment_preds = bart_treatment_preds.T
-        bart_control_preds = [bart_control_preds.iloc[i, :].dropna().tolist() for i in range(n_splits*n_repeats)]
-        bart_treatment_preds = [bart_treatment_preds.iloc[i, :].dropna().tolist() for i in range(n_splits*n_repeats)]
+        bart_control_preds = [bart_control_preds.iloc[i, :].dropna().tolist() for i in range(n_splits)]
+        bart_treatment_preds = [bart_treatment_preds.iloc[i, :].dropna().tolist() for i in range(n_splits)]
 
-        lcm = LCM_MF(outcome='Y', treatment='T', data=df, n_splits=n_splits, n_repeats=n_repeats)
+        lcm = LCM_MF(outcome='Y', treatment='T', data=this_df, n_splits=n_splits, n_repeats=1)
         lcm.gen_skf = split_strategy
         lcm.fit(double_model=False)
         lcm.MG(k=k_est)
         lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
                  precomputed_control_preds=bart_control_preds,
                  precomputed_treatment_preds=bart_treatment_preds)
-        lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
-        augmented_lcm_ates.append([lcm.cate_df['CATE_double_linear_pruned_augmented'].iloc[:, (n_splits)*i:(n_splits)*(i+1)].mean().mean() for i in range(n_repeats)])
+        these_lcm_ates.append(lcm.cate_df['CATE_double_linear_pruned'].mean().mean())
+        these_augmented_lcm_ates.append(lcm.cate_df['CATE_double_linear_pruned_augmented'].mean().mean())
+        t += 1
 
+    bart_ates.append(copy.deepcopy(these_bart_ates))
+    lcm_ates.append(copy.deepcopy(these_lcm_ates))
+    augmented_lcm_ates.append(copy.deepcopy(these_augmented_lcm_ates))
     print(f'Iter {i+1}: {time.time() - start}')
 
 ate_dof = n_repeats - 1
 ate = df_true['TE'].mean()
 
-bart_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=np.std(l)),
-                             np.std(l)] for l in bart_ates], columns=['lb', 'ub', 'stdev'])
+bart_ate_df = pd.DataFrame([[*st.t.interval(confidence=0.95, df=ate_dof, loc=np.mean(l), scale=st.sem(l)),
+                             st.sem(l)] for l in bart_ates], columns=['lb', 'ub', 'sem'])
 
-lcm_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=np.std(l)),
-                            np.std(l)] for l in lcm_ates], columns=['lb', 'ub', 'stdev'])
+lcm_ate_df = pd.DataFrame([[*st.t.interval(confidence=0.95, df=ate_dof, loc=np.mean(l), scale=st.sem(l)),
+                            st.sem(l)] for l in lcm_ates], columns=['lb', 'ub', 'sem'])
 
-aug_lcm_ate_df = pd.DataFrame([[*st.t.interval(alpha=0.95, df=ate_dof, loc=np.mean(l), scale=np.std(l)),
-                                np.std(l)] for l in augmented_lcm_ates], columns=['lb', 'ub', 'stdev'])
+aug_lcm_ate_df = pd.DataFrame([[*st.t.interval(confidence=0.95, df=ate_dof, loc=np.mean(l), scale=st.sem(l)),
+                                st.sem(l)] for l in augmented_lcm_ates], columns=['lb', 'ub', 'sem'])
 
 bart_ate_df['coverage'] = ((bart_ate_df['lb'] <= ate) & (bart_ate_df['ub'] >= ate)).astype(int)
 lcm_ate_df['coverage'] = ((lcm_ate_df['lb'] <= ate) & (lcm_ate_df['ub'] >= ate)).astype(int)

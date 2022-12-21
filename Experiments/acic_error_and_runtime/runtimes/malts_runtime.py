@@ -16,7 +16,7 @@ k_est = int(os.getenv('K_EST'))
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]
 with open(f'{acic_results_folder}/binary_cols.txt', 'r') as f:
-    binary = f.read().replace('[','').replace(']','').replace("'", '').replace(' ','').split(',')
+    binary = f.read().replace('[', '').replace(']','').replace("'", '').replace(' ','').split(',')
 with open(f'{acic_results_folder}/categorical_cols.txt', 'r') as f:
     categorical = f.read().replace('[','').replace(']','').replace("'", '').replace(' ','').split(',')
 

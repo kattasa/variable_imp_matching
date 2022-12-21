@@ -24,9 +24,9 @@ x_unimp = 1
 t_imp = 3
 
 preset_weights = [
-    [0, {'control': 2, 'treated': 0}],
-    [1, {'control': 0, 'treated': 2}],
-    [2, {'control': 1, 'treated': 1}]
+    [0, {'control': 20, 'treated': 0}],
+    [1, {'control': 0, 'treated': 20}],
+    [2, {'control': 10, 'treated': 10}]
 ]
 
 _, df, df_true, x_cols, binary = dgp_dense_mixed_endo_df(n=n_samples, nci=x_imp, ndi=0, ncu=x_unimp, ndu=0, std=1.5,
@@ -82,12 +82,12 @@ lcm.fit(double_model=True)
 these_weights = pd.DataFrame(lcm.M_C_list)
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
-these_weights['Method'] = 'Metalearner LCM M_C'
+these_weights['Method'] = 'LCM Metalearner M_C'
 df_weights = df_weights.append(these_weights.copy(deep=True))
 these_weights = pd.DataFrame(lcm.M_T_list)
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
-these_weights['Method'] = 'Metalearner LCM M_T'
+these_weights['Method'] = 'LCM Metalearner M_T'
 df_weights = df_weights.append(these_weights.copy(deep=True))
 lcm.MG(k=k_est)
 for s in sample_mg_splits:
@@ -95,9 +95,9 @@ for s in sample_mg_splits:
         np.where(lcm.gen_skf[s][0] == sample_idx)[0]].to_numpy()])
     this_treatment_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.T_MG_list[s].iloc[
         np.where(lcm.gen_skf[s][0] == sample_idx)[0]].to_numpy()])
-    this_control_mg['Method'] = 'Metalearner LCM'
+    this_control_mg['Method'] = 'LCM Metalearner'
     this_control_mg['T'] = 0
-    this_treatment_mg['Method'] = 'Metalearner LCM'
+    this_treatment_mg['Method'] = 'LCM Metalearner'
     this_treatment_mg['T'] = 1
     this_control_mg.index = [sample_idx]
     this_treatment_mg.index = [sample_idx]
@@ -110,9 +110,9 @@ cate_df = lcm.cate_df.sort_index()
 cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
 cate_df['True_CATE'] = df_true['TE'].to_numpy()
 cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
-cate_df['Method'] = ['Metalearner LCM' for i in range(cate_df.shape[0])]
+cate_df['Method'] = ['LCM Metalearner' for i in range(cate_df.shape[0])]
 df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
-print(f'Metalearner LCM complete: {time.time() - start}')
+print(f'LCM Metalearner complete: {time.time() - start}')
 
 df_true.to_csv('Results/df_true.csv')
 df_err.to_csv('Results/df_err.csv')
@@ -181,11 +181,11 @@ for i in range(x_imp):
 lcm_std_df = pd.concat(lcm_std_df)
 meta_lcm_std_df = pd.concat(meta_lcm_std_df)
 lcm_std_df['Method'] = 'LCM'
-meta_lcm_std_df['Method'] = 'Metalearner LCM'
+meta_lcm_std_df['Method'] = 'LCM Metalearner'
 mg_std = pd.concat([lcm_std_df, meta_lcm_std_df])
 mg_std = pd.melt(mg_std, id_vars=['Method', 'T', 'Covariate'])
 mg_std = mg_std.rename(columns={'value': 'MG Average Difference'})
-mg_hue = mg_std.apply(lambda x: f"{x['Method']}, {x['T']}", axis=1)
+mg_hue = mg_std.apply(lambda x: f"{x['Method']} {'Treatment' if x['T'] == 1 else 'Control'} Matches", axis=1)
 mg_hue.name = 'Method, T'
 
 
