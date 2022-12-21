@@ -12,7 +12,6 @@ q = 0.5
 methods = [
     'LASSO Coefficient Matching',
     # 'Tree Feature Importance Matching',
-    # 'Manhattan with Feature Selection',
     'Equal Weighted LASSO Matching',
     'MALTS Matching',
     'Prognostic Score Matching',
@@ -20,16 +19,13 @@ methods = [
     'DoubleML',
     'DRLearner',
     'Causal Forest',
-    # 'Causal Forest 2'
     'Causal Forest DML'
 ]
 
 rename_methods = {
     "BART": "T-Learner BART",
     "Causal Forest DML": "Causal Forest\nDML",
-    # "Causal Forest 2": "Causal Forest\nDML",
     'LASSO Coefficient Matching': 'LASSO Coefficient\nMatching',
-    # "Manhattan with Feature Selection": "Equal Weighted\nLASSO Matching",
     "Equal Weighted LASSO Matching": "Equal Weighted\nLASSO Matching",
     'Prognostic Score Matching': 'Prognostic Score\nMatching',
     "DoubleML": "Linear DoubleML",

@@ -6,11 +6,11 @@ import time
 
 from other_methods.doubleml import doubleml_sample
 
-np.random.seed(0)
-
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]
 split_num = int(os.getenv('SPLIT_NUM'))
 random_state = int(os.getenv('RANDOM_STATE'))
+
+np.random.seed(random_state)
 
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]

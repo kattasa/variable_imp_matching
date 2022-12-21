@@ -21,6 +21,8 @@ n_repeats = int(os.getenv('N_REPEATS'))
 n_iters = int(os.getenv('N_ITERS'))
 k_est = int(os.getenv('K_EST'))
 
+lcm_cate_method = 'mean'
+
 x_imp = 5
 x_unimp = 10
 
@@ -65,11 +67,11 @@ for i in range(n_iters):
         lcm.gen_skf = split_strategy
         lcm.fit(double_model=False)
         lcm.MG(k=k_est)
-        lcm.CATE(cate_methods=[['double_linear_pruned', False], ['double_linear_pruned', True]],
+        lcm.CATE(cate_methods=[[lcm_cate_method, False], [lcm_cate_method, True]],
                  precomputed_control_preds=bart_control_preds,
                  precomputed_treatment_preds=bart_treatment_preds)
-        these_lcm_ates.append(lcm.cate_df['CATE_double_linear_pruned'].mean().mean())
-        these_augmented_lcm_ates.append(lcm.cate_df['CATE_double_linear_pruned_augmented'].mean().mean())
+        these_lcm_ates.append(lcm.cate_df[f'CATE_{lcm_cate_method}'].mean().mean())
+        these_augmented_lcm_ates.append(lcm.cate_df[f'CATE_{lcm_cate_method}_augmented'].mean().mean())
         t += 1
 
     bart_ates.append(copy.deepcopy(these_bart_ates))

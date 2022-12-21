@@ -7,14 +7,14 @@ import time
 from src.linear_coef_matching import LCM
 from utils import sample_match_group, sample_linear_cate
 
-np.random.seed(0)
-
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]
 split_num = int(os.getenv('SPLIT_NUM'))
 k_est = int(os.getenv('K_EST'))
 random_state = int(os.getenv('RANDOM_STATE'))
 method = os.getenv('LCM_METHOD')
 equal_weights = int(os.getenv('LCM_EQUAL_WEIGHTS')) == 1
+
+np.random.seed(random_state)
 
 
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
