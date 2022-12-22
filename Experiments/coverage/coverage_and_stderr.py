@@ -21,7 +21,7 @@ n_repeats = int(os.getenv('N_REPEATS'))
 n_iters = int(os.getenv('N_ITERS'))
 k_est = int(os.getenv('K_EST'))
 
-lcm_cate_method = 'mean'
+lcm_cate_method = 'linear_pruned'
 
 x_imp = 5
 x_unimp = 10
