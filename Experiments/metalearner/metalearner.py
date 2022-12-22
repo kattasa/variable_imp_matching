@@ -3,7 +3,6 @@ import copy
 import numpy as np
 import pandas as pd
 import time
-import warnings
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -12,7 +11,8 @@ import matplotlib.ticker as ticker
 from datagen.dgp_df import dgp_dense_mixed_endo_df
 from src.linear_coef_matching_mf import LCM_MF
 
-warnings.filterwarnings("ignore")
+random_state = 1
+np.random.seed(random_state)
 
 k_est = 15
 est_method = ['linear_pruned', False]
@@ -51,7 +51,7 @@ these_weights = pd.DataFrame(lcm.M_list)
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
 these_weights['Method'] = 'LCM'
-df_weights = df_weights.append(these_weights.copy(deep=True))
+df_weights = pd.concat([df_weights, these_weights.copy(deep=True)])
 lcm.MG(k=k_est)
 for s in sample_mg_splits:
     this_control_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.C_MG_list[s].iloc[
@@ -64,8 +64,8 @@ for s in sample_mg_splits:
     this_treatment_mg['T'] = 1
     this_control_mg.index = [sample_idx]
     this_treatment_mg.index = [sample_idx]
-    df_mgs = df_mgs.append(this_control_mg.copy(deep=True))
-    df_mgs = df_mgs.append(this_treatment_mg.copy(deep=True))
+    df_mgs = pd.concat([df_mgs, this_control_mg.copy(deep=True)])
+    df_mgs = pd.concat([df_mgs, this_treatment_mg.copy(deep=True)])
 lcm_c_mgs = copy.deepcopy(lcm.C_MG_list)
 lcm_t_mgs = copy.deepcopy(lcm.T_MG_list)
 lcm.CATE(cate_methods=[est_method])
@@ -74,7 +74,7 @@ cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
 cate_df['True_CATE'] = df_true['TE'].to_numpy()
 cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
 cate_df['Method'] = ['LCM' for i in range(cate_df.shape[0])]
-df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
+df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
 print(f'LCM complete: {time.time() - start}')
 
 start = time.time()
@@ -83,12 +83,12 @@ these_weights = pd.DataFrame(lcm.M_C_list)
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
 these_weights['Method'] = 'LCM Metalearner M_C'
-df_weights = df_weights.append(these_weights.copy(deep=True))
+df_weights = pd.concat([df_weights, these_weights.copy(deep=True)])
 these_weights = pd.DataFrame(lcm.M_T_list)
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
 these_weights['Method'] = 'LCM Metalearner M_T'
-df_weights = df_weights.append(these_weights.copy(deep=True))
+df_weights = pd.concat([df_weights, these_weights.copy(deep=True)])
 lcm.MG(k=k_est)
 for s in sample_mg_splits:
     this_control_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.C_MG_list[s].iloc[
@@ -101,8 +101,8 @@ for s in sample_mg_splits:
     this_treatment_mg['T'] = 1
     this_control_mg.index = [sample_idx]
     this_treatment_mg.index = [sample_idx]
-    df_mgs = df_mgs.append(this_control_mg.copy(deep=True))
-    df_mgs = df_mgs.append(this_treatment_mg.copy(deep=True))
+    df_mgs = pd.concat([df_mgs, this_control_mg.copy(deep=True)])
+    df_mgs = pd.concat([df_mgs, this_treatment_mg.copy(deep=True)])
 meta_lcm_c_mgs = copy.deepcopy(lcm.C_MG_list)
 meta_lcm_t_mgs = copy.deepcopy(lcm.T_MG_list)
 lcm.CATE(cate_methods=[est_method])
@@ -111,7 +111,7 @@ cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
 cate_df['True_CATE'] = df_true['TE'].to_numpy()
 cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
 cate_df['Method'] = ['LCM Metalearner' for i in range(cate_df.shape[0])]
-df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True))
+df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
 print(f'LCM Metalearner complete: {time.time() - start}')
 
 df_true.to_csv('Results/df_true.csv')
@@ -129,19 +129,19 @@ ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig(f'Results/boxplot_err.png')
 
+x_imp += 1  # to include unimportant covariate in plotting
 df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_vars=['Method'])
 df_weights = df_weights.rename(columns={'variable': 'Covariate', 'value': 'Relative Weight (%)'})
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
 fig, ax = plt.subplots(figsize=(10, 12))
-sns.catplot(data=df_weights, x="Covariate", y="Relative Weight (%)", hue="Method", kind="bar",)
+sns.catplot(data=df_weights, x="Covariate", y="Relative Weight (%)", hue="Method", kind="bar", legend=False)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.legend(loc='upper right')
 plt.tight_layout()
 plt.savefig('Results/barplot_weights.png')
 
-x_imp += 1
 lcm_std = {f'X{i}': {0: np.array([]), 1: np.array([])} for i in range(x_imp)}
 meta_lcm_std = {f'X{i}': {0: np.array([]), 1: np.array([])} for i in range(x_imp)}
 this_iter = 0
@@ -194,7 +194,6 @@ sns.set_style("darkgrid")
 sns.set(font_scale=2)
 fig, ax = plt.subplots(figsize=(10, 12))
 sns.boxplot(data=mg_std, x='Covariate', y='MG Average Difference', hue=mg_hue)
-plt.xticks(rotation=65, horizontalalignment='right')
 plt.legend(loc='upper left')
 plt.tight_layout()
 plt.savefig('Results/barplot_mg_avg_diff.png')

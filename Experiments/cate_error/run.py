@@ -11,7 +11,7 @@ k_est_mean = 15
 k_est_linear = 25
 
 datasets = [
-    'dense_continuous',
+    # 'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',

@@ -72,19 +72,19 @@ all_errors = all_errors.sort_values(['acic_year', 'acic_file_no'])
 all_errors['Method'] = all_errors['Method'].apply(lambda x: rename_methods[x] if x in rename_methods.keys() else x)
 
 
-matplotlib.rcParams.update({'font.size': 12})
+matplotlib.rcParams.update({'font.size': 50})
 plt.style.use(['seaborn-darkgrid'])
-fig, axes = plt.subplots(2, 1, figsize=(15, 15))
+fig, axes = plt.subplots(2, 1, figsize=(30, 30))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1.5)
+sns.set(font_scale=5)
 b1 = sns.barplot(data=all_errors[(all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] <= 15)],
-            x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[0])
+                 x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[0])
 b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15)) | (all_errors['acic_year'] == 2019)],
-            x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[1])
+                 x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[1])
 
 handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='right', bbox_to_anchor=(1.2, 0.5))
+fig.legend(handles, labels, loc='right', bbox_to_anchor=(1.3, 0.5))
 for ax in axes:
     ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
     ax.set_yscale('log')
@@ -101,10 +101,10 @@ n_methods = rankings['Method'].nunique()
 rankings['Ranking'] = list(range(1, n_methods+1))*(rankings.shape[0] // n_methods)
 rankings = rankings[~rankings['Median Relative Error (%) (log)'].isna()]
 
-plt.figure()
+plt.figure(figsize=(24, 16))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
+sns.set(font_scale=4)
 sns.boxplot(data=rankings, x="Ranking", y="Method", order=order)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()

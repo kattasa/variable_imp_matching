@@ -79,6 +79,9 @@ class LCM:
         self.random_state = random_state
 
     def fit(self, method='linear', equal_weights=False, params=None, double_model=False, return_score=False):
+        self.M = None
+        self.M_C = None
+        self.M_T = None
         if params is None:
             params = {'max_iter': 5000}
         params['random_state'] = self.random_state

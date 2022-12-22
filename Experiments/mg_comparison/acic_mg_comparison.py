@@ -75,8 +75,6 @@ print(f'Prog Rankings: {prog_rank}')
 int_types = np.array(imp_covs)[list(df_est[imp_covs].nunique() <= 2)]
 float_types = np.array(imp_covs)[list(df_est[imp_covs].nunique() > 2)]
 if len(float_types) > 0:
-    from sklearn.experimental import enable_iterative_imputer
-    from sklearn.impute import IterativeImputer
     sample_ids = pd.read_csv(
         f'/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/{acic_name}.csv')
     df = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/acic_2018/covariates/x_preprocessed.csv')
