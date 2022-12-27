@@ -97,8 +97,11 @@ class LCM:
                 model = linear.LassoCV(**params).fit(self.X, self.Y)
                 M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
             elif method == 'tree':
-                model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
-                M_hat = model.feature_importances_[:-1].reshape(-1,)
+                params['positive'] = True
+                model = linear.LassoCV(**params).fit(self.X, self.Y)
+                M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
+                # model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
+                # M_hat = model.feature_importances_[:-1].reshape(-1,)
             else:
                 raise Exception(f'Fit method not supported.')
             if equal_weights:

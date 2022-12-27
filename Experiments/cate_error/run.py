@@ -24,7 +24,7 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    # 'acic_2019',
+    'acic_2019',
     # 'news'
 ]
 
@@ -32,12 +32,13 @@ all_acic_2018_files = [f.replace('.csv', '') for f in set([c.split('/')[-1].repl
                                                            glob.glob(f"{os.getenv('ACIC_2018_FOLDER')}/*.csv")])]
 n_samples_per_split = 1000
 # all_acic_2019_files = list(range(1, 9))
-all_acic_2019_files = [3, 4,7,8]
+all_acic_2019_files = [3, 4, 7, 8]
 
 
 methods_config = {
-    'linear_coef_matching': {'double_model': [False, True], 'n_repeats': 1, 'params': None,
+    'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
                              'methods': [['linear_pruned', False]]},
+    'tree_imp_matching': True,
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
     # 'manhatten_pruned': {'params': None, 'methods': ['mean', 'linear']},

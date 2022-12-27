@@ -218,6 +218,32 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
                 if print_progress:
                     print(f'{method_name} method complete: {time.time() - start + fit_time + mg_time + init_time}')
 
+        if 'tree_imp_matching' in methods:
+            method_name = 'Tree Feature Importance Matching'
+            start = time.time()
+            lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
+                         random_state=random_state)
+            init_time = time.time() - start
+            lcm.gen_skf = split_strategy
+            start = time.time()
+            lcm.fit(method='tree')
+            fit_time = time.time() - start
+            start = time.time()
+            lcm.MG(k=60)
+            mg_time = time.time() - start
+            start = time.time()
+            lcm.CATE(cate_methods=[['linear_pruned', False]])
+            times[method_name] = time.time() - start + fit_time + mg_time + init_time
+            cate_df = lcm.cate_df
+            cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+            cate_df['True_CATE'] = df_true['TE'].to_numpy()
+            cate_df['Relative Error (%)'] = np.abs(
+                (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
+            cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+            cate_df['Iter'] = iter
+            df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']].copy(deep=True)])
+            print(f'{method_name} method complete: {time.time() - start + fit_time + mg_time + init_time}')
+
         if 'propensity' in methods:
             method_name = 'Propensity Score Matching'
             start = time.time()
