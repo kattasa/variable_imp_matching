@@ -5,7 +5,7 @@ import pickle
 import time
 
 from src.linear_coef_matching import LCM
-from utils import sample_match_group, sample_linear_cate
+from sample_utils import sample_match_group, sample_linear_cate
 
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]
 split_num = int(os.getenv('SPLIT_NUM'))

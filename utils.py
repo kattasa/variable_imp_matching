@@ -1,28 +1,8 @@
-import copy
-
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor as RFR, RandomForestClassifier as RFC
-from sklearn.linear_model import RidgeCV, LogisticRegressionCV, LinearRegression, LogisticRegression, Ridge
+from sklearn.ensemble import RandomForestRegressor as RFR
+from sklearn.linear_model import RidgeCV
 from sklearn.neighbors import NearestNeighbors
-
-# X_C = X[:, M_C > 0]
-# X_T = X[:, M_T > 0]
-# M_C = M_C[M_C > 0]
-# M_T = M_T[M_T > 0]
-# control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_C * X_C[T == 0])
-# treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='kd_tree', n_jobs=10).fit(M_T * X_T[T == 1])
-# control_dist, control_mg = control_nn.kneighbors(M_C * X_C, return_distance=True)
-# treatment_dist, treatment_mg = treatment_nn.kneighbors(M_T * X_T, return_distance=True)
-# control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
-# treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
-# control_dist = pd.DataFrame(control_dist)
-# treatment_dist = pd.DataFrame(treatment_dist)
-# if return_original_idx:
-#     control_dist.index = old_idx
-#     treatment_dist.index = old_idx
-#     return convert_idx(control_mg, old_idx), convert_idx(treatment_mg, old_idx), control_dist, treatment_dist
-# return control_mg, treatment_mg, control_dist, treatment_dist
 
 
 def get_match_groups(df_estimation, k, covariates, treatment, M, M_C=None, M_T=None, return_original_idx=True,
@@ -61,37 +41,6 @@ def get_mg_from_M(X, T, M, M_C, M_T, k):
 def get_nn(X, T, treatment, k):
     nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', metric='cityblock', n_jobs=10).fit(X[T == treatment])
     return nn.kneighbors(X, return_distance=True)
-
-
-def sample_match_group(df_estimation, sample_idx, k, covariates, treatment, M, combine_mg=True):
-    X = M[M > 0] * df_estimation[covariates[M > 0]].to_numpy()
-    T = df_estimation[treatment].to_numpy()
-    this_sample = X[sample_idx, :].reshape(1, -1)
-    control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', metric='cityblock', n_jobs=10).fit(X[T == 0])
-    treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', metric='cityblock', n_jobs=10).fit(X[T == 1])
-    if combine_mg:
-        return pd.concat([df_estimation.loc[df_estimation['T'] == 0].iloc[control_nn.kneighbors(this_sample, return_distance=False).reshape(-1)],
-               df_estimation.loc[df_estimation['T'] == 1].iloc[treatment_nn.kneighbors(this_sample, return_distance=False).reshape(-1)]])
-    else:
-        return df_estimation.loc[df_estimation['T'] == 0].iloc[control_nn.kneighbors(this_sample, return_distance=False).reshape(-1)], \
-               df_estimation.loc[df_estimation['T'] == 1].iloc[treatment_nn.kneighbors(this_sample, return_distance=False).reshape(-1)]
-
-
-def sample_linear_cate(mg, covariates, M, treatment, outcome, prune=True):
-    if prune:
-        imp_covs = prune_covariates(covariates, M)
-    else:
-        imp_covs = covariates
-    return RidgeCV().fit(mg[imp_covs + [treatment]].to_numpy(), mg[outcome].to_numpy()).coef_[-1]
-
-
-def sample_double_linear_cate(c_mg, t_mg, sample, covariates, M, outcome, prune=True):
-    if prune:
-        imp_covs = prune_covariates(covariates, M)
-    else:
-        imp_covs = covariates
-    return RidgeCV().fit(t_mg[imp_covs].to_numpy(), t_mg[outcome].to_numpy()).predict(sample)[0] - \
-           RidgeCV().fit(c_mg[imp_covs].to_numpy(), c_mg[outcome].to_numpy()).predict(sample)[0]
 
 
 def convert_idx(mg, idx):
@@ -195,78 +144,3 @@ def prune_covariates(covariates, M):
         imp_covs = list(np.array(covariates)[M >= prune_level * M.shape[0]])
         prune_level *= 0.1
     return imp_covs
-
-
-def compare_CATE_methods(c_mg, t_mg, df_est, covariates, prune, M, treatment, outcome,
-                         methods=['linear', 'double_linear']):
-    df_est = df_est.reset_index(drop=True)
-    if prune:
-        imp_covs = prune_covariates(covariates, M)
-    else:
-        imp_covs = covariates
-    mg = mg_to_training_set(df_est, c_mg, t_mg, imp_covs, treatment, outcome,
-                            augmented=False, control_preds=None, treatment_preds=None)
-    samples = c_mg.index.to_list()
-    df_est = df_est[imp_covs + [treatment, outcome]].to_numpy()
-    mg_size = mg.shape[1] // 2
-    control_mg = mg[:, :mg_size, :]
-    treatment_mg = mg[:, mg_size:, :]
-    results = {}
-    for m in methods:
-        errors = []
-        if m == 'linear':
-            for i in range(mg.shape[0]):
-                this_sample = df_est[samples[i]]
-                this_mg = mg[i, :, :]
-                errors.append(
-                    (this_sample[-1] -
-                     LinearRegression().fit(this_mg[:, :-1], this_mg[:, -1]).predict(this_sample[:-1].reshape(1, -1))[0]
-                     )**2)
-        elif m == 'double_linear':
-            for i in range(mg.shape[0]):
-                this_sample = df_est[samples[i]]
-                if this_sample[-2] == 0:
-                    this_mg = control_mg[i, :, :]
-                elif this_sample[-2] == 1:
-                    this_mg = treatment_mg[i, :, :]
-                errors.append(
-                    (this_sample[-1] -
-                     LinearRegression().fit(this_mg[:, :-2], this_mg[:, -1]).predict(this_sample[:-2].reshape(1, -1))[0]
-                     ) ** 2)
-        results[m] = copy.deepcopy(errors)
-    return results
-
-
-class CustomLinearClassifier:
-    def __init__(self):
-        self.model = None
-        self.label = None
-
-    def fit(self, x, y):
-        if np.unique(y).shape[0] >= 2:
-            self.model = LogisticRegressionCV().fit(x, y)
-        else:
-            self.label = y[0]
-        return self
-
-    def predict_proba(self, x):
-        if self.model is not None:
-            return self.model.predict_proba(x)[0][1]
-        return self.label
-
-class CustomRFClassifier:
-    def __init__(self):
-        self.model = None
-        self.label = None
-
-    def fit(self, x, y):
-        if np.unique(y).shape[0] >= 2:
-            self.model = RFC().fit(x, y)
-        else:
-            self.label = y[0]
-        return self
-
-    def predict_proba(self, x):
-        if self.model is not None:
-            return self.model.predict_proba(x)[0][1]
-        return self.label
