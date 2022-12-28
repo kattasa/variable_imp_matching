@@ -18,3 +18,4 @@ dataset_config['n_train'] = dataset_config['num_samples']
 df_train, df_data, df_true, binary = get_data(data='dense_continuous', config=dataset_config)
 
 df_train.to_csv(f'{save_folder}/df_train.csv', index=False)
+print(f'Saved to {save_folder}/df_train.csv')
