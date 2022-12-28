@@ -7,11 +7,9 @@
 
 export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
-export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
 memory=$"16G"
 random_state=1
-cd $RESULTS_FOLDER
 iters=1
 
 mkdir "${RESULTS_FOLDER}/num_samples"
@@ -24,7 +22,7 @@ for n in ${num_samples[@]}; do
     if [ ! -f "${RESULTS_FOLDER}/num_samples/${n}/df_train.csv" ]; then
         sleep 10
     fi
-    echo "Running scripts for ${f}"
+    echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_samples/${n}/lcm_fit_times"
     mkdir "${RESULTS_FOLDER}/num_samples/${n}/malts_fit_times"
     counter=0
@@ -46,7 +44,7 @@ for n in ${num_covs[@]}; do
     if [ ! -f "${RESULTS_FOLDER}/num_covs/${n}/df_train.csv" ]; then
         sleep 10
     fi
-    echo "Running scripts for ${f}"
+    echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_covs/${n}/lcm_fit_times"
     mkdir "${RESULTS_FOLDER}/num_covs/${n}/malts_fit_times"
     counter=0
