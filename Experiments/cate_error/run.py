@@ -8,7 +8,7 @@ from Experiments.cate_error.cate_error import cate_error_test
 iters = 1
 print_progress = True
 k_est_mean = 15
-k_est_linear = 25
+k_est_linear = 40
 
 datasets = [
     # 'dense_continuous',
@@ -38,7 +38,7 @@ all_acic_2019_files = [3, 4, 7, 8]
 methods_config = {
     'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
                              'methods': [['linear_pruned', False]]},
-    'tree_imp_matching': True,
+    # 'tree_imp_matching': True,
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
     # 'manhatten_pruned': {'params': None, 'methods': ['mean', 'linear']},

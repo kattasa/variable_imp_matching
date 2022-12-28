@@ -125,10 +125,9 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
                                  methods_config['linear_coef_matching']['methods']]:
                     method_name = f'{"Double" if double_model else "Single"} Model Lasso Matching ' \
                                   f'{"Augmented " if e_method[0][1] else ""}{" ".join(e_method[0][0].split("_")).title()}'
-                    if e_method[1] != lcm.MG_size:
-                        start = time.time()
-                        lcm.MG(k=e_method[1])
-                        mg_time = time.time() - start
+                    start = time.time()
+                    lcm.MG(k=e_method[1])
+                    mg_time = time.time() - start
                     start = time.time()
                     # lcm.CATE(cate_methods=[e_method[0]], precomputed_control_preds=bart_control_preds,
                     #          precomputed_treatment_preds=bart_treatment_preds)
