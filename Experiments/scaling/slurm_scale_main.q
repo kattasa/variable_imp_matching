@@ -8,7 +8,7 @@
 export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 
-memory=$"16G"
+memory=$"64G"
 random_state=1
 iters=1
 
@@ -18,7 +18,7 @@ imp_c=8
 unimp_c=32
 for n in ${num_samples[@]}; do
     mkdir "${RESULTS_FOLDER}/num_samples/${n}"
-    sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/dgp.err" --mem="4" --export=NUM_SAMPLES=$n,IMP_C=$imp_c,UNIMP_C=$unimp_c,RANDOM_STATE=$random_state,SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH slurm_dgp_scale.q
+    sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/dgp.err" --mem="$memory" --export=NUM_SAMPLES=$n,IMP_C=$imp_c,UNIMP_C=$unimp_c,RANDOM_STATE=$random_state,SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH slurm_dgp_scale.q
     if [ ! -f "${RESULTS_FOLDER}/num_samples/${n}/df_train.csv" ]; then
         sleep 10
     fi
