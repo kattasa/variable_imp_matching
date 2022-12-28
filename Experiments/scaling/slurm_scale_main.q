@@ -8,7 +8,7 @@
 export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 
-memory=$"64G"
+memory=$"16G"
 random_state=1
 iters=1
 
@@ -18,10 +18,10 @@ imp_c=8
 unimp_c=32
 for n in ${num_samples[@]}; do
     mkdir "${RESULTS_FOLDER}/num_samples/${n}"
-    sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/dgp.err" --mem="$memory" --export=NUM_SAMPLES=$n,IMP_C=$imp_c,UNIMP_C=$unimp_c,RANDOM_STATE=$random_state,SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH slurm_dgp_scale.q
-    if [ ! -f "${RESULTS_FOLDER}/num_samples/${n}/df_train.csv" ]; then
+    sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/dgp.err" --mem="16" --export=NUM_SAMPLES=$n,IMP_C=$imp_c,UNIMP_C=$unimp_c,RANDOM_STATE=$random_state,SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH slurm_dgp_scale.q
+    while [ ! -f "${RESULTS_FOLDER}/num_samples/${n}/df_train.csv" ]; do
         sleep 10
-    fi
+    done
     echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_samples/${n}/lcm_fit_times"
     mkdir "${RESULTS_FOLDER}/num_samples/${n}/malts_fit_times"
