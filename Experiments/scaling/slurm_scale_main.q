@@ -40,10 +40,10 @@ num_samples=1024
 imp_c=8
 for n in ${num_covs[@]}; do
     mkdir "${RESULTS_FOLDER}/num_covs/${n}"
-    sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/dgp.err" --mem="4" --export=NUM_SAMPLES=$num_samples,IMP_C=$imp_c,UNIMP_C=$n,RANDOM_STATE=$random_state,SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH slurm_dgp_scale.q
-    if [ ! -f "${RESULTS_FOLDER}/num_covs/${n}/df_train.csv" ]; then
+    sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/dgp.err" --mem="16G" --export=NUM_SAMPLES=$num_samples,IMP_C=$imp_c,UNIMP_C=$n,RANDOM_STATE=$random_state,SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH slurm_dgp_scale.q
+    while [ ! -f "${RESULTS_FOLDER}/num_covs/${n}/df_train.csv" ]; do
         sleep 10
-    fi
+    done
     echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_covs/${n}/lcm_fit_times"
     mkdir "${RESULTS_FOLDER}/num_covs/${n}/malts_fit_times"
