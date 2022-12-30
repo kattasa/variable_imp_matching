@@ -13,7 +13,7 @@ random_state=1
 cd $RESULTS_FOLDER
 folders=$(ls -d */)
 cd -
-iters=25
+iters=5
 
 for f in $folders; do
     echo "Running scripts for ${f}"
