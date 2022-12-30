@@ -11,7 +11,8 @@ export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 memory=$"8G"
 random_state=1
 cd $RESULTS_FOLDER
-folders=$(ls -d */)
+#folders=$(ls -d */)
+folder=$('acic_2019-8_000')
 cd -
 iters=5
 
