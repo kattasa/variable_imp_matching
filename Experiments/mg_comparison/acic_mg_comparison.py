@@ -220,7 +220,11 @@ prog_unimp_covs = np.array(prog.cov)[prog.hc.feature_importances_ == 0]
 unimp_covs = [c for c in lcm_unimp_covs if c in prog_unimp_covs]
 covs_by_nunique = list(df_est.nunique().sort_values(ascending=False).index)
 unimp_covs = [c for c in covs_by_nunique if c in unimp_covs]
-unimp_covs = unimp_covs[:len(imp_covs)]
+unimp_int = list(df_est[unimp_covs].loc[:, (df_est[unimp_covs].dtypes == 'int64').to_numpy()].var()
+                 .sort_values(ascending=False).index)[:len(int_types)]
+unimp_float = list(df_est[unimp_covs].loc[:, (df_est[unimp_covs].dtypes == 'float64').to_numpy()].var()
+                   .sort_values(ascending=False).index)[:len(float_types)]
+unimp_covs = unimp_int + unimp_float
 
 focus_cols = imp_covs + unimp_covs + ['T', 'Y0_true', 'Y1_true', 'Y']
 

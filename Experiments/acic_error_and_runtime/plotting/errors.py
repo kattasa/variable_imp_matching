@@ -7,7 +7,7 @@ import seaborn as sns
 
 all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
 
-plot_name = '_results'
+plot_name = os.getenv('PLOT_NAME')
 q = 0.5
 methods = [
     'LASSO Coefficient Matching',
