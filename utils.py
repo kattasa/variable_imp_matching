@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor as RFR
-from sklearn.linear_model import RidgeCV, LogisticRegressionCV
+from sklearn.linear_model import RidgeCV
 from sklearn.neighbors import NearestNeighbors
 
 
@@ -150,22 +150,3 @@ def prune_covariates(covariates, M):
         imp_covs = list(np.array(covariates)[M >= prune_level * M.shape[0]])
         prune_level *= 0.1
     return imp_covs
-
-
-class CustomLinearClassifier:
-    def __init__(self, random_state=None):
-        self.model = None
-        self.label = None
-        self.random_state = random_state
-
-    def fit(self, x, y):
-        if np.unique(y).shape[0] >= 2:
-            self.model = LogisticRegressionCV(random_state=self.random_state).fit(x, y)
-        else:
-            self.label = y[0]
-        return self
-
-    def predict_proba(self, x):
-        if self.model is not None:
-            return self.model.predict_proba(x)[0][1]
-        return self.label
