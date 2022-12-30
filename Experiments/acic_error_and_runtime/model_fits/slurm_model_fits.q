@@ -12,7 +12,7 @@ memory=$"8G"
 random_state=1
 cd $RESULTS_FOLDER
 #folders=$(ls -d */)
-folder=("acic_2019-8_000")
+folders=("acic_2019-8_000")
 cd -
 iters=5
 
