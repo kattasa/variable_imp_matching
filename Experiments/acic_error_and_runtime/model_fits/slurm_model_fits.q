@@ -11,13 +11,11 @@ export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 memory=$"8G"
 random_state=1
 cd $RESULTS_FOLDER
-#folders=$(ls -d */)
-folders=("acic_2019-8_000/")
+folders=$(ls -d */)
 cd -
-iters=5
+iters=1
 
-#for f in $folders; do
-for f in ${folders[*]}; do
+for f in $folders; do
     echo "Running scripts for ${f}"
     n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
     n_splits=$(($n_splits + 0))
