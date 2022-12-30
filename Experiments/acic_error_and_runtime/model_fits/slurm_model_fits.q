@@ -12,11 +12,12 @@ memory=$"8G"
 random_state=1
 cd $RESULTS_FOLDER
 #folders=$(ls -d */)
-folder=$('acic_2019-8_000')
+folder=("acic_2019-8_000")
 cd -
 iters=5
 
-for f in $folders; do
+#for f in $folders; do
+for f in ${folders[*]}; do
     echo "Running scripts for ${f}"
     n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
     n_splits=$(($n_splits + 0))
