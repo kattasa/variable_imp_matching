@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor as RFR
-from sklearn.linear_model import RidgeCV
+from sklearn.linear_model import RidgeCV, Lasso, Ridge
 from sklearn.neighbors import NearestNeighbors
 
 
@@ -56,8 +56,7 @@ def mg_to_training_set(df_estimation, control_mg, treatment_mg, covariates, trea
                                               (((1 - df_estimation[treatment].to_numpy()[all_matches]) *
                                                 control_preds[all_matches]) +
                                                (df_estimation[treatment].to_numpy()[all_matches] *
-                                                treatment_preds[all_matches])), axis=2)],
-                              axis=2)
+                                                treatment_preds[all_matches])), axis=2)], axis=2)
     else:
         return df_estimation[covariates + [treatment, outcome]].to_numpy()[all_matches]
 
@@ -77,11 +76,14 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
         else:
             imp_covs = covariates
         mg = mg_to_training_set(df_estimation, control_mg, treatment_mg, imp_covs, treatment, outcome,
-                                 augmented, control_preds, treatment_preds)
+                                augmented, control_preds, treatment_preds)
         mg_size = mg.shape[1] // 2
         method = method.replace('_pruned', '')
         if method == 'linear':
-            mg_cates = np.array([linear_cate(mg[i, :, :]) for i in range(mg.shape[0])])
+            if augmented:
+                mg_cates = np.array([linear_augmented_cate(mg[i, :, :]) for i in range(mg.shape[0])])
+            else:
+                mg_cates = np.array([linear_cate(mg[i, :, :]) for i in range(mg.shape[0])])
         elif (method == 'double_linear') or (method == 'rf'):
             samples = df_estimation[imp_covs].to_numpy()[control_mg.index]
             control_mg = mg[:, :mg_size, :]
@@ -104,6 +106,10 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
 
 def linear_cate(mg):
     return RidgeCV().fit(mg[:, :-1], mg[:, -1]).coef_[-1]
+
+
+def linear_augmented_cate(mg):
+    return RidgeCV(fit_intercept=False).fit(mg[:, :-1], mg[:, -1]).coef_[-1]
 
 
 def dual_linear_cate(c_mg, t_mg, this_sample):

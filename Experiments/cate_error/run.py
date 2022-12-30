@@ -8,10 +8,10 @@ from Experiments.cate_error.cate_error import cate_error_test
 iters = 1
 print_progress = True
 k_est_mean = 15
-k_est_linear = 40
+k_est_linear = 60
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
@@ -24,7 +24,7 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    'acic_2019',
+    # 'acic_2019',
     # 'news'
 ]
 
@@ -37,7 +37,7 @@ all_acic_2019_files = [3, 4, 7, 8]
 
 methods_config = {
     'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
-                             'methods': [['linear_pruned', False]]},
+                             'methods': [['linear_pruned', False], ['linear_pruned', True]]},
     # 'tree_imp_matching': True,
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
@@ -45,7 +45,7 @@ methods_config = {
     # 'propensity': None,
     # 'genmatch': None,
     # 'prognostic': None,
-    # 'bart': None,
+    'bart': None,
     # 'causal_forest': None
 }
 
