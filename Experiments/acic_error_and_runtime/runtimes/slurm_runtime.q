@@ -21,7 +21,7 @@ iters=1
 malts_max=5000
 bart_dont_run="acic_2018-d09f96200455407db569ae33fe06b0d3_000/"
 
-//for f in $folders; do
+#for f in $folders; do
 f="acic_2018-d09f96200455407db569ae33fe06b0d3_000/"
 echo "Running scripts for ${f}"
 n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
@@ -72,4 +72,4 @@ do
   done
   ((counter++))
 done
-//done
+#done
