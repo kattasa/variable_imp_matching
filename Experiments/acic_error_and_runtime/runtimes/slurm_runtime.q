@@ -20,15 +20,20 @@ cd -
 iters=1
 malts_max=5000
 bart_dont_run="acic_2018-d09f96200455407db569ae33fe06b0d3_000/"
+two_splits_if_below=2000
 
 #for f in $folders; do
 f="acic_2018-d09f96200455407db569ae33fe06b0d3_000/"
 echo "Running scripts for ${f}"
 n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
 n_splits=$(($n_splits + 0))
-echo "${n_splits} splits"
 n_samples=$(cat "${RESULTS_FOLDER}/${f}df_true.csv" | wc -l)
 n_samples=$(($n_samples - 1))
+if [[ $n_samples -lt $two_splits_if_below ]]
+then
+  n_splits=2
+fi
+echo "${n_splits} splits"
 echo "${n_samples} samples"
 mkdir "${RESULTS_FOLDER}/${f}/lcm_fit_times"
 mkdir "${RESULTS_FOLDER}/${f}/tree_fit_times"
