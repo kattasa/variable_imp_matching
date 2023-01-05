@@ -1,3 +1,4 @@
+import pandas as pd
 from sklearn.linear_model import RidgeCV
 from sklearn.neighbors import NearestNeighbors
 

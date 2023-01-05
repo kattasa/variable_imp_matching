@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
-from datagen.dgp import dgp_poly_no_interaction, dgp_poly_interaction,dgp_friedman, data_generation_dense_mixed_endo, \
+from datagen.dgp import dgp_poly_basic, dgp_friedman, data_generation_dense_mixed_endo, \
     dgp_sine, dgp_non_linear_mixed, dgp_polynomials, dgp_test
 
 np.random.seed(0)
@@ -18,6 +18,24 @@ ACIC_2018_FOLDER = os.getenv('ACIC_2018_FOLDER')
 ACIC_2019_FOLDER = os.getenv('ACIC_2019_FOLDER')
 ACIC_2022_FOLDER = os.getenv('ACIC_2022_FOLDER')
 NEWS_FOLDER = os.getenv('NEWS_FOLDER')
+
+
+def dgp_poly_basic_df(n_samples, n_imp, n_t_imp, n_unimp, powers=[2], t_powers=[2], perc_train=None, n_train=None):
+    if perc_train:
+        train_idx = int(n_samples*perc_train)
+    else:
+        train_idx = n_train
+    X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_poly_basic(n_samples, n_imp, n_t_imp, n_unimp, powers=powers,
+                                                           t_powers=t_powers)
+    df = pd.DataFrame(np.concatenate([X, Y, T, Y0, Y1, TE, Y0_true, Y1_true], axis=1))
+    x_cols = [f'X{i}' for i in range(X.shape[1])]
+    df.columns = [*x_cols, 'Y', 'T', 'Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true']
+    df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+    df_train = df.copy(deep=True)[:train_idx]
+    df_train = df_train.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
+    df_true = df.copy(deep=True)[train_idx:]
+    df_assess = df_true.copy(deep=True).drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
+    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols
 
 
 def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=None):
@@ -32,12 +50,6 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
         discrete = []
     if dgp == 'test':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_test(n_samples, n_imp, n_unimp)
-        discrete = []
-    if dgp == 'poly_no_interaction':
-        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_poly_no_interaction(n_samples, n_imp, n_unimp)
-        discrete = []
-    if dgp == 'poly_interaction':
-        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_poly_interaction(n_samples, n_imp, n_unimp)
         discrete = []
     elif dgp == 'friedman':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_friedman(n_samples)

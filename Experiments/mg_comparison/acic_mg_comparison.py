@@ -4,9 +4,10 @@ import shutil
 import pandas as pd
 import warnings
 
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import seaborn as sns
-from sklearn.model_selection import train_test_split
 
 from other_methods import prognostic
 from src.linear_coef_matching import LCM
@@ -132,7 +133,13 @@ lcm_diffs['Method'] = 'Linear Coefficient\nMatching'
 ewl_diffs['Method'] = 'Equal Weighted\nLASSO Matching'
 prog_diffs['Method'] = 'Prognostic Score\nMatching'
 binary_sims = pd.concat([lcm_diffs, ewl_diffs, prog_diffs])
-binary_sims[int_types] = (k_est - binary_sims[int_types]) / k_est
+for c in binary_sims.columns:
+    if len(c) > 10:
+        binary_sims = binary_sims.rename(columns={c: '_\n'.join(c.split('_'))})
+        int_types = [d for d in int_types if d != c]
+        int_types.append('_\n'.join(c.split('_')))
+        int_types = np.array(int_types)
+binary_sims[int_types] = ((k_est - binary_sims[int_types]) / k_est) * 100
 binary_sims = pd.melt(binary_sims, id_vars=['Method']).dropna(subset=['value'])
 binary_sims = binary_sims.rename(columns={'variable': 'Binary Covariate', 'value': binary_y_label})
 
@@ -172,17 +179,23 @@ if len(float_types) > 0:
     ewl_std['Method'] = 'Equal Weighted\nLASSO Matching'
     prog_std['Method'] = 'Prognostic Score\nMatching'
     cont_sims = pd.concat([lcm_std, ewl_std, prog_std])
+    cont_sims = cont_sims.rename(columns={'wtgain': 'wtgain\n'})
     cont_sims = pd.melt(cont_sims, id_vars=['Method'])
     cont_sims = cont_sims.rename(columns={'variable': 'Continuous Covariate', 'value': cont_y_label})
 
 if (len(int_types) > 0) & (len(float_types) > 0):
-    fig, axes = plt.subplots(1, 2)
-    sns.barplot(ax=axes[0], data=binary_sims, x='Binary Covariate', y=binary_y_label, hue='Method')
+    matplotlib.rcParams.update({'font.size': 50})
+    plt.style.use(['seaborn-darkgrid'])
+    fig, axes = plt.subplots(1, 2, figsize=(26, 14))
+    sns.barplot(ax=axes[0], data=binary_sims, x='Binary Covariate', y=binary_y_label, hue='Method', errorbar=None)
     sns.boxplot(ax=axes[1], data=cont_sims, x='Continuous Covariate', y=cont_y_label, hue='Method')
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='right', bbox_to_anchor=(0.95, 1.05), ncol=3)
+    fig.legend(handles, labels, loc='right', bbox_to_anchor=(0.95, 1.02), ncol=3, fontsize=50,
+               columnspacing=0.5)
     for ax in axes:
         ax.get_legend().remove()
+    axes[0].yaxis.set_major_formatter(ticker.PercentFormatter())
+    axes[1].set_ylim([0,40])
     fig.tight_layout()
     fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
 elif len(int_types) > 0:

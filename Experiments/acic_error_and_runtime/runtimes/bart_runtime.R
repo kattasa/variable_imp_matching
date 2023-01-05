@@ -3,8 +3,8 @@ suppressWarnings(library(dbarts))
 
 RESULTS_FOLDER <- Sys.getenv("RESULTS_FOLDER")
 ACIC_FOLDER <- Sys.getenv("ACIC_FOLDER")
-SPLIT_NUM <- Sys.getenv("SPLIT_NUM")
-RANDOM_STATE <- Sys.getenv("RANDOM_STATE")
+SPLIT_NUM <- strtoi(Sys.getenv("SPLIT_NUM"))
+RANDOM_STATE <- strtoi(Sys.getenv("RANDOM_STATE"))
 
 
 acic_results_folder <- paste(RESULTS_FOLDER, ACIC_FOLDER, sep="/")
@@ -35,8 +35,8 @@ Yc <- subset(df_train[df_train$T == 0,], select = c(Y))
 Xt <- subset(df_train[df_train$T == 1,], select = -c(T,Y))
 Yt <- subset(df_train[df_train$T == 1,], select = c(Y))
 if (binary) {
-  cate <- mean(pnorm(dbarts::bart(as.matrix(Xt), as.matrix(Yt), as.matrix(sample), verbose=FALSE, seed=RANDOM_STATE)[3][[1]][,1])) - mean(pnorm(dbarts::bart(as.matrix(Xc), as.matrix(Yc), as.matrix(sample), verbose=FALSE)[3][[1]][,1]))
+  cate <- mean(pnorm(dbarts::bart(as.matrix(Xt), as.matrix(Yt), as.matrix(sample), verbose=FALSE, seed=RANDOM_STATE)[3][[1]][,1])) - mean(pnorm(dbarts::bart(as.matrix(Xc), as.matrix(Yc), as.matrix(sample), verbose=FALSE, seed=RANDOM_STATE)[3][[1]][,1]))
 } else {
-  cate <- mean(dbarts::bart(as.matrix(Xt), as.matrix(Yt), as.matrix(sample), verbose=FALSE, seed=RANDOM_STATE)[8][1]) - mean(dbarts::bart(as.matrix(Xc), as.matrix(Yc), as.matrix(sample), verbose=FALSE)[8][1])
+  cate <- dbarts::bart(as.matrix(Xt), as.matrix(Yt), as.matrix(sample), verbose=FALSE, seed=RANDOM_STATE)[8][[1]][1] - dbarts::bart(as.matrix(Xc), as.matrix(Yc), as.matrix(sample), verbose=FALSE, seed=RANDOM_STATE)[8][[1]][1]
 }
 cat(as.character(as.numeric(Sys.time() - start)), '\n')

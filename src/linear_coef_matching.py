@@ -8,7 +8,7 @@ Created on Sat May 14 2022
 import numpy as np
 
 from sklearn.base import clone as clone_est
-from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear
 import sklearn.tree as tree
 
@@ -110,6 +110,9 @@ class LCM:
             elif method == 'tree':
                 model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
                 M_hat = model.feature_importances_[:-1].reshape(-1,)
+            elif method == 'rf':
+                model = ensemble.RandomForestRegressor(**params).fit(self.X, self.Y)
+                M_hat = model.feature_importances_[:-1].reshape(-1,)
             else:
                 raise Exception(f'Fit method not supported.')
             if equal_weights:
@@ -153,9 +156,9 @@ class LCM:
 
     def augment(self, estimator=None):
         if estimator is None and self.binary_outcome:
-            estimator = GradientBoostingClassifier(random_state=self.random_state)
+            estimator = ensemble.GradientBoostingClassifier(random_state=self.random_state)
         elif estimator is None:
-            estimator = GradientBoostingRegressor(random_state=self.random_state)
+            estimator = ensemble.GradientBoostingRegressor(random_state=self.random_state)
         self.est_C = estimator
         self.est_T = clone_est(self.est_C)
         self.est_C.fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])

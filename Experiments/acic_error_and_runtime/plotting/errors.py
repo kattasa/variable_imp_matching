@@ -1,4 +1,5 @@
 from glob import glob
+import json
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -27,6 +28,7 @@ rename_methods = {
     "Causal Forest DML": "Causal Forest\nDML",
     'LASSO Coefficient Matching': 'LASSO Coefficient\nMatching',
     "Equal Weighted LASSO Matching": "Equal Weighted\nLASSO Matching",
+    # "Tree Feature Importance Matching": "Tree Feature\nImportance Matching",
     'Prognostic Score Matching': 'Prognostic Score\nMatching',
     "DoubleML": "Linear DoubleML",
     "DRLearner": "Linear DRLearner"
@@ -35,7 +37,7 @@ rename_methods = {
 order = [
     'LASSO Coefficient\nMatching',
     "Equal Weighted\nLASSO Matching",
-    # 'Tree Feature Importance Matching',
+    # 'Tree Feature\nImportance Matching',
     'MALTS Matching',
     'Prognostic Score\nMatching',
     "T-Learner BART",
@@ -50,12 +52,10 @@ failed_files = []
 name_to_label = {}
 
 acic_2018_file_no = 1
-acic_2019_file_no = 1
 for f in all_folders:
     if os.path.isfile(f'{f}df_err.csv'):
         if 'acic_2019' in f:
-            label = f'ACIC 2019 {acic_2019_file_no}'
-            acic_2019_file_no += 1
+            label = f"ACIC 2019 {f.split('/')[-2].split('_')[1].split('-')[1]}"
         elif 'acic_2018' in f:
             label = f'ACIC 2018 {acic_2018_file_no}'
             acic_2018_file_no += 1
@@ -64,6 +64,9 @@ for f in all_folders:
     else:
         failed_files.append(f.split('/')[-2])
         print(f"Failed: {f.split('/')[-2]}")
+
+with open(f'plots/acic_file_to_num{plot_name}.txt', 'w') as f:
+    f.write(json.dumps({v: k for k, v in name_to_label.items()}))
 
 all_errors = all_errors.reset_index().melt(id_vars=['index'])
 all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%) (log)']
@@ -74,17 +77,17 @@ all_errors['Method'] = all_errors['Method'].apply(lambda x: rename_methods[x] if
 
 matplotlib.rcParams.update({'font.size': 50})
 plt.style.use(['seaborn-darkgrid'])
-fig, axes = plt.subplots(2, 1, figsize=(30, 30))
+fig, axes = plt.subplots(2, 1, figsize=(40, 30))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=5)
+sns.set(font_scale=6)
 b1 = sns.barplot(data=all_errors[(all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] <= 15)],
                  x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[0])
 b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15)) | (all_errors['acic_year'] == 2019)],
                  x="ACIC File", y="Median Relative Error (%) (log)", hue="Method", hue_order=order, ax=axes[1])
 
 handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='right', bbox_to_anchor=(1.3, 0.5))
+fig.legend(handles, labels, loc='right', bbox_to_anchor=(0.95, 1.07), ncol=3)
 for ax in axes:
     ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
     ax.set_yscale('log')
@@ -101,12 +104,12 @@ n_methods = rankings['Method'].nunique()
 rankings['Ranking'] = list(range(1, n_methods+1))*(rankings.shape[0] // n_methods)
 rankings = rankings[~rankings['Median Relative Error (%) (log)'].isna()]
 
-plt.figure(figsize=(24, 16))
+plt.figure(figsize=(26, 23))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=4)
+sns.set(font_scale=6)
 sns.boxplot(data=rankings, x="Ranking", y="Method", order=order)
-plt.xticks(rotation=65, horizontalalignment='right')
+plt.xticks(list(range(1, 1+len(order))))
 plt.tight_layout()
 plt.savefig(f'plots/acic_cate_errors_ranking{plot_name}.png')
 

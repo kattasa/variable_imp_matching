@@ -185,20 +185,16 @@ def dgp_test(n_samples, n_imp, n_unimp):
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
-def dgp_poly_no_interaction(n_samples, n_imp, n_unimp):
-    # x_imp = np.linspace(-1, 1, n_samples).reshape(-1, 1)
-    x_imp = np.random.uniform(-2, 2, size=(n_samples, n_imp))
-    t_imp = np.random.binomial(1, 0.5, size=(n_imp,))
+def dgp_poly_basic(n_samples, n_imp, n_t_imp, n_unimp, powers=[2], t_powers=[2]):
+    x_imp = np.random.uniform(-10, 10, size=(n_samples, n_imp))
     t = np.random.binomial(1, 0.5, size=(n_samples,))
 
     eff_sign = np.random.choice([-1, 1], n_imp)
-    eff_powers = np.random.randint(2, 3, size=(n_imp,))
-    t_eff_sign = np.random.choice([-1, 1], n_imp)
-    t_eff_powers = np.random.randint(2, 3, size=(n_imp,))
+    eff_powers = np.random.choice(powers, size=(n_imp,))
     y0 = np.sum(eff_sign*(x_imp ** eff_powers), axis=1)
-    y1 = np.sum(eff_sign*(x_imp ** eff_powers), axis=1) + np.sum(t_eff_sign*((x_imp * t_imp) ** t_eff_powers), axis=1)
-    y0_errors = np.random.normal(0, 0.03 * np.std(y0), size=n_samples)
-    y1_errors = np.random.normal(0, 0.03 * np.std(y1), size=n_samples)
+    y1 = y0 + 10
+    y0_errors = np.random.normal(0, 1, size=n_samples)
+    y1_errors = np.random.normal(0, 1, size=n_samples)
     te = y1 - y0
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
@@ -206,35 +202,3 @@ def dgp_poly_no_interaction(n_samples, n_imp, n_unimp):
     x_unimp = np.random.uniform(-2, 2, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
-
-
-def dgp_poly_interaction(n_samples, n_imp, n_unimp):
-    x_imp = np.random.uniform(0, 5, size=(n_samples, n_imp))
-    t_imp = [1] * n_imp
-    int_y = []
-    int_te = []
-    for c in itertools.combinations(range(n_imp), 2):
-        r = np.random.binomial(1, 0.5, size=(2,))
-        eff = np.random.choice([-1, 1]) * (x_imp[:, c[0]] * x_imp[:, c[1]])
-        int_y.append((r[0] * eff).reshape(-1, 1))
-        int_te.append((r[1] * eff).reshape(-1, 1))
-    int_y = np.sum(np.concatenate(int_y, axis=1), axis=1)
-    int_te = np.sum(np.concatenate(int_te, axis=1), axis=1)
-    t = np.random.binomial(1, 0.5, size=(n_samples,))
-
-    eff_sign = np.random.choice([-1, 1], n_imp)
-    eff_powers = [3] * n_imp
-    t_eff_sign = [1, -1, 1, 0, 0, 0, 0, 0]
-    t_eff_powers = [3] * n_imp
-    y0 = np.sum(eff_sign*(x_imp ** eff_powers), axis=1) + int_y
-    y1 = np.sum(eff_sign*(x_imp ** eff_powers), axis=1) + int_y + np.sum(t_eff_sign*((x_imp * t_imp) ** t_eff_powers), axis=1) + int_te
-    y0_errors = np.random.normal(0, 1, size=n_samples)
-    y1_errors = np.random.normal(0, 1, size=n_samples)
-    te = y1 - y0
-    y0 = y0 + y0_errors
-    y1 = y1 + y1_errors
-    y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.uniform(0, 5, size=(n_samples, n_unimp))
-    X = np.concatenate([x_imp, x_unimp], axis=1)
-    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
-

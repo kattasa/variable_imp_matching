@@ -3,8 +3,8 @@ suppressWarnings(library(grf))
 
 RESULTS_FOLDER <- Sys.getenv("RESULTS_FOLDER")
 ACIC_FOLDER <- Sys.getenv("ACIC_FOLDER")
-SPLIT_NUM <- Sys.getenv("SPLIT_NUM")
-RANDOM_STATE <- Sys.getenv("RANDOM_STATE")
+SPLIT_NUM <- strtoi(Sys.getenv("SPLIT_NUM"))
+RANDOM_STATE <- strtoi(Sys.getenv("RANDOM_STATE"))
 
 acic_results_folder <- paste(RESULTS_FOLDER, ACIC_FOLDER, sep="/")
 split_num = strtoi(SPLIT_NUM)

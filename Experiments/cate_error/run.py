@@ -11,7 +11,7 @@ k_est_mean = 15
 k_est_linear = 60
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
@@ -24,7 +24,7 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    'acic_2019',
+    # 'acic_2019',
     # 'news'
 ]
 
@@ -37,7 +37,7 @@ all_acic_2019_files = [1, 2, 5, 6]
 
 methods_config = {
     'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
-                             'methods': [['linear_pruned', False], ['double_linear_pruned', False]]},
+                             'methods': [['linear_pruned', False]]},
     # 'tree_imp_matching': True,
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
@@ -55,8 +55,8 @@ for data in datasets:
         n_splits = 6
         dataset_config['num_samples'] = 3000
         if 'continuous' in data:
-            dataset_config['imp_c'] = 15
-            dataset_config['unimp_c'] = 25
+            dataset_config['imp_c'] = 2
+            dataset_config['unimp_c'] = 10
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
