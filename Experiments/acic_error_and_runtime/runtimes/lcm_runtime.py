@@ -16,6 +16,10 @@ equal_weights = int(os.getenv('LCM_EQUAL_WEIGHTS')) == 1
 
 np.random.seed(random_state)
 
+if method == 'linear':
+    params = None
+elif method == 'tree':
+    params = {'max_depth': 4}
 
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
     est_idx, train_idx = pickle.load(f)[split_num]
@@ -25,7 +29,7 @@ df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).lo
 
 start = time.time()
 lcm = LCM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
-lcm.fit(method=method, equal_weights=equal_weights)
+lcm.fit(method=method, params=params, equal_weights=equal_weights)
 fit_time = time.time() - start
 
 covariates = np.array(lcm.covariates)

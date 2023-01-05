@@ -23,7 +23,7 @@ bart_dont_run="acic_2018-d09f96200455407db569ae33fe06b0d3_000/"
 two_splits_if_below=2000
 
 #for f in $folders; do
-f="acic_2018-d09f96200455407db569ae33fe06b0d3_000/"
+f="acic_2018-0a2adba672c7478faa7a47137a87a3ab_000/"
 echo "Running scripts for ${f}"
 n_splits=$((python -c "import json;print(json.load(open('${RESULTS_FOLDER}/${f}config.txt', 'rb'))['n_splits'])") 2>&1)
 n_splits=$(($n_splits + 0))
