@@ -12,7 +12,7 @@ plot_name = os.getenv('PLOT_NAME')
 q = 0.5
 methods = [
     'LASSO Coefficient Matching',
-    # 'Tree Feature Importance Matching',
+    'Tree Feature Importance Matching',
     'Equal Weighted LASSO Matching',
     'MALTS Matching',
     'Prognostic Score Matching',
@@ -26,9 +26,9 @@ methods = [
 rename_methods = {
     "BART": "T-Learner BART",
     "Causal Forest DML": "Causal Forest\nDML",
+    'Tree Feature Importance Matching': 'Tree Feature\nImportance Matching',
     'LASSO Coefficient Matching': 'LASSO Coefficient\nMatching',
     "Equal Weighted LASSO Matching": "Equal Weighted\nLASSO Matching",
-    # "Tree Feature Importance Matching": "Tree Feature\nImportance Matching",
     'Prognostic Score Matching': 'Prognostic Score\nMatching',
     "DoubleML": "Linear DoubleML",
     "DRLearner": "Linear DRLearner"
@@ -37,7 +37,7 @@ rename_methods = {
 order = [
     'LASSO Coefficient\nMatching',
     "Equal Weighted\nLASSO Matching",
-    # 'Tree Feature\nImportance Matching',
+    'Tree Feature\nImportance Matching',
     'MALTS Matching',
     'Prognostic Score\nMatching',
     "T-Learner BART",
@@ -59,7 +59,7 @@ for f in all_folders:
         elif 'acic_2018' in f:
             label = f'ACIC 2018 {acic_2018_file_no}'
             acic_2018_file_no += 1
-        all_errors = all_errors.join(pd.read_csv(f'{f}df_err.csv').groupby('Method')['Relative Error (%)'].quantile(0.5).rename(label).to_frame())
+        all_errors = all_errors.join(pd.read_csv(f'{f}df_err.csv').groupby('Method')['Relative Error (%)'].quantile(q).rename(label).to_frame())
         name_to_label[f.split('/')[-2]] = label
     else:
         failed_files.append(f.split('/')[-2])

@@ -20,13 +20,12 @@ ACIC_2022_FOLDER = os.getenv('ACIC_2022_FOLDER')
 NEWS_FOLDER = os.getenv('NEWS_FOLDER')
 
 
-def dgp_poly_basic_df(n_samples, n_imp, n_t_imp, n_unimp, powers=[2], t_powers=[2], perc_train=None, n_train=None):
+def dgp_poly_basic_df(n_samples, n_imp, n_unimp, powers=[2], perc_train=None, n_train=None):
     if perc_train:
         train_idx = int(n_samples*perc_train)
     else:
         train_idx = n_train
-    X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_poly_basic(n_samples, n_imp, n_t_imp, n_unimp, powers=powers,
-                                                           t_powers=t_powers)
+    X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_poly_basic(n_samples, n_imp, n_unimp, powers=powers)
     df = pd.DataFrame(np.concatenate([X, Y, T, Y0, Y1, TE, Y0_true, Y1_true], axis=1))
     x_cols = [f'X{i}' for i in range(X.shape[1])]
     df.columns = [*x_cols, 'Y', 'T', 'Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true']

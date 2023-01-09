@@ -185,13 +185,12 @@ def dgp_test(n_samples, n_imp, n_unimp):
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
-def dgp_poly_basic(n_samples, n_imp, n_t_imp, n_unimp, powers=[2], t_powers=[2]):
+def dgp_poly_basic(n_samples, n_imp, n_unimp, powers=[2]):
     x_imp = np.random.uniform(-10, 10, size=(n_samples, n_imp))
     t = np.random.binomial(1, 0.5, size=(n_samples,))
 
-    eff_sign = np.random.choice([-1, 1], n_imp)
     eff_powers = np.random.choice(powers, size=(n_imp,))
-    y0 = np.sum(eff_sign*(x_imp ** eff_powers), axis=1)
+    y0 = np.sum(x_imp ** eff_powers, axis=1)
     y1 = y0 + 10
     y0_errors = np.random.normal(0, 1, size=n_samples)
     y1_errors = np.random.normal(0, 1, size=n_samples)
@@ -199,6 +198,6 @@ def dgp_poly_basic(n_samples, n_imp, n_t_imp, n_unimp, powers=[2], t_powers=[2])
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.uniform(-2, 2, size=(n_samples, n_unimp))
+    x_unimp = np.random.uniform(-10, 10, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
