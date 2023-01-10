@@ -18,7 +18,7 @@ memory=$"128G"
 k_est=15
 n_splits=2
 n_sample_per_split=5000
-malts_max=5000
+malts_max=500000
 
 all_acic_2018_files=($(python -c "import glob;import os;print([f.replace('.csv', '') for f in set([c.split('/')[-1].replace('_cf', '') for c in glob.glob('${ACIC_2018_FOLDER}/*.csv')])])" | tr -d '[],'))
 

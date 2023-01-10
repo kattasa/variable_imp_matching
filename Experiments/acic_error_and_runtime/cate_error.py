@@ -97,46 +97,46 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
 lasso_malts_init = lcm_to_malts_weights(lcm, [c for c in df_data.columns if c not in ['Y', 'T']], categorical_to_dummy)
-# if run_malts:
-#     method_name = 'MALTS Matching'
-#     start = time.time()
-#     with warnings.catch_warnings(record=True) as warning_list:
-#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
-#                              n_splits=n_splits, estimator='linear', smooth_cate=False,
-#                              gen_skf=split_strategy, random_state=random_state)
-#     times[method_name] = time.time() - start
-#     cate_df = m.CATE_df
-#     cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-#     cate_df['True_CATE'] = df_true['TE'].to_numpy()
-#     cate_df['Relative Error (%)'] = np.abs(
-#         (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
-#     cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-#     df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-#     print(f'{method_name} complete: {time.time() - start}')
-#     summarize_warnings(warning_list, method_name)
-#     malts_m_opt = m.M_opt_list
-#     print()
-#
-#     method_name = 'MALTS Matching with LASSO Weights'
-#     start = time.time()
-#     with warnings.catch_warnings(record=True) as warning_list:
-#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
-#                              n_splits=n_splits, estimator='linear', smooth_cate=False,
-#                              gen_skf=split_strategy,
-#                              M_init=lasso_malts_init,
-#                              random_state=random_state)
-#     times[method_name] = time.time() - start
-#     cate_df = m.CATE_df
-#     cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-#     cate_df['True_CATE'] = df_true['TE'].to_numpy()
-#     cate_df['Relative Error (%)'] = np.abs(
-#         (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
-#     cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-#     df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-#     print(f'{method_name} complete: {time.time() - start}')
-#     summarize_warnings(warning_list, method_name)
-#     lasso_weights_malts_m_opt = m.M_opt_list
-#     print()
+if run_malts:
+    method_name = 'MALTS Matching'
+    start = time.time()
+    with warnings.catch_warnings(record=True) as warning_list:
+        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
+                             n_splits=n_splits, estimator='mean', smooth_cate=False,
+                             gen_skf=split_strategy, random_state=random_state)
+    times[method_name] = time.time() - start
+    cate_df = m.CATE_df
+    cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+    cate_df['True_CATE'] = df_true['TE'].to_numpy()
+    cate_df['Relative Error (%)'] = np.abs(
+        (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
+    cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+    df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+    print(f'{method_name} complete: {time.time() - start}')
+    summarize_warnings(warning_list, method_name)
+    malts_m_opt = m.M_opt_list
+    print()
+
+    method_name = 'MALTS Matching with LASSO Weights'
+    start = time.time()
+    with warnings.catch_warnings(record=True) as warning_list:
+        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=15, k_est=k_est,
+                             n_splits=n_splits, estimator='mean', smooth_cate=False,
+                             gen_skf=split_strategy,
+                             M_init=lasso_malts_init,
+                             random_state=random_state)
+    times[method_name] = time.time() - start
+    cate_df = m.CATE_df
+    cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+    cate_df['True_CATE'] = df_true['TE'].to_numpy()
+    cate_df['Relative Error (%)'] = np.abs(
+        (cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
+    cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+    df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+    print(f'{method_name} complete: {time.time() - start}')
+    summarize_warnings(warning_list, method_name)
+    lasso_weights_malts_m_opt = m.M_opt_list
+    print()
 
 lasso_feature_selection = weights_to_feature_selection(
                              lasso_malts_init, [c for c in df_data.columns if c not in ['Y', 'T']])
@@ -163,9 +163,9 @@ print()
 generic_malts = pymalts.malts('Y', 'T', data=df_data, discrete=binary+categorical, k=15)
 print('MALTS Objective Lossess:')
 print(f'LCM: {[generic_malts.objective(w) for w in lasso_malts_init]}')
-# if run_malts:
-#     print(f'MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in malts_m_opt]}')
-#     print(f'LASSO Initialized MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in lasso_weights_malts_m_opt]}')
+if run_malts:
+    print(f'MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in malts_m_opt]}')
+    print(f'LASSO Initialized MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in lasso_weights_malts_m_opt]}')
 print(f"LASSO Feature Selection MALTS: "
       f"{[pymalts.malts('Y', 'T', data=df_data[lasso_feature_selection[i] + ['Y', 'T']], discrete=[c for c in binary+categorical if c in lasso_feature_selection[i]], k=15).objective(m.M_opt_list[i].to_numpy().reshape(-1,)) for i in range(len(m.M_opt_list))]}"
       f"")
