@@ -275,7 +275,7 @@ class malts:
 class malts_mf:
     def __init__(self, outcome, treatment, data, discrete=[], C=1, k_tr=15, k_est=50, estimator='linear',
                  smooth_cate=True, reweight=False, n_splits=5, n_repeats=1, output_format='brief', gen_skf=None,
-                 M_init=None, random_state=None):
+                 M_init=None, trim_features=None, random_state=None):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -286,6 +286,7 @@ class malts_mf:
         self.continuous = list(set(data.columns).difference(set([outcome] + [treatment] + discrete)))
         self.reweight = reweight
         self.M_init = M_init
+        self.trim_features = trim_features
 
         if gen_skf is None:
             skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
@@ -302,6 +303,12 @@ class malts_mf:
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
+            if trim_features is not None:
+                df_train = df_train[trim_features[i] + [outcome, treatment]]
+                df_est = df_est[trim_features[i] + [outcome, treatment]]
+                discrete = [c for c in self.discrete if c in trim_features]
+            else:
+                discrete = self.discrete
             m = malts(outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr,
                       reweight=self.reweight, random_state=random_state)
             m_init = self.M_init[i] if self.M_init is not None else None

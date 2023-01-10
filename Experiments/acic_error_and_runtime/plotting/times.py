@@ -65,11 +65,14 @@ methods_dirs = {
 acic_2018_file_no = 1
 for f in all_folders:
     n_samples = pd.read_csv(f'{f}df_true.csv').shape[0]
-    if n_samples < 2000:
-        n_splits = 2
+    if 'acic_2019' in f:
+        n_splits = 3
     else:
-        with open(f'{f}config.txt') as c:
-            n_splits = json.loads(c.read())['n_splits']
+        if n_samples < 2000:
+            n_splits = 2
+        else:
+            with open(f'{f}config.txt') as c:
+                n_splits = json.loads(c.read())['n_splits']
     if n_samples <= 5000:
         malts = True
     else:

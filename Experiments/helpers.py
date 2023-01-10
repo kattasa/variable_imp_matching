@@ -1,5 +1,8 @@
+import copy
+
 import numpy as np
 import os
+import pandas as pd
 
 from datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, \
     dgp_ihdp_df, dgp_news, dgp_acic_2018_df
@@ -57,3 +60,34 @@ def summarize_warnings(warning_list, method_name=None, print_warnings=True, retu
             print(f'\t{v}: {k}')
     if return_warnings:
         return method_warnings
+
+
+def lcm_to_malts_weights(lcm, malts_covs):
+    matching_cols = [c for c in malts_covs if c in lcm.covariates]
+    lcm_mismatches = [c for c in lcm.covariates if c not in matching_cols]
+    malts_mismatches = [c for c in malts_covs if c not in matching_cols]
+    M_map = {}
+    for k in malts_mismatches:
+        matches = [c for c in lcm_mismatches if '_'.join(c.split('_')[:-1]) == k]
+        M_map[k] = matches
+        lcm_mismatches = [c for c in lcm_mismatches if c not in matches]
+    if len(lcm_mismatches) > 0:
+        print(f'ERROR: {len(lcm_mismatches)} lcm covariate(s) not mapped to malts covariate.')
+
+    malts_weights = []
+    for i in range(len(lcm.gen_skf)):
+        M = pd.DataFrame([lcm.M_list[i]], columns=lcm.covariates)
+        these_malts_weights = pd.DataFrame([np.zeros(shape=len(malts_covs))], columns=malts_covs)
+        these_malts_weights[matching_cols] = M[matching_cols]
+        for k, v in M_map.items():
+            these_malts_weights[k] = M[v].sum(axis=1).values[0]
+        malts_weights.append(copy.deepcopy(these_malts_weights.to_numpy().reshape(-1,)))
+
+    return np.array(malts_weights)
+
+
+def weights_to_feature_selection(malts_weights, malts_covs):
+    malts_features = []
+    for w in malts_weights:
+        malts_features.append(list(np.array(malts_covs)[w > 0]))
+    return malts_features
