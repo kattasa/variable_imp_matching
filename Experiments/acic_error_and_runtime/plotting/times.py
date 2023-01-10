@@ -181,3 +181,40 @@ plt.xticks(rotation=65, horizontalalignment='right')
 plt.yscale('log')
 plt.tight_layout()
 plt.savefig(f'plots/acic_cate_times_by_method{plot_name}.png')
+
+q = 0.5
+all_errors = pd.DataFrame([], index=methods)
+failed_files = []
+name_to_label = {}
+acic_2018_file_no = 1
+for f in all_folders:
+    if os.path.isfile(f'{f}df_err.csv'):
+        if 'acic_2019' in f:
+            label = f"ACIC 2019 {f.split('/')[-2].split('_')[1].split('-')[1]}"
+        elif 'acic_2018' in f:
+            label = f'ACIC 2018 {acic_2018_file_no}'
+            acic_2018_file_no += 1
+        all_errors = all_errors.join(pd.read_csv(f'{f}df_err.csv').groupby('Method')['Relative Error (%)'].quantile(q).rename(label).to_frame())
+        name_to_label[f.split('/')[-2]] = label
+    else:
+        failed_files.append(f.split('/')[-2])
+        print(f"Failed: {f.split('/')[-2]}")
+
+with open(f'plots/acic_file_to_num{plot_name}.txt', 'w') as f:
+    f.write(json.dumps({v: k for k, v in name_to_label.items()}))
+
+all_errors = all_errors.reset_index().melt(id_vars=['index'])
+all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%)']
+all_errors[['acic_year', 'acic_file_no']] = all_errors['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
+all_errors = all_errors.sort_values(['acic_year', 'acic_file_no'])
+all_errors['Method'] = all_errors['Method'].apply(lambda x: rename_methods[x] if x in rename_methods.keys() else x)
+
+mean_no_nan = all_times_no_nan.groupby(['ACIC File', 'Method'])['Single CATE Runtime (s)'].mean().reset_index()
+all_errors_no_nan = all_errors[all_errors['ACIC File'].isin(
+    mean_no_nan['ACIC File'].unique())][['ACIC File', 'Method', 'Median Relative Error (%)']]
+
+no_nan_results = pd.merge(mean_no_nan, all_errors_no_nan, how='inner',
+                          left_on=['ACIC File', 'Method'], right_on=['ACIC File', 'Method'])
+
+print('lets goo')
+print('hi')

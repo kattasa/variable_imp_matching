@@ -15,7 +15,7 @@ source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
 memory=$"128G"
-k_est=60
+k_est=15
 n_splits=2
 n_sample_per_split=5000
 malts_max=5000
