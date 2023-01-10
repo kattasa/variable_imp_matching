@@ -22,12 +22,14 @@ def create_folder(data, print_progress=True):
 
 def get_acic_data(year, file, n_train):
     if year == 'acic_2019':
-        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols = dgp_acic_2019_df(file, n_train=n_train)
+        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols, categorical_to_dummy = dgp_acic_2019_df(
+            file, n_train=n_train)
     elif year == 'acic_2018':
-        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols = dgp_acic_2018_df(file, n_train=n_train)
+        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols, categorical_to_dummy = dgp_acic_2018_df(
+            file, n_train=n_train)
     if n_train > 0:
-        return df_train, df_data, df_true, binary, categorical, dummy_cols
-    return df_data, df_true, binary, categorical, dummy_cols
+        return df_train, df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy
+    return df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy
 
 
 def get_data(data, config):
@@ -62,15 +64,15 @@ def summarize_warnings(warning_list, method_name=None, print_warnings=True, retu
         return method_warnings
 
 
-def lcm_to_malts_weights(lcm, malts_covs):
+def lcm_to_malts_weights(lcm, malts_covs, categorical_to_dummy):
     matching_cols = [c for c in malts_covs if c in lcm.covariates]
     lcm_mismatches = [c for c in lcm.covariates if c not in matching_cols]
     malts_mismatches = [c for c in malts_covs if c not in matching_cols]
-    M_map = {}
-    for k in malts_mismatches:
-        matches = [c for c in lcm_mismatches if '_'.join(c.split('_')[:-1]) == k]
-        M_map[k] = matches
-        lcm_mismatches = [c for c in lcm_mismatches if c not in matches]
+    for k, v in categorical_to_dummy.items():
+        lcm_mismatches = [c for c in lcm_mismatches if c not in v]
+        malts_mismatches = [c for c in malts_mismatches if c != k]
+    if len(malts_mismatches) > 0:
+        print(f'ERROR: {len(malts_mismatches)} malts covariate(s) not mapped to lcm covariate.')
     if len(lcm_mismatches) > 0:
         print(f'ERROR: {len(lcm_mismatches)} lcm covariate(s) not mapped to malts covariate.')
 
@@ -79,7 +81,7 @@ def lcm_to_malts_weights(lcm, malts_covs):
         M = pd.DataFrame([lcm.M_list[i]], columns=lcm.covariates)
         these_malts_weights = pd.DataFrame([np.zeros(shape=len(malts_covs))], columns=malts_covs)
         these_malts_weights[matching_cols] = M[matching_cols]
-        for k, v in M_map.items():
+        for k, v in categorical_to_dummy.items():
             these_malts_weights[k] = M[v].sum(axis=1).values[0]
         malts_weights.append(copy.deepcopy(these_malts_weights.to_numpy().reshape(-1,)))
 

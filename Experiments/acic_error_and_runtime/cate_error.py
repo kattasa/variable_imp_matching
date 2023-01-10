@@ -37,7 +37,7 @@ print(f'Running {acic_year} file {acic_file}...')
 
 total_time = time.time()
 
-df_data, df_true, binary, categorical, dummy_cols = get_acic_data(year=acic_year, file=acic_file, n_train=0)
+df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_acic_data(year=acic_year, file=acic_file, n_train=0)
 df_true.to_csv(f'{save_folder}/df_true.csv')
 
 new_n_splits = df_data.shape[0] // n_samples_per_split
@@ -96,7 +96,7 @@ split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
-lasso_malts_init = lcm_to_malts_weights(lcm, [c for c in df_data.columns if c not in ['Y', 'T']])
+lasso_malts_init = lcm_to_malts_weights(lcm, [c for c in df_data.columns if c not in ['Y', 'T']], categorical_to_dummy)
 # if run_malts:
 #     method_name = 'MALTS Matching'
 #     start = time.time()

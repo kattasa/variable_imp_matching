@@ -138,14 +138,19 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
     binary = []
     categorical = []
     dummy_cols = []
+    categorical_to_dummy = {}
+    n_x_cols = len(x_cols)
     for i in range(len(x_cols)):
         if df.iloc[:, 2 + i].unique().shape[0] <= 2:
             binary.append(f'X{i}')
         elif df.iloc[:, 2 + i].unique().shape[0] <= dummy_cutoff and df.iloc[:, 2 + i].dtype == int:
             categorical.append(f'X{i}')
-            dummy_cols.append(pd.get_dummies(df.iloc[:, 2+i]))
+            these_dummies = pd.get_dummies(df.iloc[:, 2+i])
+            these_dummies.columns = [f'X{c}' for c in list(range(n_x_cols, n_x_cols + these_dummies.shape[1]))]
+            n_x_cols += these_dummies.shape[1]
+            categorical_to_dummy[f'X{i}'] = list(these_dummies.columns)
+            dummy_cols.append(these_dummies)
     dummy_cols = pd.concat(dummy_cols, axis=1)
-    dummy_cols.columns = [f'X{i}' for i in range(len(x_cols), len(x_cols)+dummy_cols.shape[1])]
     df = pd.concat([df, dummy_cols], axis=1)
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)
@@ -163,7 +168,7 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols,\
-           binary, categorical, list(dummy_cols.columns)
+           binary, categorical, list(dummy_cols.columns), categorical_to_dummy
 
 
 def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
@@ -178,6 +183,9 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     else:
         df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv').set_index('sample_id')
         df, binary, categorical, dummy_cols = clean_2018_covariates(df)
+    categorical_to_dummy = {}
+    for c in categorical:
+        categorical_to_dummy[c] = [k for k in dummy_cols if '_'.join(k.split('_')[:-1]) == c]
     df_results = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}.csv')
     df_cf = pd.read_csv(f'{ACIC_2018_FOLDER}/{acic_file}_cf.csv')
     df_cf = df_cf[['sample_id', 'y0', 'y1']]
@@ -197,7 +205,7 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, \
-           binary, categorical, dummy_cols
+           binary, categorical, dummy_cols, categorical_to_dummy
 
 
 def dgp_acic_2022_df(track=2):

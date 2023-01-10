@@ -306,7 +306,7 @@ class malts_mf:
             if trim_features is not None:
                 df_train = df_train[trim_features[i] + [outcome, treatment]]
                 df_est = df_est[trim_features[i] + [outcome, treatment]]
-                discrete = [c for c in self.discrete if c in trim_features]
+                discrete = [c for c in self.discrete if c in trim_features[i]]
             else:
                 discrete = self.discrete
             m = malts(outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr,
