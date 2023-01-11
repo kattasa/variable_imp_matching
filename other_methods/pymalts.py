@@ -15,13 +15,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from sklearn.model_selection import RepeatedStratifiedKFold
-import warnings
-
-# warnings.filterwarnings("ignore")
 
 
 class malts:
-    def __init__(self, outcome, treatment, data, discrete=[], C=1, k=10, reweight=False, random_state=0):
+    def __init__(self, outcome, treatment, data, discrete=[], categorical=[], M_init=None, C=1, k=10, reweight=False,
+                 random_state=0):
         np.random.seed(random_state)
         self.C = C  # coefficient to regularization term
         self.k = k
@@ -31,8 +29,9 @@ class malts:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
+        self.categorical = categorical
         self.random_state = random_state
-        self.continuous = list(set(data.columns).difference(set([outcome] + [treatment] + discrete)))
+        self.continuous = [c for c in data.columns if c not in [*discrete, treatment, outcome]]
         # splitting the data into control and treated units
         self.df_T = data.loc[data[treatment] == 1]
         self.df_C = data.loc[data[treatment] == 0]
@@ -58,6 +57,12 @@ class malts:
         self.Dd_T = (self.Dd_T != self.Dd_T.T)
         self.Dd_C = np.ones((self.Xd_C.shape[0], self.Xd_C.shape[1], self.Xd_C.shape[0])) * self.Xd_C.T
         self.Dd_C = (self.Dd_C != self.Dd_C.T)
+        self.M_init = None
+        if M_init is not None:
+            M_order = self.continuous + self.discrete
+            covs = [c for c in data.columns if c not in [treatment, outcome]]
+            self.M_init = np.array(M_init)[M_order.index(c) for c in covs]
+
 
     def threshold(self, x):
         k = self.k
@@ -111,9 +116,9 @@ class malts:
         cons2 = 1e+25 * np.sum((np.concatenate((Mc, Md)) < 0))
         return delta + reg + cons1 + cons2
 
-    def fit(self, method='COBYLA', M_init=None):
+    def fit(self, method='COBYLA'):
         # np.random.seed(0)
-        M_init = np.ones((self.p,)) if M_init is None else M_init
+        M_init = np.ones((self.p,)) if self.M_init is None else self.M_init
         res = opt.minimize(self.objective, x0=M_init, method=method)
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
@@ -216,10 +221,13 @@ class malts:
                     cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome': v.loc['query'][self.outcome],
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
                 if model == 'single_linear':
-                    matched_X_C['T'] = 0
-                    matched_X_T['T'] = 1
+                    matched_X = pd.concat([matched_X_C, matched_X_T])
+                    matched_X = pd.concat([matched_X, pd.get_dummies(
+                        matched_X[self.categorical], columns=self.categorical)], axis=1).drop(columns=self.categorical)
+                    matched_X['T'] = np.concatenate(
+                        [np.zeros(shape=(matched_X.shape[0] // 2)), np.ones(shape=(matched_X.shape[0] // 2))])
                     y_te = lm.Ridge(random_state=self.random_state).fit(
-                        X=pd.concat([matched_X_C, matched_X_T]), y=pd.concat([matched_Y_C, matched_Y_T])).coef_[-1]
+                        X=matched_X, y=pd.concat([matched_Y_C, matched_Y_T])).coef_[-1]
                     cate[k] = {'CATE': y_te, 'outcome': v.loc['query'][self.outcome],
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
                 if model == 'RF':
@@ -280,7 +288,7 @@ class malts:
 
 
 class malts_mf:
-    def __init__(self, outcome, treatment, data, discrete=[], C=1, k_tr=15, k_est=50, estimator='linear',
+    def __init__(self, outcome, treatment, data, discrete=[], categorical=[], C=1, k_tr=15, k_est=50, estimator='linear',
                  smooth_cate=True, reweight=False, n_splits=5, n_repeats=1, output_format='brief', gen_skf=None,
                  M_init=None, trim_features=None, random_state=None):
         self.n_splits = n_splits
@@ -290,7 +298,8 @@ class malts_mf:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
-        self.continuous = list(set(data.columns).difference(set([outcome] + [treatment] + discrete)))
+        self.categorical = categorical
+        self.continuous = [c for c in data.columns if c not in [*discrete, treatment, outcome]]
         self.reweight = reweight
         self.M_init = M_init
         self.trim_features = trim_features
@@ -314,12 +323,14 @@ class malts_mf:
                 df_train = df_train[trim_features[i] + [outcome, treatment]]
                 df_est = df_est[trim_features[i] + [outcome, treatment]]
                 discrete = [c for c in self.discrete if c in trim_features[i]]
+                categorical = [c for c in self.categorical if c in trim_features[i]]
             else:
                 discrete = self.discrete
-            m = malts(outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr,
-                      reweight=self.reweight, random_state=random_state)
+                categorical = self.categorical
             m_init = self.M_init[i] if self.M_init is not None else None
-            m.fit(M_init=m_init)
+            m = malts(outcome, treatment, data=df_train, discrete=discrete, categorical=categorical, M_init=m_init,
+                      C=self.C, k=self.k_tr, reweight=self.reweight, random_state=random_state)
+            m.fit()
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est, k_est)
             self.MG_list.append(mg)
