@@ -1,0 +1,6 @@
+{
+  "n_splits": 2,
+  "k_est": 15,
+  "run_malts": false,
+  "run_bart": true
+}

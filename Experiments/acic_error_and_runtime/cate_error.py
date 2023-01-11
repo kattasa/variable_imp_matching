@@ -25,7 +25,8 @@ random_state = 1
 
 acic_year = os.getenv('ACIC_YEAR').replace("'", '').replace('"', '')
 acic_file = os.getenv('ACIC_FILE').replace("'", '').replace('"', '')
-k_est = int(os.getenv('K_EST'))
+k_est_mean = int(os.getenv('K_EST_MEAN'))
+k_est_linear = int(os.getenv('K_EST_LINEAR'))
 save_folder = os.getenv('SAVE_FOLDER').replace("'", '').replace('"', '')
 n_splits = int(os.getenv('N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
@@ -54,7 +55,8 @@ if acic_year == 'acic_2018' and acic_file == 'd09f96200455407db569ae33fe06b0d3':
     print('**Not running bart. BART fails to create predictions due to small size of treated group.')
     run_bart = False
 
-config = {'n_splits': n_splits, 'k_est': k_est, 'run_malts': run_malts, 'run_bart': run_bart}
+config = {'n_splits': n_splits, 'k_est_mean': k_est_mean, 'k_est_linear': k_est_linear, 'run_malts': run_malts,
+          'run_bart': run_bart}
 
 with open(f'{save_folder}/config.txt', 'w') as f:
     json.dump(config, f, indent=2)
@@ -75,12 +77,28 @@ with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
 
 times = {}
 
-method_name = 'LASSO Coefficient Matching'
+method_name = 'LASSO Coefficient Matching Linear'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
+    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
+                 random_state=random_state)
     lcm.fit(method='linear')
-    lcm.MG(k=k_est)
+    lcm.MG(k=k_est_linear)
+    lcm.CATE(cate_methods=[['linear_pruned', False]])
+times[method_name] = time.time() - start
+cate_df = lcm.cate_df
+cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+cate_df['True_CATE'] = df_true['TE'].to_numpy()
+cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'\n{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'LASSO Coefficient Matching Mean'
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm.MG(k=k_est_mean)
     lcm.CATE(cate_methods=[['mean', False]])
 times[method_name] = time.time() - start
 cate_df = lcm.cate_df
@@ -102,7 +120,7 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 #     method_name = 'MALTS Matching'
 #     start = time.time()
 #     with warnings.catch_warnings(record=True) as warning_list:
-#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=malts_k_train, k_est=k_est,
+#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=malts_k_train, k_est=k_est_mean,
 #                              n_splits=n_splits, estimator='single_linear', smooth_cate=False,
 #                              gen_skf=split_strategy, random_state=random_state)
 #     times[method_name] = time.time() - start
@@ -121,7 +139,7 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 #     method_name = 'MALTS Matching with LASSO Weights'
 #     start = time.time()
 #     with warnings.catch_warnings(record=True) as warning_list:
-#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=malts_k_train, k_est=k_est,
+#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=malts_k_train, k_est=k_est_mean,
 #                              n_splits=n_splits, estimator='single_linear', smooth_cate=False,
 #                              gen_skf=split_strategy,
 #                              M_init=lasso_malts_init,
@@ -144,7 +162,7 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 # method_name = 'MALTS Matching with LASSO Feature Selection'
 # start = time.time()
 # with warnings.catch_warnings(record=True) as warning_list:
-#     m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical, k_tr=malts_k_train, k_est=k_est,
+#     m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical, k_tr=malts_k_train, k_est=k_est_linear,
 #                          n_splits=n_splits, estimator='single_linear', smooth_cate=False,
 #                          gen_skf=split_strategy,
 #                          trim_features=lasso_feature_selection,
@@ -211,11 +229,29 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 # summarize_warnings(warning_list, method_name)
 # print()
 
-method_name = 'Prognostic Score Matching'
+method_name = 'Ensemble Prognostic Score Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
-                                                   k_est=k_est, gen_skf=split_strategy, random_state=random_state)
+    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='ensemble',
+                                                   k_est=k_est_mean, est_method='mean', gen_skf=split_strategy,
+                                                   random_state=random_state)
+times[method_name] = time.time() - start
+df_err_prog = pd.DataFrame()
+df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
+df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
+df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'Linear Prognostic Score Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='linear',
+                                                   k_est=k_est_linear, est_method='linear_pruned', gen_skf=split_strategy,
+                                                   random_state=random_state)
 times[method_name] = time.time() - start
 df_err_prog = pd.DataFrame()
 df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
