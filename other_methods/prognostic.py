@@ -16,31 +16,21 @@ from utils import prune_covariates, linear_cate
 
 
 class Prognostic:
-    def __init__(self, Y, T, df, method='ensemble', binary=False, random_state=None):
+    def __init__(self, Y, T, df, method='ensemble', random_state=None):
         self.Y = Y
         self.T = T
         self.df = df
         self.cov = [c for c in df.columns if c not in [Y, T]]
         self.df_c = df.loc[df[T] == 0]
         self.Xc, self.Yc = self.df_c[self.cov].to_numpy(), self.df_c[Y].to_numpy()
-        if binary:
-            if method == 'ensemble':
-                self.hc = ensemble.GradientBoostingClassifier(random_state=random_state).fit(self.Xc, self.Yc)
-            elif method == 'linear':
-                self.hc = linear.LogisticRegressionCV(max_iter=500, penalty='l1',
-                                                      random_state=random_state).fit(self.Xc, self.Yc)
-        else:
-            if method == 'ensemble':
-                self.hc = ensemble.GradientBoostingRegressor(random_state=random_state).fit(self.Xc, self.Yc)
-            elif method == 'linear':
-                self.hc = linear.LassoCV(max_iter=5000, random_state=random_state).fit(self.Xc, self.Yc)
+        if method == 'ensemble':
+            self.hc = ensemble.GradientBoostingRegressor(random_state=random_state).fit(self.Xc, self.Yc)
+        elif method == 'linear':
+            self.hc = linear.LassoCV(max_iter=5000, random_state=random_state).fit(self.Xc, self.Yc)
 
-    def get_sample_cate(self, df_est, sample_idx, k=10, binary=False):
+    def get_sample_cate(self, df_est, sample_idx, k=10):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
-        if binary:
-            hat_Y = self.hc.predict_proba(X_est)[:, 1]
-        else:
-            hat_Y = self.hc.predict(X_est)
+        hat_Y = self.hc.predict(X_est)
         control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
             hat_Y[T_est == 0].reshape(-1, 1))
         treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
@@ -51,12 +41,9 @@ class Prognostic:
         yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean()
         return yt - yc
 
-    def get_matched_group(self, df_est, k=10, est_method='mean', binary=False):
+    def get_matched_group(self, df_est, k=10, est_method='mean'):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
-        if binary:
-            hat_Y = self.hc.predict_proba(X_est)[:, 1]
-        else:
-            hat_Y = self.hc.predict(X_est)
+        hat_Y = self.hc.predict(X_est)
         control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
             hat_Y[T_est == 0].reshape(-1, 1))
         treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
@@ -71,10 +58,6 @@ class Prognostic:
             df_mg.columns = ['Yc', 'Yt', 'T']
             df_mg['CATE'] = df_mg['Yt'] - df_mg['Yc']
         elif est_method == 'linear_pruned':
-            def f(a):
-                a = a.reshape(k * 2, -1)
-                return linear.RidgeCV().fit(a[:, :-1], a[:, -1]).coef_[-1]
-
             M = np.abs(self.hc.coef_)
             M = M / np.sum(M) * len(self.cov) if not np.all(M == 0) else np.ones(len(self.cov))
             imp_covs = prune_covariates(self.cov, M)
@@ -100,12 +83,11 @@ def prognostic_cv(outcome, treatment, data, method='ensemble', k_est=1, est_meth
     cate_est = pd.DataFrame()
     control_mgs = []
     treatment_mgs = []
-    binary = data[outcome].nunique() == 2
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
-        prog = Prognostic(outcome, treatment, df_train, method=method, binary=binary, random_state=random_state)
-        prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est, est_method=est_method, binary=binary)
+        prog = Prognostic(outcome, treatment, df_train, method=method, random_state=random_state)
+        prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est, est_method=est_method)
         control_mgs.append(c_mgs)
         treatment_mgs.append(t_mgs)
         cate_est_i = pd.DataFrame(prog_mg['CATE'])

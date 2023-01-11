@@ -1,5 +1,4 @@
 ,0
-LASSO Coefficient Matching Linear,2.6362030506134033
-LASSO Coefficient Matching Mean,2.741866111755371
-Ensemble Prognostic Score Matching,1.56402587890625
-Linear Prognostic Score Matching,1.6718018054962158
+LASSO Coefficient Matching Linear,8.496181011199951
+DoubleML,216.69097995758057
+DRLearner,226.51925373077393

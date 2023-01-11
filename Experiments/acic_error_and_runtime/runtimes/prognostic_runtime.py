@@ -19,10 +19,9 @@ with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
 df_train = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[train_idx].reset_index(drop=True)
 df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[est_idx].reset_index(drop=True)
 
-binary = df_train['Y'].nunique() == 2
 sample_idx = np.random.randint(0, df_est.shape[0])
 
 start = time.time()
-prog = Prognostic(Y='Y', T='T', df=df_train, binary=binary, random_state=random_state)
-cate = prog.get_sample_cate(df_est=df_est, sample_idx=sample_idx, k=k_est, binary=binary)
+prog = Prognostic(Y='Y', T='T', df=df_train, random_state=random_state)
+cate = prog.get_sample_cate(df_est=df_est, sample_idx=sample_idx, k=k_est)
 print(time.time() - start)

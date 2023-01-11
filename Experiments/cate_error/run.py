@@ -11,7 +11,7 @@ k_est_mean = 15
 k_est_linear = 60
 
 datasets = [
-    'dense_continuous',
+    # 'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
@@ -24,7 +24,7 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    # 'acic_2019',
+    'acic_2019',
     # 'news'
 ]
 
@@ -32,12 +32,12 @@ all_acic_2018_files = [f.replace('.csv', '') for f in set([c.split('/')[-1].repl
                                                            glob.glob(f"{os.getenv('ACIC_2018_FOLDER')}/*.csv")])]
 n_samples_per_split = 1000
 # all_acic_2019_files = list(range(1, 9))
-all_acic_2019_files = [1, 2, 5, 6]
+all_acic_2019_files = [3]
 
 
 methods_config = {
-    'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
-                             'methods': [['linear_pruned', False]]},
+    # 'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
+    #                          'methods': [['linear_pruned', False]]},
     # 'tree_imp_matching': True,
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
@@ -47,6 +47,8 @@ methods_config = {
     # 'prognostic': None,
     # 'bart': None,
     # 'causal_forest': None
+    'doubleml': None,
+    'drlearner': None
 }
 
 for data in datasets:
@@ -55,8 +57,8 @@ for data in datasets:
         n_splits = 6
         dataset_config['num_samples'] = 3000
         if 'continuous' in data:
-            dataset_config['imp_c'] = 2
-            dataset_config['unimp_c'] = 10
+            dataset_config['imp_c'] = 50
+            dataset_config['unimp_c'] = 150
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
@@ -86,7 +88,7 @@ for data in datasets:
     else:
         for acic_file in all_acic_2019_files:
             dataset_config['acic_file'] = acic_file
-            n_splits = 3
+            n_splits = 2
 
             cate_error_test(dataset=data, n_splits=n_splits, dataset_config=dataset_config, methods_config=methods_config,
                             k_est_mean=k_est_mean, k_est_linear=k_est_linear,

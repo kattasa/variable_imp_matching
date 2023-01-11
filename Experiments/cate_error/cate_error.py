@@ -16,7 +16,7 @@ import seaborn as sns
 from sklearn.model_selection import RepeatedStratifiedKFold
 
 from Experiments.helpers import create_folder, get_data, get_acic_data
-from other_methods import pymalts, bart, causalforest, matchit, prognostic
+from other_methods import pymalts, bart, causalforest, matchit, prognostic, drlearner, doubleml
 from src.linear_coef_matching_mf import LCM_MF
 from utils import get_match_groups, get_CATES
 
@@ -59,7 +59,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
                 dataset_config[k] = v
 
         if 'acic' in dataset:
-            df_data, df_true, binary, categorical, dummy_cols = get_acic_data(year=dataset,
+            df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_acic_data(year=dataset,
                                                                               file=dataset_config['acic_file'],
                                                                               n_train=0)
         else:
@@ -82,7 +82,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
 
 
         times = {}
-        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=methods_config['linear_coef_matching']['n_repeats'],
+        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=1,
                                       random_state=random_state)
         split_strategy = list(skf.split(df_dummy_data, df_dummy_data['T']))
 
@@ -302,6 +302,41 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
             df_err = df_err.append(df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']])
             if print_progress:
                 print(f'{method_name} complete: {time.time() - start}')
+
+        if 'doubleml' in methods:
+            method_name = 'DoubleML'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+            times[method_name] = time.time() - start
+            df_err_doubleml = pd.DataFrame()
+            df_err_doubleml['Method'] = [method_name for i in range(cate_est_doubleml.shape[0])]
+            df_err_doubleml['Relative Error (%)'] = np.abs(
+                (cate_est_doubleml['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+            df_err_doubleml['Iter'] = iter
+            df_err_doubleml['True_CATE'] = df_true['TE'].to_numpy()
+            df_err_doubleml['Est_CATE'] = cate_est_doubleml['avg.CATE'].to_numpy()
+            df_err = pd.concat([df_err, df_err_doubleml[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']].copy(deep=True)])
+            print(f'{method_name} complete: {time.time() - start}')
+            print()
+
+        if 'drlearner' in methods:
+            method_name = 'DRLearner'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+            times[method_name] = time.time() - start
+
+            df_err_drlearner = pd.DataFrame()
+            df_err_drlearner['Method'] = [method_name for i in range(cate_est_drlearner.shape[0])]
+            df_err_drlearner['Relative Error (%)'] = np.abs(
+                (cate_est_drlearner['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+            df_err_drlearner['Iter'] = iter
+            df_err_drlearner['True_CATE'] = df_true['TE'].to_numpy()
+            df_err_drlearner['Est_CATE'] = cate_est_drlearner['avg.CATE'].to_numpy()
+            df_err = pd.concat([df_err, df_err_drlearner[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']].copy(deep=True)])
+            print(f'{method_name} complete: {time.time() - start}')
+            print()
 
         df_err.loc[df_err['Iter'] == iter, 'Relative Error (%)'] = df_err.loc[df_err['Iter'] == iter,
                                                                               'Relative Error (%)'] * 100

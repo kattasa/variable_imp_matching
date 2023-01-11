@@ -22,7 +22,11 @@ methods = [
     'DoubleML',
     'DRLearner',
     'Causal Forest',
-    'Causal Forest DML'
+    'Causal Forest DML',
+    'Linear Prognostic Score Matching',
+    'LASSO Coefficient Matching Linear',
+    'Ensemble Prognostic Score Matching',
+    'LASSO Coefficient Matching Mean'
 ]
 
 rename_methods = {
@@ -35,7 +39,11 @@ rename_methods = {
     'MALTS Matching with LASSO Feature Selection': 'MALTS Matching with\nLASSO Feature Selection',
     'Prognostic Score Matching': 'Prognostic Score\nMatching',
     "DoubleML": "Linear DoubleML",
-    "DRLearner": "Linear DRLearner"
+    "DRLearner": "Linear DRLearner",
+    'Linear Prognostic Score Matching': 'Linear Prognostic\nScore Matching',
+    'LASSO Coefficient Matching Linear': 'LASSO Coefficient\nMatching Linear',
+    'Ensemble Prognostic Score Matching': 'Ensemble Prognostic\nScore Matching',
+    'LASSO Coefficient Matching Mean': 'LASSO Coefficient\nMatching Mean'
 }
 
 order = [
@@ -50,7 +58,11 @@ order = [
     'Causal Forest',
     "Causal Forest\nDML",
     'Linear DoubleML',
-    'Linear DRLearner'
+    'Linear DRLearner',
+    'Linear Prognostic\nScore Matching',
+    'LASSO Coefficient\nMatching Linear',
+    'Ensemble Prognostic\nScore Matching',
+    'LASSO Coefficient\nMatching Mean'
 ]
 
 all_errors = pd.DataFrame([], index=methods)
@@ -74,10 +86,9 @@ for f in all_folders:
 with open(f'plots/acic_file_to_num{plot_name}.txt', 'w') as f:
     f.write(json.dumps({v: k for k, v in name_to_label.items()}))
 
-all_errors = all_errors.loc[~(all_errors.isna().sum(axis=1) == all_errors.shape[1]).values, :]
-rename_methods = {k: v for k, v in rename_methods.items() if k in all_errors.index}
-all_errors = all_errors / all_errors.loc['LASSO Coefficient Matching']
-all_errors = all_errors.reset_index().melt(id_vars=['index'])
+all_errors_original = all_errors.loc[~(all_errors.isna().sum(axis=1) == all_errors.shape[1]).values, :]
+rename_methods = {k: v for k, v in rename_methods.items() if k in all_errors_original.index}
+all_errors = all_errors_original.reset_index().melt(id_vars=['index'])
 all_errors.columns = ['Method', 'ACIC File', 'Median Relative Error (%)']
 all_errors[['acic_year', 'acic_file_no']] = all_errors['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
 all_errors = all_errors.sort_values(['acic_year', 'acic_file_no'])
@@ -99,9 +110,9 @@ handles, labels = axes[0].get_legend_handles_labels()
 fig.legend(handles, labels, loc='right', bbox_to_anchor=(0.95, 1.07), ncol=3)
 for ax in axes:
     ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
-    # ax.set_yscale('log')
+    ax.set_yscale('log')
     ax.get_legend().remove()
-    ax.set_ylim([0, 2])
+    # ax.set_ylim([0, 2])
 b1.set(xlabel=None, ylabel=None)
 b2.set(xlabel=None, ylabel=None)
 fig.text(0.5, -0.01, 'ACIC File', ha='center')
@@ -131,3 +142,19 @@ sns.boxplot(data=all_errors, x="Median Relative Error (%)", y="Method", order=or
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig(f'plots/acic_cate_errors_by_method{plot_name}.png')
+
+relative_errors = all_errors_original.divide(all_errors_original.min(), axis=1)
+relative_errors = relative_errors.reset_index().melt(id_vars=['index'])
+relative_errors.columns = ['Method', 'ACIC File', 'Relative Median Error to Top Method (%)']
+relative_errors[['acic_year', 'acic_file_no']] = relative_errors['ACIC File'].str.split(expand=True).iloc[:, 1:].astype(int)
+relative_errors = relative_errors.sort_values(['acic_year', 'acic_file_no'])
+relative_errors['Method'] = relative_errors['Method'].apply(lambda x: rename_methods[x] if x in rename_methods.keys() else x)
+
+plt.figure()
+sns.set_context("paper")
+sns.set_style("darkgrid")
+sns.set(font_scale=1)
+sns.boxplot(data=relative_errors, x="Relative Median Error to Top Method (%)", y="Method", order=order)
+plt.xticks(rotation=65, horizontalalignment='right')
+plt.tight_layout()
+plt.savefig(f'plots/acic_cate_relative_errors_by_method{plot_name}.png')

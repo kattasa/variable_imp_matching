@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 #SBATCH --get-user-env
-#SBATCH --output=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results_LCM_MALTS/slurm_%A.out
-#SBATCH --error=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results_LCM_MALTS/slurm_%A.err
+#SBATCH --output=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results_All/slurm_%A.out
+#SBATCH --error=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results_All/slurm_%A.err
 #SBATCH --mem=2G
 
-export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results_LCM_MALTS
+export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/acic_error_and_runtime/Results_All
 export ACIC_2018_FOLDER=/work/qml/acic_2018
 export ACIC_2019_FOLDER=/work/qml/acic_2019
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
@@ -14,7 +14,7 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
-memory=$"64G"
+memory=$"128G"
 k_est_mean=25
 k_est_linear=60
 n_splits=2

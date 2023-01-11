@@ -83,10 +83,8 @@ with warnings.catch_warnings(record=True) as warning_list:
     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
                  random_state=random_state)
     lcm.fit(method='linear')
-    lcm.MG(k=k_est_mean)
-    lcm.CATE(cate_methods=[['mean', False]])
-    # lcm.MG(k=k_est_linear)
-    # lcm.CATE(cate_methods=[['linear_pruned', False]])
+    lcm.MG(k=k_est_linear)
+    lcm.CATE(cate_methods=[['linear_pruned', False]])
 times[method_name] = time.time() - start
 cate_df = lcm.cate_df
 cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
@@ -98,20 +96,21 @@ print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
 print()
 
-# method_name = 'LASSO Coefficient Matching Mean'
-# with warnings.catch_warnings(record=True) as warning_list:
-#     lcm.MG(k=k_est_mean)
-#     lcm.CATE(cate_methods=[['mean', False]])
-# times[method_name] = time.time() - start
-# cate_df = lcm.cate_df
-# cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-# cate_df['True_CATE'] = df_true['TE'].to_numpy()
-# cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
-# cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-# df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'\n{method_name} method complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
+method_name = 'LASSO Coefficient Matching Mean'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm.MG(k=k_est_mean)
+    lcm.CATE(cate_methods=[['mean', False]])
+times[method_name] = time.time() - start
+cate_df = lcm.cate_df
+cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+cate_df['True_CATE'] = df_true['TE'].to_numpy()
+cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'\n{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
 
 split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
@@ -122,7 +121,8 @@ if run_malts:
     method_name = 'MALTS Matching'
     start = time.time()
     with warnings.catch_warnings(record=True) as warning_list:
-        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=malts_k_train, k_est=k_est_mean,
+        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, categorical=categorical,
+                             k_tr=malts_k_train, k_est=k_est_mean,
                              n_splits=n_splits, estimator='mean', smooth_cate=False,
                              gen_skf=split_strategy, random_state=random_state)
     times[method_name] = time.time() - start
@@ -141,7 +141,8 @@ if run_malts:
     method_name = 'MALTS Matching with LASSO Weights'
     start = time.time()
     with warnings.catch_warnings(record=True) as warning_list:
-        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, k_tr=malts_k_train, k_est=k_est_mean,
+        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary+categorical, categorical=categorical,
+                             k_tr=malts_k_train, k_est=k_est_mean,
                              n_splits=n_splits, estimator='mean', smooth_cate=False,
                              gen_skf=split_strategy,
                              M_init=lasso_malts_init,
@@ -164,8 +165,9 @@ lasso_feature_selection = weights_to_feature_selection(
 method_name = 'MALTS Matching with LASSO Feature Selection'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical, k_tr=malts_k_train, k_est=k_est_mean,
-                         n_splits=n_splits, estimator='mean', smooth_cate=False,
+    m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical, categorical=categorical,
+                         k_tr=malts_k_train, k_est=k_est_linear,
+                         n_splits=n_splits, estimator='single_linear', smooth_cate=False,
                          gen_skf=split_strategy,
                          trim_features=lasso_feature_selection,
                          random_state=random_state)
@@ -180,170 +182,173 @@ df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relativ
 print(f'{method_name} complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
 print()
-#
-generic_malts = pymalts.malts('Y', 'T', data=df_data, discrete=binary+categorical, k=malts_k_train)
-print('MALTS Objective Lossess:')
-print(f'LCM: {[generic_malts.objective(w) for w in lasso_malts_init]}')
-if run_malts:
-    print(f'MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in malts_m_opt]}')
-    print(f'LASSO Initialized MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in lasso_weights_malts_m_opt]}')
-print(f"LASSO Feature Selection MALTS: "
-      f"{[pymalts.malts('Y', 'T', data=df_data[lasso_feature_selection[i] + ['Y', 'T']], discrete=[c for c in binary+categorical if c in lasso_feature_selection[i]], k=malts_k_train).objective(m.M_opt_list[i].to_numpy().reshape(-1,)) for i in range(len(m.M_opt_list))]}"
-      f"")
 
-#
-# method_name = 'Tree Feature Importance Matching'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
-#     lcm.gen_skf = split_strategy
-#     lcm.fit(method='tree', params={'max_depth': 4})
-#     lcm.MG(k=k_est)
-#     lcm.CATE(cate_methods=[['linear_pruned', False]])
-# times[method_name] = time.time() - start
-# cate_df = lcm.cate_df
-# cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-# cate_df['True_CATE'] = df_true['TE'].to_numpy()
-# cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
-# cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-# df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} method complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
-#
-# method_name = 'Equal Weighted LASSO Matching'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1, random_state=random_state)
-#     lcm.gen_skf = split_strategy
-#     lcm.fit(method='linear', equal_weights=True)
-#     lcm.MG(k=k_est)
-#     lcm.CATE(cate_methods=[['linear_pruned', False]])
-# times[method_name] = time.time() - start
-#
-# cate_df = lcm.cate_df
-# cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-# cate_df['True_CATE'] = df_true['TE'].to_numpy()
-# cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
-# cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-# df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} method complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
+# generic_malts = pymalts.malts('Y', 'T', data=df_data, discrete=binary+categorical, k=malts_k_train)
+# print('MALTS Objective Lossess:')
+# print(f'LCM: {[generic_malts.objective(w) for w in lasso_malts_init]}')
+# if run_malts:
+#     print(f'MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in malts_m_opt]}')
+#     print(f'LASSO Initialized MALTS: {[generic_malts.objective(w.to_numpy().reshape(-1,)) for w in lasso_weights_malts_m_opt]}')
+# print(f"LASSO Feature Selection MALTS: "
+#       f"{[pymalts.malts('Y', 'T', data=df_data[lasso_feature_selection[i] + ['Y', 'T']], discrete=[c for c in binary+categorical if c in lasso_feature_selection[i]], k=malts_k_train).objective(m.M_opt_list[i].to_numpy().reshape(-1,)) for i in range(len(m.M_opt_list))]}"
+#       f"")
 
-# method_name = 'Ensemble Prognostic Score Matching'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='ensemble',
-#                                                    k_est=k_est_mean, est_method='mean', gen_skf=split_strategy,
-#                                                    random_state=random_state)
-# times[method_name] = time.time() - start
-# df_err_prog = pd.DataFrame()
-# df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
-# df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-# df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
-# df_err = pd.concat([df_err, df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
-#
-# method_name = 'Linear Prognostic Score Matching'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='linear',
-#                                                    k_est=k_est_linear, est_method='linear_pruned', gen_skf=split_strategy,
-#                                                    random_state=random_state)
-# times[method_name] = time.time() - start
-# df_err_prog = pd.DataFrame()
-# df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
-# df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-# df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
-# df_err = pd.concat([df_err, df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
 
-# method_name = 'DoubleML'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-# times[method_name] = time.time() - start
-# df_err_doubleml = pd.DataFrame()
-# df_err_doubleml['Method'] = [method_name for i in range(cate_est_doubleml.shape[0])]
-# df_err_doubleml['Relative Error (%)'] = np.abs(
-#     (cate_est_doubleml['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-# df_err_doubleml['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_doubleml['Est_CATE'] = cate_est_doubleml['avg.CATE'].to_numpy()
-# df_err = pd.concat([df_err, df_err_doubleml[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
-#
-# method_name = 'DRLearner'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-# times[method_name] = time.time() - start
-#
-# df_err_drlearner = pd.DataFrame()
-# df_err_drlearner['Method'] = [method_name for i in range(cate_est_drlearner.shape[0])]
-# df_err_drlearner['Relative Error (%)'] = np.abs(
-#     (cate_est_drlearner['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-# df_err_drlearner['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_drlearner['Est_CATE'] = cate_est_drlearner['avg.CATE'].to_numpy()
-# df_err = pd.concat([df_err, df_err_drlearner[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
-#
-# if run_bart:
-#     method_name = 'BART'
-#     start = time.time()
-#     with warnings.catch_warnings(record=True) as warning_list:
-#         cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-#     times[method_name] = time.time() - start
-#     df_err_bart = pd.DataFrame()
-#     df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
-#     df_err_bart['Relative Error (%)'] = np.abs(
-#         (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
-#     df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
-#     df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
-#     df_err = pd.concat([df_err, df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-#     print(f'{method_name} complete: {time.time() - start}')
-#     summarize_warnings(warning_list, method_name)
-#     print()
-#
-# method_name = 'Causal Forest'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-# times[method_name] = time.time() - start
-# df_err_cf = pd.DataFrame()
-# df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
-# df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-# df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
-# df_err = pd.concat([df_err, df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
-#
-# method_name = 'Causal Forest DML'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_cf = causalforest_dml.causalforest_dml('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-# times[method_name] = time.time() - start
-# df_err_cf = pd.DataFrame()
-# df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
-# df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
-# df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
-# df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
-# df_err = pd.concat([df_err, df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-# print(f'{method_name} complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
+method_name = 'Tree Feature Importance Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
+                 random_state=random_state)
+    lcm.gen_skf = split_strategy
+    lcm.fit(method='tree', params={'max_depth': 4})
+    lcm.MG(k=k_est_linear)
+    lcm.CATE(cate_methods=[['linear_pruned', False]])
+times[method_name] = time.time() - start
+cate_df = lcm.cate_df
+cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+cate_df['True_CATE'] = df_true['TE'].to_numpy()
+cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'Equal Weighted LASSO Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
+                 random_state=random_state)
+    lcm.gen_skf = split_strategy
+    lcm.fit(method='linear', equal_weights=True)
+    lcm.MG(k=k_est_linear)
+    lcm.CATE(cate_methods=[['linear_pruned', False]])
+times[method_name] = time.time() - start
+cate_df = lcm.cate_df
+cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+cate_df['True_CATE'] = df_true['TE'].to_numpy()
+cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'Ensemble Prognostic Score Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='ensemble',
+                                                   k_est=k_est_mean, est_method='mean', gen_skf=split_strategy,
+                                                   random_state=random_state)
+times[method_name] = time.time() - start
+df_err_prog = pd.DataFrame()
+df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
+df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
+df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'Linear Prognostic Score Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='linear',
+                                                   k_est=k_est_linear, est_method='linear_pruned', gen_skf=split_strategy,
+                                                   random_state=random_state)
+times[method_name] = time.time() - start
+df_err_prog = pd.DataFrame()
+df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
+df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
+df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'DoubleML'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+times[method_name] = time.time() - start
+df_err_doubleml = pd.DataFrame()
+df_err_doubleml['Method'] = [method_name for i in range(cate_est_doubleml.shape[0])]
+df_err_doubleml['Relative Error (%)'] = np.abs(
+    (cate_est_doubleml['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+df_err_doubleml['True_CATE'] = df_true['TE'].to_numpy()
+df_err_doubleml['Est_CATE'] = cate_est_doubleml['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_doubleml[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'DRLearner'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+times[method_name] = time.time() - start
+df_err_drlearner = pd.DataFrame()
+df_err_drlearner['Method'] = [method_name for i in range(cate_est_drlearner.shape[0])]
+df_err_drlearner['Relative Error (%)'] = np.abs(
+    (cate_est_drlearner['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+df_err_drlearner['True_CATE'] = df_true['TE'].to_numpy()
+df_err_drlearner['Est_CATE'] = cate_est_drlearner['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_drlearner[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+if run_bart:
+    method_name = 'BART'
+    start = time.time()
+    with warnings.catch_warnings(record=True) as warning_list:
+        cate_est_bart = bart.bart('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+    times[method_name] = time.time() - start
+    df_err_bart = pd.DataFrame()
+    df_err_bart['Method'] = [method_name for i in range(cate_est_bart.shape[0])]
+    df_err_bart['Relative Error (%)'] = np.abs(
+        (cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+    df_err_bart['True_CATE'] = df_true['TE'].to_numpy()
+    df_err_bart['Est_CATE'] = cate_est_bart['avg.CATE'].to_numpy()
+    df_err = pd.concat([df_err, df_err_bart[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+    print(f'{method_name} complete: {time.time() - start}')
+    summarize_warnings(warning_list, method_name)
+    print()
+
+method_name = 'Causal Forest'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+times[method_name] = time.time() - start
+df_err_cf = pd.DataFrame()
+df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
+df_err_cf['Relative Error (%)'] = np.abs(
+    (cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
+df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'Causal Forest DML'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_cf = causalforest_dml.causalforest_dml('Y', 'T', df_dummy_data, gen_skf=split_strategy,
+                                                    random_state=random_state)
+times[method_name] = time.time() - start
+df_err_cf = pd.DataFrame()
+df_err_cf['Method'] = [method_name for i in range(cate_est_cf.shape[0])]
+df_err_cf['Relative Error (%)'] = np.abs(
+    (cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/np.abs(df_true['TE']).mean())
+df_err_cf['True_CATE'] = df_true['TE'].to_numpy()
+df_err_cf['Est_CATE'] = cate_est_cf['avg.CATE'].to_numpy()
+df_err = pd.concat([df_err, df_err_cf[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+print(f'{method_name} complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
 
 df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
 
