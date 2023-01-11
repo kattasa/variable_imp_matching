@@ -215,6 +215,13 @@ class malts:
                     yt = lm.Ridge(random_state=self.random_state).fit(X=matched_X_T, y=matched_Y_T)
                     cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome': v.loc['query'][self.outcome],
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
+                if model == 'single_linear':
+                    matched_X_C['T'] = 0
+                    matched_X_T['T'] = 1
+                    y_te = lm.Ridge(random_state=self.random_state).fit(
+                        X=pd.concat([matched_X_C, matched_X_T]), y=pd.concat([matched_Y_C, matched_Y_T])).coef_[-1]
+                    cate[k] = {'CATE': y_te, 'outcome': v.loc['query'][self.outcome],
+                               'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
                 if model == 'RF':
                     yc = ensemble.RandomForestRegressor(random_state=self.random_state).fit(X=matched_X_C, y=matched_Y_C)
                     yt = ensemble.RandomForestRegressor(random_state=self.random_state).fit(X=matched_X_T, y=matched_Y_T)
