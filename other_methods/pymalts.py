@@ -61,7 +61,7 @@ class malts:
         if M_init is not None:
             M_order = self.continuous + self.discrete
             covs = [c for c in data.columns if c not in [treatment, outcome]]
-            self.M_init = np.array(M_init)[M_order.index(c) for c in covs]
+            self.M_init = np.array(M_init)[[M_order.index(c) for c in covs]]
 
 
     def threshold(self, x):
