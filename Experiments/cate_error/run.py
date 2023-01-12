@@ -11,7 +11,7 @@ k_est_mean = 15
 k_est_linear = 60
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
@@ -24,7 +24,7 @@ datasets = [
     # 'friedman',
     # 'ihdp',
     # 'acic_2018',
-    'acic_2019',
+    # 'acic_2019',
     # 'news'
 ]
 
@@ -36,36 +36,36 @@ all_acic_2019_files = [3]
 
 
 methods_config = {
-    # 'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
-    #                          'methods': [['linear_pruned', False]]},
+    'linear_coef_matching': {'double_model': [False], 'n_repeats': 1, 'params': None,
+                             'methods': [['linear_pruned', False]]},
     # 'tree_imp_matching': True,
     # 'malts': {'methods': ['linear']},
     # 'manhatten': {'methods': ['mean', 'linear']},
     # 'manhatten_pruned': {'params': None, 'methods': ['mean', 'linear']},
     # 'propensity': None,
     # 'genmatch': None,
-    # 'prognostic': None,
+    'prognostic': None,
     # 'bart': None,
     # 'causal_forest': None
-    'doubleml': None,
-    'drlearner': None
+    # 'doubleml': None,
+    # 'drlearner': None
 }
 
 for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
-        n_splits = 6
+        n_splits = 3
         dataset_config['num_samples'] = 3000
         if 'continuous' in data:
-            dataset_config['imp_c'] = 50
-            dataset_config['unimp_c'] = 150
+            dataset_config['imp_c'] = 10
+            dataset_config['unimp_c'] = 190
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
             dataset_config['imp_c'] = 0
             dataset_config['unimp_c'] = 0
-            dataset_config['imp_d'] = 15
-            dataset_config['unimp_d'] = 10
+            dataset_config['imp_d'] = 150
+            dataset_config['unimp_d'] = 100
         elif 'mixed' in data:
             dataset_config['imp_c'] = 5
             dataset_config['unimp_c'] = 10

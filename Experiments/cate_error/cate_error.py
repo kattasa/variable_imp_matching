@@ -272,19 +272,25 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
                 print(f'GenMatch complete: {time.time() - start}')
 
         if 'prognostic' in methods:
-            method_name = 'Prognostic Score Matching'
+            method_name = 'Linear Prognostic Score Matching'
             start = time.time()
-            cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data, k_est=k_est_mean, gen_skf=split_strategy,
-                                                           n_splits=n_splits)
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T', df_dummy_data, method='linear',
+                                                                     k_est=k_est_linear, est_method='linear_pruned',
+                                                                     gen_skf=split_strategy,
+                                                                     random_state=random_state)
             times[method_name] = time.time() - start
             df_err_prog = pd.DataFrame()
             df_err_prog['Method'] = [method_name for i in range(cate_est_prog.shape[0])]
-            df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() -
-                                                        df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
+            df_err_prog['Relative Error (%)'] = np.abs(
+                (cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy()) / np.abs(df_true['TE']).mean())
             df_err_prog['Iter'] = iter
             df_err_prog['True_CATE'] = df_true['TE'].to_numpy()
             df_err_prog['Est_CATE'] = cate_est_prog['avg.CATE'].to_numpy()
-            df_err = df_err.append(df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']])
+            df_err = pd.concat(
+                [df_err, df_err_prog[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']].copy(deep=True)])
+            print(f'{method_name} complete: {time.time() - start}')
+            print()
             if print_progress:
                 print(f'{method_name} complete: {time.time() - start}')
 
