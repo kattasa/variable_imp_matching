@@ -19,7 +19,7 @@ k_est_mean=25
 k_est_linear=60
 n_splits=2
 n_sample_per_split=2500
-malts_max=10000
+malts_max=5000
 
 all_acic_2018_files=($(python -c "import glob;import os;print([f.replace('.csv', '') for f in set([c.split('/')[-1].replace('_cf', '') for c in glob.glob('${ACIC_2018_FOLDER}/*.csv')])])" | tr -d '[],'))
 
@@ -33,8 +33,12 @@ do
     ((counter++))
     save_dir=$(printf "${RESULTS_FOLDER}/acic_2019-${acic_file}_%03d" $counter)
   done
-  mkdir $save_dir
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST_MEAN=$k_est_mean,K_EST_LINEAR=$k_est_linear,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=5000,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+#  mkdir $save_dir
+  if [ -f "${save_dir}/df_err.csv"]; then
+    echo "${save_dir}/df_err.csv exists"
+  else
+    sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST_MEAN=$k_est_mean,K_EST_LINEAR=$k_est_linear,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=5000,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  fi
   ((acic_file++))
 done
 
@@ -47,6 +51,10 @@ do
     ((counter++))
     save_dir=$(printf "${RESULTS_FOLDER}/acic_2018-${acic_file}_%03d" $counter | tr -d \"\')
   done
-  mkdir $save_dir
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST_MEAN=$k_est_mean,K_EST_LINEAR=$k_est_linear,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=$malts_max,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+#  mkdir $save_dir
+  if [ -f "${save_dir}/df_err.csv"]; then
+    echo "${save_dir}/df_err.csv exists"
+  else
+    sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST_MEAN=$k_est_mean,K_EST_LINEAR=$k_est_linear,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,MALTS_MAX=$malts_max,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  fi
 done

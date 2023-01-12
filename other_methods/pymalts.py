@@ -222,8 +222,10 @@ class malts:
                                'treatment': v.loc['query'][self.treatment], 'diameter': diameter}
                 if model == 'single_linear':
                     matched_X = pd.concat([matched_X_C, matched_X_T])
-                    matched_X = pd.concat([matched_X, pd.get_dummies(
-                        matched_X[self.categorical], columns=self.categorical)], axis=1).drop(columns=self.categorical)
+                    if len(self.categorical) > 0:
+                        matched_X = pd.concat([matched_X, pd.get_dummies(
+                            matched_X[self.categorical], columns=self.categorical)], axis=1).drop(
+                            columns=self.categorical)
                     matched_X['T'] = np.concatenate(
                         [np.zeros(shape=(matched_X.shape[0] // 2)), np.ones(shape=(matched_X.shape[0] // 2))])
                     y_te = lm.Ridge(random_state=self.random_state).fit(
