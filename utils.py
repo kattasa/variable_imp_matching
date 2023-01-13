@@ -80,10 +80,7 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
         mg_size = mg.shape[1] // 2
         method = method.replace('_pruned', '')
         if method == 'linear':
-            if augmented:
-                mg_cates = np.array([linear_augmented_cate(mg[i, :, :]) for i in range(mg.shape[0])])
-            else:
-                mg_cates = np.array([linear_cate(mg[i, :, :]) for i in range(mg.shape[0])])
+            mg_cates = np.array([linear_cate(mg[i, :, :]) for i in range(mg.shape[0])])
         elif (method == 'double_linear') or (method == 'rf'):
             samples = df_estimation[imp_covs].to_numpy()[control_mg.index]
             control_mg = mg[:, :mg_size, :]
@@ -106,10 +103,6 @@ def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outco
 
 def linear_cate(mg):
     return RidgeCV().fit(mg[:, :-1], mg[:, -1]).coef_[-1]
-
-
-def linear_augmented_cate(mg):
-    return RidgeCV(fit_intercept=False).fit(mg[:, :-1], mg[:, -1]).coef_[-1]
 
 
 def dual_linear_cate(c_mg, t_mg, this_sample):

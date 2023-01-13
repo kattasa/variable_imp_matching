@@ -23,33 +23,29 @@ k_est = int(os.getenv('K_EST'))
 
 lcm_cate_method = 'linear_pruned'
 
-x_imp = 10
-x_unimp = 25
+x_imp = 5
+x_unimp = 10
 
 _, df, df_true, x_cols, binary = dgp_dense_mixed_endo_df(n=n_samples, nci=x_imp, ndi=0, ncu=x_unimp, ndu=0, std=1.5,
                                                          t_imp=2, overlap=1000, n_train=0)
 
-bart_cates = []
-lcm_cates = []
-augmented_lcm_cates = []
+bart_ates = []
+lcm_ates = []
+augmented_lcm_ates = []
 
-sample = np.random.randint(0, n_samples)
 start = time.time()
 for i in range(n_iters):
     new_T = np.random.binomial(1, 0.5, size=(n_samples,))  # randomize T
     df['T'] = new_T
     df['Y'] = (new_T * df_true['Y1']) + ((1 - new_T) * df_true['Y0'])
 
-    these_bart_cates = []
-    these_lcm_cates = []
-    these_augmented_lcm_cates = []
+    these_bart_ates = []
+    these_lcm_ates = []
+    these_augmented_lcm_ates = []
     t = 0
     while t < n_repeats:
         random_state = np.random.randint(100000)
-        this_sample = df.loc[sample]
-        this_df = df.drop(index=[sample]).sample(frac=1, replace=True, random_state=random_state)
-        this_df = pd.concat([this_df, this_sample.to_frame().T]).reset_index(drop=True)
-
+        this_df = df.sample(frac=1, replace=True, random_state=random_state).reset_index(drop=True)
         skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=1, random_state=random_state)
         split_strategy = list(skf.split(df, df['T']))
 
@@ -60,7 +56,7 @@ for i in range(n_iters):
         except rpy2.rinterface_lib.embedded.RRuntimeError as e:
             print(f'Bart runtime error')
             continue
-        these_bart_cates.append(cate_est_bart.tail(1)['avg.CATE'].values[0])
+        these_bart_ates.append(cate_est_bart['CATE'].mean().mean())
 
         bart_control_preds = bart_control_preds.T
         bart_treatment_preds = bart_treatment_preds.T
@@ -74,30 +70,30 @@ for i in range(n_iters):
         lcm.CATE(cate_methods=[[lcm_cate_method, False], [lcm_cate_method, True]],
                  precomputed_control_preds=bart_control_preds,
                  precomputed_treatment_preds=bart_treatment_preds)
-        these_lcm_cates.append(lcm.cate_df[f'avg.CATE_{lcm_cate_method}'].tail(1).values[0])
-        these_augmented_lcm_cates.append(lcm.cate_df[f'avg.CATE_{lcm_cate_method}_augmented'].tail(1).values[0])
+        these_lcm_ates.append(lcm.cate_df[f'CATE_{lcm_cate_method}'].mean().mean())
+        these_augmented_lcm_ates.append(lcm.cate_df[f'CATE_{lcm_cate_method}_augmented'].mean().mean())
         t += 1
 
-    bart_cates.append(copy.deepcopy(these_bart_cates))
-    lcm_cates.append(copy.deepcopy(these_lcm_cates))
-    augmented_lcm_cates.append(copy.deepcopy(these_augmented_lcm_cates))
+    bart_ates.append(copy.deepcopy(these_bart_ates))
+    lcm_ates.append(copy.deepcopy(these_lcm_ates))
+    augmented_lcm_ates.append(copy.deepcopy(these_augmented_lcm_ates))
     print(f'Iter {i+1}: {time.time() - start}')
 
 ate_dof = n_repeats - 1
-cate = df_true.loc[sample, 'TE']
+ate = df_true['TE'].mean()
 
 bart_ate_df = pd.DataFrame([[*st.t.interval(confidence=0.95, df=ate_dof, loc=np.mean(l), scale=st.sem(l)),
-                             st.sem(l)] for l in bart_cates], columns=['lb', 'ub', 'sem'])
+                             st.sem(l)] for l in bart_ates], columns=['lb', 'ub', 'sem'])
 
 lcm_ate_df = pd.DataFrame([[*st.t.interval(confidence=0.95, df=ate_dof, loc=np.mean(l), scale=st.sem(l)),
-                            st.sem(l)] for l in lcm_cates], columns=['lb', 'ub', 'sem'])
+                            st.sem(l)] for l in lcm_ates], columns=['lb', 'ub', 'sem'])
 
 aug_lcm_ate_df = pd.DataFrame([[*st.t.interval(confidence=0.95, df=ate_dof, loc=np.mean(l), scale=st.sem(l)),
-                                st.sem(l)] for l in augmented_lcm_cates], columns=['lb', 'ub', 'sem'])
+                                st.sem(l)] for l in augmented_lcm_ates], columns=['lb', 'ub', 'sem'])
 
-bart_ate_df['coverage'] = ((bart_ate_df['lb'] <= cate) & (bart_ate_df['ub'] >= cate)).astype(int)
-lcm_ate_df['coverage'] = ((lcm_ate_df['lb'] <= cate) & (lcm_ate_df['ub'] >= cate)).astype(int)
-aug_lcm_ate_df['coverage'] = ((aug_lcm_ate_df['lb'] <= cate) & (aug_lcm_ate_df['ub'] >= cate)).astype(int)
+bart_ate_df['coverage'] = ((bart_ate_df['lb'] <= ate) & (bart_ate_df['ub'] >= ate)).astype(int)
+lcm_ate_df['coverage'] = ((lcm_ate_df['lb'] <= ate) & (lcm_ate_df['ub'] >= ate)).astype(int)
+aug_lcm_ate_df['coverage'] = ((aug_lcm_ate_df['lb'] <= ate) & (aug_lcm_ate_df['ub'] >= ate)).astype(int)
 
 bart_ate_df['Method'] = 'BART'
 lcm_ate_df['Method'] = 'LCM'
