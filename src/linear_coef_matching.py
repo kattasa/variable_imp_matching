@@ -91,6 +91,8 @@ class LCM:
                 model_T = linear.LassoCV(**params).fit(self.X[self.T == 1, :-1], self.Y[self.T == 1])
                 M_C_hat = np.abs(model_C.coef_).reshape(-1,)
                 M_T_hat = np.abs(model_T.coef_).reshape(-1,)
+                print(f'Control Score: {model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])}')
+                print(f'Treatment Score: {model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])}')
             elif method == 'tree':
                 model_C = tree.DecisionTreeRegressor(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
                 model_T = tree.DecisionTreeRegressor(**params).fit(self.X[self.T == 1, :-1], self.Y[self.T == 1])
@@ -105,19 +107,47 @@ class LCM:
             self.M_T = M_T_hat / np.sum(M_T_hat) * self.p if not np.all(M_T_hat == 0) else np.ones(self.p)
         else:
             if method == 'linear':
-                model = linear.LassoCV(**params).fit(self.X, self.Y)
-                M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
+                # model = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
+                # M_hat = np.abs(model.coef_).reshape(-1,)
+                # print('Control Score:')
+                # print(model.score(self.X[self.T == 0, :-1], self.Y[self.T == 0]))
+                # print('Treatment Score:')
+                # print(model.score(self.X[self.T == 1, :-1], self.Y[self.T == 1]))
+                model_C = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
+                model_T = linear.LassoCV(**params).fit(self.X[self.T == 1, :-1], self.Y[self.T == 1])
+                print(f'Control Score: {model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])}')
+                print(f'Treatment Score: {model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])}')
+                mc = (np.abs(model_C.coef_).reshape(-1,) / np.sum(np.abs(model_C.coef_))) if \
+                    not np.all(model_C.coef_ == 0) else np.ones(self.p)/self.p
+                mt = (np.abs(model_T.coef_).reshape(-1,) / np.sum(np.abs(model_T.coef_))) if \
+                    not np.all(model_T.coef_ == 0) else np.ones(self.p)/self.p
+                M_hat = mc + mt
+                # model = linear.LassoCV(**params).fit(self.X, self.Y)
+                # M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
+                # print('Score:')
+                # print(model.score(self.X, self.Y))
             elif method == 'tree':
                 model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
                 M_hat = model.feature_importances_[:-1].reshape(-1,)
-            elif method == 'rf':
-                model = ensemble.RandomForestRegressor(**params).fit(self.X, self.Y)
-                M_hat = model.feature_importances_[:-1].reshape(-1,)
+            elif method == 'ensemble':
+                model_C = ensemble.GradientBoostingRegressor(random_state=self.random_state).fit(
+                    self.X[self.T == 0, :-1], self.Y[self.T == 0])
+                model_T = ensemble.GradientBoostingRegressor(random_state=self.random_state).fit(
+                    self.X[self.T == 1, :-1], self.Y[self.T == 1])
+                mc = (model_C.feature_importances_.reshape(-1,) / np.sum(model_C.feature_importances_)) if \
+                    not np.all(model_C.feature_importances_ == 0) else np.ones(self.p)/self.p
+                mt = (model_T.feature_importances_.reshape(-1,) / np.sum(model_T.feature_importances_)) if \
+                    not np.all(model_T.feature_importances_ == 0) else np.ones(self.p)/self.p
+                M_hat = mc + mt
             else:
                 raise Exception(f'Fit method not supported.')
-            if equal_weights:
-                M_hat = np.where(M_hat > 0, 1, 0)
+            # if equal_weights:
+            #     M_hat = np.where(M_hat > 0, 1, 0)
             self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
+            if equal_weights:
+                print(f'Pre trim: {np.sum(self.M > 0)}')
+                self.M = np.where(self.M > 0.03*self.p, 1, 0)
+                print(f'Post trim: {np.sum(self.M > 0)}')
         if return_score:
             if double_model:
                 return model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0]), \
@@ -150,7 +180,7 @@ class LCM:
                 treatment_preds = self.est_T.predict(df_estimation[self.covariates].to_numpy())
         this_M = self.M if self.M is not None else self.M_C + self.M_T
         return get_CATES(df_estimation, control_match_groups, treatment_match_groups, method,
-                         self.covariates, self.outcome, self.treatment, this_M, augmented=augmented,
+                         self.outcome, self.treatment, covariates=self.covariates, M=this_M, augmented=augmented,
                          control_preds=control_preds, treatment_preds=treatment_preds, check_est_df=check_est_df,
                          random_state=self.random_state)
 

@@ -101,8 +101,8 @@ class LCM_MF:
                                                                             precomputed_control_preds,
                                                                             precomputed_treatment_preds)
                 this_M = self.M_list[i] if not self.double_model else self.M_C_list[i] + self.M_T_list[i]
-                cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method, self.covariates,
-                                       outcome, treatment, this_M, augmented=augmented,
+                cates.append(get_CATES(df_estimation, self.C_MG_list[i], self.T_MG_list[i], method,
+                                       outcome, treatment, covariates=self.covariates, M=this_M, augmented=augmented,
                                        control_preds=control_preds, treatment_preds=treatment_preds,
                                        check_est_df=False, random_state=self.random_state)
                              )
