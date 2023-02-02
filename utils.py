@@ -1,45 +1,43 @@
+from itertools import combinations
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor as RFR
 from sklearn.linear_model import RidgeCV
 from sklearn.neighbors import NearestNeighbors
+import warnings
 
 
-def get_match_groups(df_estimation, k, covariates, treatment, M, M_C=None, M_T=None, return_original_idx=True,
-                     check_est_df=True):
+def get_match_groups(df_estimation, k, covariates, treatment, M,
+                     return_original_idx=True, check_est_df=True):
     if check_est_df:
-        check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [treatment])
+        check_df_estimation(df_cols=df_estimation.columns,
+                            necessary_cols=covariates + [treatment])
     old_idx = np.array(df_estimation.index)
     df_estimation = df_estimation.reset_index(drop=True)
     X = df_estimation[covariates].to_numpy()
     T = df_estimation[treatment].to_numpy()
-    control_dist, control_mg, treatment_dist, treatment_mg = get_mg_from_M(X, T, M, M_C, M_T, k)
-    control_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 0].index)[control_mg])
-    treatment_mg = pd.DataFrame(np.array(df_estimation.loc[df_estimation['T'] == 1].index)[treatment_mg])
-    control_dist = pd.DataFrame(control_dist)
-    treatment_dist = pd.DataFrame(treatment_dist)
-    if return_original_idx:
-        control_dist.index = old_idx
-        treatment_dist.index = old_idx
-        return convert_idx(control_mg, old_idx), convert_idx(treatment_mg, old_idx), control_dist, treatment_dist
-    return control_mg, treatment_mg, control_dist, treatment_dist
-
-
-def get_mg_from_M(X, T, M, M_C, M_T, k):
-    if M is not None:
-        X = M[M > 0] * X[:, M > 0]
-        control_dist, control_mg = get_nn(X, T, treatment=0, k=k)
-        treatment_dist, treatment_mg = get_nn(X, T, treatment=1, k=k)
-    else:
-        X_C = M_C[M_C > 0] * X[:, M_C > 0]
-        X_T = M_T[M_T > 0] * X[:, M_T > 0]
-        control_dist, control_mg = get_nn(X_C, T, treatment=0, k=k)
-        treatment_dist, treatment_mg = get_nn(X_T, T, treatment=1, k=k)
-    return control_dist, control_mg, treatment_dist, treatment_mg
+    match_groups = {}
+    match_distances = {}
+    for t in np.unique(T):
+        if type(M) == dict:
+            weights = M[t]
+        else:
+            weights = M
+        this_X = weights[weights > 0] * X[:, weights > 0]
+        this_dist, this_mg = get_nn(this_X, T, treatment=t, k=k)
+        match_groups[t] = this_mg
+        match_distances[t] = this_dist
+    for t in np.unique(T):
+        match_groups[t] = pd.DataFrame(np.array(df_estimation.loc[T == t].index)[match_groups[t]])
+        match_distances[t] = pd.DataFrame(match_distances[t])
+        if return_original_idx:
+            match_groups[t] = convert_idx(match_groups[t], old_idx)
+            match_distances[t].index = old_idx
+    return match_groups, match_distances
 
 
 def get_nn(X, T, treatment, k):
-    nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', metric='cityblock', n_jobs=10).fit(X[T == treatment])
+    nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto',
+                          metric='cityblock', n_jobs=10).fit(X[T == treatment])
     return nn.kneighbors(X, return_distance=True)
 
 
@@ -47,76 +45,57 @@ def convert_idx(mg, idx):
     return pd.DataFrame(idx[mg.to_numpy()], index=idx)
 
 
-def mg_to_training_set(df_estimation, control_mg, treatment_mg, covariates, treatment, outcome, augmented=False,
-                       control_preds=None, treatment_preds=None):
-    all_matches = np.concatenate([control_mg.to_numpy(), treatment_mg.to_numpy()], axis=1)
-    if augmented:
-        return np.concatenate([df_estimation[covariates + [treatment]].to_numpy()[all_matches],
-                               np.expand_dims(df_estimation[outcome].to_numpy()[all_matches] -
-                                              (((1 - df_estimation[treatment].to_numpy()[all_matches]) *
-                                                control_preds[all_matches]) +
-                                               (df_estimation[treatment].to_numpy()[all_matches] *
-                                                treatment_preds[all_matches])), axis=2)], axis=2)
-    else:
-        return df_estimation[covariates + [treatment, outcome]].to_numpy()[all_matches]
-
-
-def get_CATES(df_estimation, control_mg, treatment_mg, method, covariates, outcome, treatment, M,
-              augmented=False, control_preds=None, treatment_preds=None, check_est_df=True, random_state=None):
+def get_CATES(df_estimation, match_groups, match_distances, outcome,
+              covariates, M, method='mean', diameter_prune=None,
+              cov_imp_prune=0.01, check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
-    df_estimation, old_idx = check_mg_indices(df_estimation, control_mg.shape[0], treatment_mg.shape[0])
-    method_full_name = f'CATE_{method}{"_augmented" if augmented else ""}'
-    if method == 'mean':
-        cates = df_estimation[outcome].to_numpy()[treatment_mg.to_numpy()].mean(axis=1) - \
-                df_estimation[outcome].to_numpy()[control_mg.to_numpy()].mean(axis=1)
+    df_estimation, old_idx = check_mg_indices(df_estimation, match_groups,
+                                              match_distances)
+    potential_outcomes = []
+    for t, mgs in match_groups.items():
+        if diameter_prune:
+            diameters = match_distances[t].iloc[:, -1]
+            good_mgs = diameters < (diameters.mean() +
+                                    (diameter_prune*diameters.std()))
+            these_mgs = mgs.loc[good_mgs].to_numpy()
+            mgs_idx = old_idx[good_mgs]
+        else:
+            these_mgs = mgs.to_numpy()
+            mgs_idx = old_idx
+        if method == 'mean':
+            y_pot = df_estimation[outcome].to_numpy()[these_mgs].mean(axis=1)
+        elif 'linear' in method:
+            if 'pruned' in method:
+                if type(M) == dict:
+                    weights = M[t]
+                else:
+                    weights = M
+                imp_covs = prune_covariates(covariates, weights,
+                                            prune_level=cov_imp_prune)
+            else:
+                imp_covs = covariates
+            these_mgs = df_estimation[imp_covs + [outcome]].to_numpy()[these_mgs]
+            these_samples = df_estimation[imp_covs].to_numpy()[mgs_idx]
+            y_pot = [linear_cate(these_mgs[i], these_samples[i].reshape(1, -1))
+                     for i in range(these_samples.shape[0])]
+        else:
+            raise Exception(f'CATE Method type {method} not supported. '
+                            f'Supported methods are: mean, linear, and '
+                            f'linear_pruned.')
+        potential_outcomes.append(pd.DataFrame(y_pot, index=mgs_idx,
+                                               columns=[f'Y{t}_{method}']))
+    cates = pd.concat(potential_outcomes, axis=1).sort_index()
+    if len([t for t in list(match_groups.keys()) if t not in [0, 1]]) == 0:
+        cates[f'CATE_{method}'] = cates[f'Y1_{method}'] - cates[f'Y0_{method}']
     else:
-        if 'pruned' in method:
-            imp_covs = prune_covariates(covariates, M)
-        else:
-            imp_covs = covariates
-        mg = mg_to_training_set(df_estimation, control_mg, treatment_mg, imp_covs, treatment, outcome,
-                                augmented, control_preds, treatment_preds)
-        mg_size = mg.shape[1] // 2
-        method = method.replace('_pruned', '')
-        if method == 'linear':
-            mg_cates = np.array([linear_cate(mg[i, :, :]) for i in range(mg.shape[0])])
-        elif (method == 'double_linear') or (method == 'rf'):
-            samples = df_estimation[imp_covs].to_numpy()[control_mg.index]
-            control_mg = mg[:, :mg_size, :]
-            treatment_mg = mg[:, mg_size:, :]
-            if method == 'double_linear':
-                mg_cates = np.array([dual_linear_cate(control_mg[i, :, :], treatment_mg[i, :, :], samples[i].reshape(1, -1)) for i in
-                                     range(mg.shape[0])])
-            elif method == 'rf':
-                mg_cates = np.array([rf_cate(control_mg[i, :, :], treatment_mg[i, :, :], samples[i].reshape(1, -1), random_state=random_state) for i in
-                                     range(mg.shape[0])])
-        else:
-            raise Exception(f'CATE Method type {method} not supported. Supported methods are: mean, linear, '
-                            f'double_linear and rf.')
-        if augmented:
-            cates = treatment_preds - control_preds + mg_cates
-        else:
-            cates = mg_cates
-    return pd.Series(cates, index=old_idx, name=method_full_name)
+        for t1, t2 in combinations(list(match_groups.keys()), r=2):
+            cates[f'{t2}-{t1}_CATE_{method}'] = cates[f'Y{t2}_{method}'] - cates[f'Y{t1}_{method}']
+    return cates
 
 
-def linear_cate(mg):
-    return RidgeCV().fit(mg[:, :-1], mg[:, -1]).coef_[-1]
-
-
-def dual_linear_cate(c_mg, t_mg, this_sample):
-    mc = RidgeCV().fit(c_mg[:, :-2], c_mg[:, -1])
-    mt = RidgeCV().fit(t_mg[:, :-2], t_mg[:, -1])
-    return mt.predict(this_sample)[0] - \
-           mc.predict(this_sample)[0]
-
-
-def rf_cate(c_mg, t_mg, this_sample, random_state=None):
-    mc = RFR(random_state=random_state).fit(c_mg[:, :-2], c_mg[:, -1])
-    mt = RFR(random_state=random_state).fit(t_mg[:, :-2], t_mg[:, -1])
-    return mt.predict(this_sample)[0] - \
-           mc.predict(this_sample)[0]
+def linear_cate(mg, sample):
+    return RidgeCV().fit(mg[:, :-1], mg[:, -1]).predict(sample)[0]
 
 
 def check_df_estimation(df_cols, necessary_cols):
@@ -125,21 +104,38 @@ def check_df_estimation(df_cols, necessary_cols):
         raise Exception(f'df_estimation missing necessary column(s) {missing_cols}')
 
 
-def check_mg_indices(df_estimation, control_nrows, treatment_nrows):
+def check_mg_indices(df_estimation, match_groups, match_distances):
     old_idx = df_estimation.index
     df_estimation = df_estimation.reset_index(drop=True)
     est_nrows = df_estimation.shape[0]
-    if (est_nrows == control_nrows) and (est_nrows == treatment_nrows):
-        return df_estimation, old_idx
-    raise Exception(f'Control match group dataframe missing {len([c for c in df_idx if c not in control_idx])} and '
-                    f'treatment match group dataframe missing {len([c for c in df_idx if c not in treatment_idx])} '
-                    f'samples that are present in estimation dataframe.')
+    if not np.all([len(mg) == est_nrows for mg in match_groups.values()]):
+        raise Exception(
+            f'Match group dataframe sizes do not match size of df_estimation')
+    if match_distances is not None:
+        if not np.all([len(mg) == est_nrows for mg in
+                       match_distances.values()]):
+            raise Exception(
+                f'Match distances dataframe sizes do not match size of '
+                f'df_estimation')
+    return df_estimation, old_idx
 
 
-def prune_covariates(covariates, M):
+def prune_covariates(covariates, M, prune_level=0.01):
     imp_covs = []
-    prune_level = 0.01
     while len(imp_covs) == 0:
         imp_covs = list(np.array(covariates)[M >= prune_level * M.shape[0]])
         prune_level *= 0.1
     return imp_covs
+
+
+def get_model_weights(model, weight_attr, equal_weights, t):
+    if type(weight_attr) == str:
+        weights = np.abs(getattr(model, weight_attr).reshape(-1,))
+    else:
+        weights = weight_attr(model)
+    if np.all(weights == 0):
+        warnings.warn(f'Model fit to treatment={t} had all zero weights.')
+        return np.ones(p)
+    if equal_weights:
+        weights = np.where(weights > 0, 1, 0)
+    return (weights / np.sum(weights)) * len(weights)

@@ -6,7 +6,6 @@ Created on Thu Feb 20 17:00:40 2020
 @author: harshparikh
 """
 
-import itertools
 import numpy as np
 import pandas as pd
 import scipy

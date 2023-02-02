@@ -7,6 +7,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.linear_model import LinearRegression
 
 from src.linear_coef_matching import LCM
+from src.linear_coef_matching_mf import LCM_MF
 from other_methods.prognostic import Prognostic
 from other_methods.pymalts import malts
 
@@ -18,15 +19,15 @@ warnings.filterwarnings("ignore")
 # 5cc4cad434a74f20aa259898eb07af5d
 # 7e4dbafff9bc4714bc4950f086bae4a0
 random_state = 1
-dataset = 'friedman'
+dataset = 'dense_continuous'
 acic_file = '0a2adba672c7478faa7a47137a87a3ab'
 dataset_config = {
     'num_samples': 2500,
-    'imp_c': 15,
+    'imp_c': 5,
     'imp_d': 0,
-    'unimp_c': 250,
+    'unimp_c': 10,
     'unimp_d': 0,
-    'n_train': 500,
+    'n_train': 0,
     'alpha': 2
 }
 k = 20
@@ -35,17 +36,14 @@ if 'acic' in dataset:
     df_train, df_est, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_acic_data(
         dataset, acic_file, n_train=dataset_config['n_train'])
 else:
-    df_train, df_est, df_true, binary = get_data(data=dataset, config=dataset_config)
+    df_est, df_true, binary = get_data(data=dataset, config=dataset_config)
     categorical = []
 
 if len(categorical) > 0:
     df_train = df_train.drop(columns=categorical)
     df_est = df_est.drop(columns=categorical)
 
-print(f'# train: {df_train.shape[0]}')
-print(f'# est: {df_est.shape[0]}')
-print(f'# Covariates: {df_train.shape[1] - 2}')
-
+df_est.index += 100
 
 def get_dists(df, covs, k):
     nn = NearestNeighbors(n_neighbors=k).fit(df[covs].to_numpy())
@@ -53,10 +51,22 @@ def get_dists(df, covs, k):
                          df[['Y']].to_numpy()))
 
 
-covs = [c for c in df_train.columns if c not in ['Y', 'T']]
-lcm = LCM(outcome='Y', treatment='T', data=df_train, binary_outcome=False, random_state=random_state)
-df_c = df_train[df_train['T'] == 0].reset_index(drop=True)
-df_t = df_train[df_train['T'] == 1].reset_index(drop=True)
+lcm = LCM_MF(outcome='Y', treatment='T', data=df_est,
+             n_splits=5, n_repeats=1, random_state=0)
+lcm.fit()
+lcm.MG()
+lcm.CATE(cate_methods=['mean', 'linear_pruned'], diameter_prune=3)
+print('hi')
+
+
+# covs = [c for c in df_train.columns if c not in ['Y', 'T']]
+# lcm = LCM(outcome='Y', treatment='T', data=df_train, binary_outcome=False,
+#           random_state=random_state)
+# lcm.fit()
+# lcm.get_matched_groups(df_estimation=df_est, k=5)
+# lcm.CATE(df_estimation=df_est, method='linear_pruned', diameter_prune=1)
+# df_c = df_train[df_train['T'] == 0].reset_index(drop=True)
+# df_t = df_train[df_train['T'] == 1].reset_index(drop=True)
 
 # start = time.time()
 # all_diffs = {}

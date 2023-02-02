@@ -1,4 +1,3 @@
-import glob
 import os
 import numpy as np
 import pandas as pd
@@ -7,10 +6,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 
-from datagen.dgp import dgp_poly_basic, dgp_friedman, data_generation_dense_mixed_endo, \
-    dgp_sine, dgp_non_linear_mixed, dgp_polynomials, dgp_test
+from datagen.dgp import dgp_poly_basic, dgp_friedman, \
+    data_generation_dense_mixed_endo, dgp_sine, dgp_non_linear_mixed, \
+    dgp_polynomials, dgp_test
 
-np.random.seed(0)
+np.random.seed(1)
 
 IHDP_FOLDER = os.getenv('IHDP_FOLDER')
 
@@ -88,42 +88,6 @@ def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, std=1.5, t_imp=2, overlap=1, 
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, binary
-
-
-def dgp_ihdp_df(dataset, k=None, perc_train=None, n_train=672):
-    x_cols = [f'X{i}' for i in range(25)]
-    if perc_train:
-        train_idx = int(df.shape[0]*perc_train)
-    else:
-        train_idx = n_train
-    train_file = f'{IHDP_FOLDER}/ihdp_npci_1-{dataset}.train.npz'
-    test_file = f'{IHDP_FOLDER}/ihdp_npci_1-{dataset}.test.npz'
-    train = np.load(train_file)
-    test = np.load(test_file)
-    if k is None:
-        k = random.randint(0, int(dataset))
-    discrete = [f'X{i}' for i in range(6, 25)]
-
-    this_x = np.vstack([train['x'][:, :, k], test['x'][:, :, k]])
-    this_y = np.hstack([train['yf'][:, k], test['yf'][:, k]])
-    this_t = np.hstack([train['t'][:, k], test['t'][:, k]])
-    this_ycf = np.hstack([train['ycf'][:, k], test['ycf'][:, k]])
-    this_y0 = np.select([this_t == 0, this_t == 1], [this_y, this_ycf])
-    this_y1 = np.select([this_t == 0, this_t == 1], [this_ycf, this_y])
-    this_df = pd.DataFrame(this_x, columns=x_cols)
-    this_df[x_cols] = StandardScaler().fit_transform(this_df[x_cols])
-    this_df['Y'] = this_y
-    this_df['T'] = this_t
-    this_df['Y0'] = this_y0
-    this_df['Y1'] = this_y1
-    this_df['TE'] = this_y1 - this_y0
-    df = this_df
-
-    df_train = df.copy(deep=True)[:train_idx]
-    df_train = df_train.drop(columns=['Y0', 'Y1', 'TE'])
-    df_true = df.copy(deep=True)[train_idx:]
-    df_assess = df_true.copy(deep=True).drop(columns=['Y0', 'Y1', 'TE'])
-    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, discrete
 
 
 def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10):
@@ -206,69 +170,6 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, \
            binary, categorical, dummy_cols, categorical_to_dummy
-
-
-def dgp_acic_2022_df(track=2):
-    practice_files = glob.glob(os.path.join(ACIC_2022_FOLDER, 'practice/*.csv'))
-    practice_year_files = glob.glob(os.path.join(ACIC_2022_FOLDER, 'practice_year/*.csv'))
-
-    practice_df = []
-    practice_year_df = []
-
-    for f in practice_files:
-        practice_df.append(pd.read_csv(f))
-    practice_df = pd.concat(practice_df, ignore_index=True)
-
-    for f in practice_year_files:
-        practice_year_df.append(pd.read_csv(f))
-    practice_year_df = pd.concat(practice_year_df, ignore_index=True)
-
-    return practice_df, practice_year_df
-
-
-def dgp_news(news_file, perc_train=None, n_train=None):
-    x = pd.read_csv(f'{NEWS_FOLDER}/{news_file}.csv.x')
-    new_x = np.zeros(shape=(int(x.columns[0]), int(x.columns[1])))
-    x = x.to_numpy()
-    for i in range(x.shape[0]):
-        new_x[x[i, 0] - 1, x[i, 1] - 1] = x[i, 2]
-    df_outcome = pd.read_csv(f'{NEWS_FOLDER}/{news_file}.csv.y', header=None, names=['T', 'Y', 'Ycf', 'Y0_true',
-                                                                                     'Y1_true'])
-    df_outcome = df_outcome.drop(columns=['Ycf'])
-    x_cols = [f'X{i}' for i in range(new_x.shape[1])]
-    discrete = []
-    df = pd.DataFrame(new_x)
-    df.columns = x_cols
-    df = df.join(df_outcome)
-    df['TE'] = df['Y1_true'] - df['Y0_true']
-    df[x_cols] = StandardScaler().fit_transform(df[x_cols])
-    if perc_train:
-        train_idx = int(df.shape[0]*perc_train)
-    else:
-        train_idx = n_train
-    df_train = df.copy(deep=True)[:train_idx]
-    df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])
-    df_true = df.copy(deep=True)[train_idx:]
-    df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
-    return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(
-        drop=True), x_cols, discrete
-
-
-
-def dgp_lalonde():
-    # df_assess = pd.read_stata('http://www.nber.org/~rdehejia/data/nsw.dta')
-    # df_assess = df_assess.drop(columns=['data_id'])
-    # df_assess = df_assess.rename(columns={'treat': 'T', 're78': 'Y'})
-    # df_assess.to_csv('/Users/qlanners/projects/linear_coef_matching/datagen/lalonde.csv', index=False)
-    df_assess = pd.read_csv('/Users/qlanners/projects/linear_coef_matching/datagen/lalonde.csv')
-    df_assess['Y'] = np.log(df_assess['Y'] + 1)
-    x_cols = [c for c in df_assess.columns if c not in ['T', 'Y']]
-    discrete = ['black', 'hispanic', 'married', 'nodegree']
-    return df_assess.reset_index(drop=True), x_cols, discrete
-
-    # psid_control = pd.read_stata(‘http: // www.nber.org / ~rdehejia / data / psid_controls.dta’)
-    # psid_control2 = pd.read_stata(‘http://www.nber.org/~rdehejia/data/psid_controls2.dta’)
-    # psid_control3 = pd.read_stata(‘http://www.nber.org/~rdehejia/data/psid_controls3.dta’)
 
 
 def clean_2018_covariates(df):

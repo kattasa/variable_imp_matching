@@ -93,3 +93,15 @@ def weights_to_feature_selection(malts_weights, malts_covs):
     for w in malts_weights:
         malts_features.append(list(np.array(malts_covs)[w > 0]))
     return malts_features
+
+
+def get_errors(est_cates, true_cates, method_name):
+    ate = np.abs(true_cates).mean()[0]
+    cates = est_cates.join(true_cates, how='inner')
+    cates.columns = ['Est_CATE', 'True_CATE']
+    cates['Relative Error (%)'] = \
+        np.abs(cates['Est_CATE'] - cates['True_CATE']) / ate
+    cates['Method'] = method_name
+    print(f'{method_name} ommitted {round(((true_cates.shape[0] - cates.shape[0]) / true_cates.shape[0])*100, 4)}% of samples.')
+    return cates[['Method', 'True_CATE',
+                  'Est_CATE', 'Relative Error (%)']].copy(deep=True)

@@ -16,17 +16,44 @@ from utils import prune_covariates, linear_cate
 
 
 class Prognostic:
-    def __init__(self, Y, T, df, method='ensemble', random_state=None):
+    def __init__(self, Y, T, df, method='ensemble', double=False, random_state=None):
         self.Y = Y
         self.T = T
-        self.df = df
         self.cov = [c for c in df.columns if c not in [Y, T]]
-        self.df_c = df.loc[df[T] == 0]
-        self.Xc, self.Yc = self.df_c[self.cov].to_numpy(), self.df_c[Y].to_numpy()
+        self.double = double
+        self.binary_outcome = df[self.Y].nunique() == 2
+
+        df_c = df.loc[df[T] == 0]
+        Xc, Yc = df_c[self.cov].to_numpy(), df_c[Y].to_numpy()
+        if self.double:
+            df_t = df.loc[df[T] == 1]
+            Xt, Yt = df_t[self.cov].to_numpy(), df_t[Y].to_numpy()
         if method == 'ensemble':
-            self.hc = ensemble.GradientBoostingRegressor(random_state=random_state).fit(self.Xc, self.Yc)
+            if self.binary_outcome:
+                self.hc = ensemble.GradientBoostingClassifier(
+                    random_state=random_state).fit(Xc, Yc)
+            else:
+                self.hc = ensemble.GradientBoostingRegressor(
+                    random_state=random_state).fit(Xc, Yc)
+            if self.double:
+                if self.binary_outcome:
+                    self.ht = ensemble.GradientBoostingClassifier(
+                        random_state=random_state).fit(Xc, Yc)
+                else:
+                    self.ht = ensemble.GradientBoostingRegressor(
+                        random_state=random_state).fit(Xt, Yt)
         elif method == 'linear':
-            self.hc = linear.LassoCV(max_iter=5000, random_state=random_state).fit(self.Xc, self.Yc)
+            if self.binary_outcome:
+                self.hc = linear.LogisticRegressionCV(
+                    max_iter=500, random_state=random_state).fit(Xc, Yc)
+            else:
+                self.hc = linear.RidgeCV().fit(Xc, Yc)
+            if self.double:
+                if self.binary_outcome:
+                    self.ht = linear.LogisticRegressionCV(
+                        max_iter=500, random_state=random_state).fit(Xt, Yt)
+                else:
+                    self.ht = linear.RidgeCV().fit(Xt, Yt)
 
     def get_sample_cate(self, df_est, sample_idx, k=10):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
@@ -41,41 +68,55 @@ class Prognostic:
         yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean()
         return yt - yc
 
-    def get_matched_group(self, df_est, k=10, est_method='mean'):
-        X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
-        hat_Y = self.hc.predict(X_est)
-        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
-            hat_Y[T_est == 0].reshape(-1, 1))
-        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
-            hat_Y[T_est == 1].reshape(-1, 1))
-        _, c_mg = control_nn.kneighbors(hat_Y.reshape(-1, 1))
-        _, t_mg = treatment_nn.kneighbors(hat_Y.reshape(-1, 1))
+    def get_matched_group(self, df_est, k=10, diameter_prune=3):
+        X_est, Y_est, T_est = df_est[self.cov].to_numpy(), \
+                              df_est[self.Y].to_numpy(), \
+                              df_est[self.T].to_numpy()
+        if self.double:
+            if self.binary_outcome:
+                hat_Y = np.concatenate([self.hc.predict_proba(X_est)[:, [1]],
+                                        self.ht.predict_proba(X_est)[:, [1]]],
+                                       axis=1)
+            else:
+                hat_Y = np.concatenate([self.hc.predict(X_est).reshape(-1, 1),
+                                        self.ht.predict(X_est).reshape(-1, 1)],
+                                       axis=1)
+        else:
+            if self.binary_outcome:
+                hat_Y = self.hc.predict_proba(X_est)[:, [1]]
+            else:
+                hat_Y = self.hc.predict(X_est).reshape(-1, 1)
+        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50,
+                                      algorithm='auto',
+                                      n_jobs=10).fit(hat_Y[T_est == 0])
+        c_dist, c_mg = control_nn.kneighbors(hat_Y)
+        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50,
+                                        algorithm='auto',
+                                        n_jobs=10).fit(hat_Y[T_est == 1])
+        t_dist, t_mg = treatment_nn.kneighbors(hat_Y)
 
-        if est_method == 'mean':
-            yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean(axis=1)
-            yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean(axis=1)
-            df_mg = pd.DataFrame([yc, yt, T_est]).T
-            df_mg.columns = ['Yc', 'Yt', 'T']
-            df_mg['CATE'] = df_mg['Yt'] - df_mg['Yc']
-        elif est_method == 'linear_pruned':
-            M = np.abs(self.hc.coef_)
-            M = M / np.sum(M) * len(self.cov) if not np.all(M == 0) else np.ones(len(self.cov))
-            imp_covs = prune_covariates(self.cov, M)
-            covs = np.concatenate([df_est[T_est == 0][imp_covs + [self.T]].to_numpy()[c_mg],
-                                   df_est[T_est == 1][imp_covs + [self.T]].to_numpy()[t_mg]], axis=1)
-            outcomes = np.concatenate(
-                [df_est[T_est == 0][self.Y].to_numpy()[c_mg], df_est[T_est == 1][self.Y].to_numpy()[t_mg]], axis=1)
-            mg = np.concatenate([covs, outcomes.reshape(outcomes.shape[0], outcomes.shape[1], 1)], axis=2)
-            df_mg = pd.DataFrame([np.array([linear_cate(mg[i, :, :]) for i in range(mg.shape[0])])]).T
-            df_mg.columns = ['CATE']
+        yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean(axis=1)
+        c_diam = c_dist[:, -1]
+        yc = np.where(
+            c_diam <= np.mean(c_diam) + (diameter_prune*np.std(c_diam)), yc,
+            np.nan)
+        yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean(axis=1)
+        t_diam = t_dist[:, -1]
+        yt = np.where(
+            t_diam <= np.mean(t_diam) + (diameter_prune * np.std(t_diam)), yt,
+            np.nan)
+        df_mg = pd.DataFrame([yc, yt, T_est]).T
+        df_mg.columns = ['Yc', 'Yt', 'T']
+        df_mg['CATE'] = df_mg['Yt'] - df_mg['Yc']
 
         df_mg.index = df_est.index
+        df_mg = df_mg.loc[~df_mg['CATE'].isna()]
         c_mg = pd.DataFrame(np.array(df_est.loc[T_est == 0].index)[c_mg])
         t_mg = pd.DataFrame(np.array(df_est.loc[T_est == 1].index)[t_mg])
         return df_mg, c_mg, t_mg
 
 
-def prognostic_cv(outcome, treatment, data, method='ensemble', k_est=1, est_method='mean', n_splits=5, gen_skf=None,
+def prognostic_cv(outcome, treatment, data, method='ensemble', double=False, k_est=1, n_splits=5, gen_skf=None,
                   random_state=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
@@ -86,8 +127,9 @@ def prognostic_cv(outcome, treatment, data, method='ensemble', k_est=1, est_meth
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
-        prog = Prognostic(outcome, treatment, df_train, method=method, random_state=random_state)
-        prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est, est_method=est_method)
+        prog = Prognostic(outcome, treatment, df_train, method=method,
+                          double=double, random_state=random_state)
+        prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est)
         control_mgs.append(c_mgs)
         treatment_mgs.append(t_mgs)
         cate_est_i = pd.DataFrame(prog_mg['CATE'])
