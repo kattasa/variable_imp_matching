@@ -5,6 +5,7 @@ datagen/acic_2018
 datagen/news
 Experiments/dcc_runs
 .idea/
+**/__pycache__/
 Experiments/cate_error/Results
 Experiments/acic_error_and_runtime/Results*
 Experiments/coverage/Results*
