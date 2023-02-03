@@ -76,7 +76,9 @@ def get_CATES(df_estimation, match_groups, match_distances, outcome,
             else:
                 imp_covs = covariates
             these_mgs = df_estimation[imp_covs + [outcome]].to_numpy()[these_mgs]
-            these_samples = df_estimation[imp_covs].to_numpy()[mgs_idx]
+            these_samples = df_estimation[imp_covs].to_numpy()
+            if diameter_prune:
+                these_samples = these_samples[good_mgs]
             y_pot = [linear_cate(these_mgs[i], these_samples[i].reshape(1, -1))
                      for i in range(these_samples.shape[0])]
         else:
@@ -135,7 +137,7 @@ def get_model_weights(model, weight_attr, equal_weights, t):
         weights = weight_attr(model)
     if np.all(weights == 0):
         warnings.warn(f'Model fit to treatment={t} had all zero weights.')
-        return np.ones(p)
+        return np.ones(len(weights))
     if equal_weights:
         weights = np.where(weights > 0, 1, 0)
     return (weights / np.sum(weights)) * len(weights)

@@ -12,8 +12,6 @@ import sklearn.linear_model as linear
 from sklearn.model_selection import StratifiedKFold
 from sklearn.neighbors import NearestNeighbors
 
-from utils import prune_covariates, linear_cate
-
 
 class Prognostic:
     def __init__(self, Y, T, df, method='ensemble', double=False, random_state=None):

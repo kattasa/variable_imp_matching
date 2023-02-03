@@ -8,6 +8,7 @@ Created on Sat May 14 2022
 import numpy as np
 
 from sklearn.base import clone
+import sklearn.ensemble as ensemble
 import sklearn.linear_model as linear
 import sklearn.tree as tree
 
@@ -100,7 +101,7 @@ class LCM:
             m.fit(self.X, self.Y)
             if return_scores:
                 scores['all'] = m.score(self.X, self.Y)
-            self.M = get_model_weights(m, weight_attr, equal_weights, t)
+            self.M = get_model_weights(m, weight_attr, equal_weights, 'all')
         if return_scores:
             return scores
 
@@ -141,6 +142,8 @@ class LCM:
                     params = {'max_iter': 5000}
             elif model == 'tree':
                 params = {'max_depth': 4}
+            else:
+                params = {}
         params['random_state'] = self.random_state
         if model == 'linear':
             if weight_attr is None:
@@ -156,4 +159,13 @@ class LCM:
                 m = tree.DecisionTreeClassifier(**params)
             else:
                 m = tree.DecisionTreeRegressor(**params)
+        elif model == 'ensemble':
+            if weight_attr is None:
+                weight_attr = 'feature_importances_'
+            if self.binary_outcome:
+                m = ensemble.GradientBoostingClassifier(**params)
+            else:
+                m = ensemble.GradientBoostingRegressor(**params)
+        else:
+            m = model.set_params(**params)
         return m, weight_attr

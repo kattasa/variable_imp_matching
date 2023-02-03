@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from datagen.dgp_df import dgp_dense_mixed_endo_df, dgp_df, dgp_acic_2019_df, \
-    dgp_ihdp_df, dgp_news, dgp_acic_2018_df
+    dgp_acic_2018_df
 
 
 def create_folder(data, print_progress=True):
@@ -38,10 +38,6 @@ def get_data(data, config):
                                                                                config['imp_d'], config['unimp_c'],
                                                                                config['unimp_d'],
                                                                                n_train=config['n_train'])
-    elif data == 'ihdp':
-        df_train, df_data, df_true, x_cols, discrete = dgp_ihdp_df(config['ihdp_file'], n_train=config['n_train'])
-    elif data == 'news':
-        df_train, df_data, df_true, x_cols, discrete = dgp_news(config['news_file'], n_train=config['n_train'])
     else:
         df_train, df_data, df_true, x_cols, discrete = dgp_df(dgp=data, n_samples=config['num_samples'],
                                                               n_imp=config['imp_c'], n_unimp=config['unimp_c'],

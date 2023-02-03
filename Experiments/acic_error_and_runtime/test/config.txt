@@ -1,6 +1,0 @@
-{
-  "n_splits": 2,
-  "k_est_mean": 10,
-  "k_est_linear": 60,
-  "run_bart": true
-}

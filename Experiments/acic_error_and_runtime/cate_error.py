@@ -26,8 +26,8 @@ random_state = 1
 
 acic_year = os.getenv('ACIC_YEAR').replace("'", '').replace('"', '')
 acic_file = os.getenv('ACIC_FILE').replace("'", '').replace('"', '')
-k_est_mean = int(os.getenv('K_EST_MEAN'))
-k_est_linear = int(os.getenv('K_EST_LINEAR'))
+k_est_per_1000 = int(os.getenv('K_EST_PER_1000'))
+k_est_max = int(os.getenv('K_EST_MAX'))
 save_folder = os.getenv('SAVE_FOLDER').replace("'", '').replace('"', '')
 n_splits = int(os.getenv('N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
@@ -43,14 +43,14 @@ df_true.to_csv(f'{save_folder}/df_true.csv')
 
 new_n_splits = df_data.shape[0] // n_samples_per_split
 n_splits = max(min(new_n_splits, 10), n_splits)
+k_est = min(k_est_max, k_est_per_1000 * (df_data.shape[0] // 1000))
 
 run_bart = True
 if acic_year == 'acic_2018' and acic_file == 'd09f96200455407db569ae33fe06b0d3':
     print('**Not running bart. BART fails to create predictions due to small size of treated group.')
     run_bart = False
 
-config = {'n_splits': n_splits, 'k_est_mean': k_est_mean,
-          'k_est_linear': k_est_linear, 'run_bart': run_bart}
+config = {'n_splits': n_splits, 'k_est': k_est, 'run_bart': run_bart}
 
 with open(f'{save_folder}/config.txt', 'w') as f:
     json.dump(config, f, indent=2)
@@ -77,7 +77,7 @@ with warnings.catch_warnings(record=True) as warning_list:
     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=1, random_state=random_state)
     lcm.fit(model='linear')
-    lcm.MG(k=k_est_mean)
+    lcm.MG(k=k_est)
     lcm.CATE(cate_methods=['mean'])
 times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
@@ -101,7 +101,47 @@ with warnings.catch_warnings(record=True) as warning_list:
                  random_state=random_state)
     lcm.gen_skf = split_strategy
     lcm.fit(model='tree')
-    lcm.MG(k=k_est_mean)
+    lcm.MG(k=k_est)
+    lcm.CATE(cate_methods=['mean'])
+times[method_name] = time.time() - start
+df_err = pd.concat([df_err,
+                    get_errors(lcm.cate_df[['avg.CATE_mean']],
+                               df_true[['TE']],
+                               method_name=method_name)
+                    ])
+print(f'\n{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'GBR Feature Importance Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                 n_splits=n_splits, n_repeats=1,
+                 random_state=random_state)
+    lcm.gen_skf = split_strategy
+    lcm.fit(model='ensemble')
+    lcm.MG(k=k_est)
+    lcm.CATE(cate_methods=['mean'])
+times[method_name] = time.time() - start
+df_err = pd.concat([df_err,
+                    get_errors(lcm.cate_df[['avg.CATE_mean']],
+                               df_true[['TE']],
+                               method_name=method_name)
+                    ])
+print(f'\n{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
+
+method_name = 'GBR Single Model Feature Importance Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                 n_splits=n_splits, n_repeats=1,
+                 random_state=random_state)
+    lcm.gen_skf = split_strategy
+    lcm.fit(model='ensemble', separate_treatments=False)
+    lcm.MG(k=k_est)
     lcm.CATE(cate_methods=['mean'])
 times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
@@ -120,7 +160,7 @@ with warnings.catch_warnings(record=True) as warning_list:
                  random_state=random_state)
     lcm.gen_skf = split_strategy
     lcm.fit(model='linear', equal_weights=True)
-    lcm.MG(k=k_est_mean)
+    lcm.MG(k=k_est)
     lcm.CATE(cate_methods=['mean'])
 times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
@@ -138,7 +178,7 @@ with warnings.catch_warnings(record=True) as warning_list:
     cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
                                                    method='linear',
                                                    double=True,
-                                                   k_est=k_est_mean,
+                                                   k_est=k_est,
                                                    gen_skf=split_strategy,
                                                    random_state=random_state)
 times[method_name] = time.time() - start
@@ -157,7 +197,7 @@ with warnings.catch_warnings(record=True) as warning_list:
     cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T', df_dummy_data,
                                                    method='ensemble',
                                                    double=True,
-                                                   k_est=k_est_mean,
+                                                   k_est=k_est,
                                                    gen_skf=split_strategy,
                                                    random_state=random_state)
 times[method_name] = time.time() - start
