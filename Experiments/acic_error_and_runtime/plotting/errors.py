@@ -18,11 +18,11 @@ methods = [
     # 'Equal Weighted LASSO Matching',
     # 'Linear Prognostic Score Matching',
     'Ensemble Prognostic Score Matching',
-    # 'DoubleML',
-    # 'DRLearner',
-    # 'BART',
-    # 'Causal Forest',
-    # 'Causal Forest DML'
+    'DoubleML',
+    'DRLearner',
+    'BART',
+    'Causal Forest',
+    'Causal Forest DML'
 ]
 
 rename_methods = {
@@ -147,7 +147,6 @@ sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
 sns.boxplot(data=relative_errors, x="Relative Median Error to Top Method (%)", y="Method", order=order)
-plt.xlim([0,250])
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig(f'plots/acic_cate_relative_errors_by_method{plot_name}.png')

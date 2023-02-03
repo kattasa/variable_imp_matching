@@ -18,7 +18,7 @@ import seaborn as sns
 
 from Experiments.helpers import get_acic_data, summarize_warnings, get_errors
 from other_methods import bart, causalforest, prognostic, doubleml, \
-    drlearner, causalforest_dml
+    drlearner, causalforest_dml, pymalts
 from src.linear_coef_matching_mf import LCM_MF
 
 np.random.seed(1)
@@ -33,6 +33,7 @@ min_n_splits = int(os.getenv('MIN_N_SPLITS'))
 max_n_splits = int(os.getenv('MAX_N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
 n_repeats = int(os.getenv('N_REPEATS'))
+malts_max = int(os.getenv('MALTS_MAX'))
 
 df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)'])
 
@@ -47,12 +48,19 @@ new_n_splits = df_data.shape[0] // n_samples_per_split
 n_splits = max(min(new_n_splits, max_n_splits), min_n_splits)
 k_est = min(k_est_max, int(k_est_per_500 * (((df_data.shape[0] // n_splits) * (n_splits - 1)) / 500)))
 
+run_malts = True
+if df_data.shape[0] > malts_max:
+    print(f'**Not running malts. > {malts_max} samples.')
+    run_malts = False
+
 run_bart = True
 if acic_year == 'acic_2018' and acic_file == 'd09f96200455407db569ae33fe06b0d3':
-    print('**Not running bart. BART fails to create predictions due to small size of treated group.')
+    print('**Not running bart. BART fails to create predictions due to small '
+          'size of treated group.')
     run_bart = False
 
-config = {'n_splits': n_splits, 'k_est': k_est, 'run_bart': run_bart}
+config = {'n_splits': n_splits, 'k_est': k_est, 'run_bart': run_bart,
+          'run_malts': run_malts}
 
 with open(f'{save_folder}/config.txt', 'w') as f:
     json.dump(config, f, indent=2)
@@ -174,6 +182,28 @@ df_err = pd.concat([df_err,
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
 print()
+
+if run_malts:
+    method_name = 'MALTS Matching'
+    start = time.time()
+    with warnings.catch_warnings(record=True) as warning_list:
+        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical,
+                             categorical=categorical,
+                             k_tr=malts_k_train, k_est=k_est_mean,
+                             n_splits=n_splits, estimator='mean',
+                             smooth_cate=False,
+                             gen_skf=split_strategy, random_state=random_state)
+    times[method_name] = time.time() - start
+    df_err = pd.concat([df_err,
+                        get_errors(m.CATE_df[['avg.CATE']],
+                                   df_true[['TE']],
+                                   method_name=method_name)
+                        ])
+    print(f'\n{method_name} method complete: {time.time() - start}')
+    print(f'{method_name} complete: {time.time() - start}')
+    summarize_warnings(warning_list, method_name)
+    print()
+
 
 method_name = 'Linear Prognostic Score Matching'
 start = time.time()

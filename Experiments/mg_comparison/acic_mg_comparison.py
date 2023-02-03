@@ -41,7 +41,7 @@ df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).lo
 df_true = pd.read_csv(f'{acic_results_folder}/df_true.csv', index_col=0).loc[est_idx].reset_index(drop=True)
 
 lcm = LCM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
-lcm.fit(method='linear')
+lcm.fit(model='ensemble', separate_treatments=False)
 lcm_c_mg, lcm_t_mg, _, _ = lcm.get_matched_groups(df_est, k=k_est)
 print('LCM done')
 

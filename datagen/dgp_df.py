@@ -117,6 +117,23 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
             dummy_cols.append(these_dummies)
     dummy_cols = pd.concat(dummy_cols, axis=1)
     df = pd.concat([df, dummy_cols], axis=1)
+    # drop correlated columns
+    corr = df.corr()
+    cols = corr.columns
+    corr_drop_cols = []
+    n = corr.shape[0]
+    for i in range(n):
+        if cols[i] in corr_drop_cols:
+            continue
+        corr_drop_cols += list(corr.iloc[list(range(0, i)) +
+                                         list(range(i + 1, n))].loc[
+                                   corr.iloc[list(range(0, i)) +
+                                             list(range(i + 1, n)), i] == 1]
+                               .index)
+    df = df.drop(columns=corr_drop_cols)
+    binary = [c for c in binary if c not in corr_drop_cols]
+    categorical = [c for c in categorical if c not in corr_drop_cols]
+    dummy_cols = [c for c in dummy_cols.columns if c not in corr_drop_cols]
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)
     else:
@@ -125,7 +142,7 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
     df_cf = df_cf.rename(columns={'EY1': 'Y1_true', 'EY0': 'Y0_true'})
     df_cf['TE'] = df_cf['Y1_true'] - df_cf['Y0_true']
     df = pd.concat([df, df_cf], axis=1)
-    continuous = [x for x in x_cols if x not in binary + categorical + list(dummy_cols.columns)]
+    continuous = [x for x in x_cols if x not in binary + categorical + dummy_cols]
     df[continuous] = StandardScaler().fit_transform(df[continuous])
 
     df_train = df.copy(deep=True)[:train_idx]
@@ -133,7 +150,7 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols,\
-           binary, categorical, list(dummy_cols.columns), categorical_to_dummy
+           binary, categorical, dummy_cols, categorical_to_dummy
 
 
 def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
@@ -160,6 +177,23 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     df = df.join(df_cf.set_index('sample_id'), how='inner')
     df = df.rename(columns={'z': 'T', 'y': 'Y', 'y0': 'Y0_true', 'y1': 'Y1_true'})
     df['TE'] = df['Y1_true'] - df['Y0_true']
+    # drop correlated columns
+    corr = df[x_cols].corr()
+    cols = corr.columns
+    corr_drop_cols = []
+    n = corr.shape[0]
+    for i in range(n):
+        if cols[i] in corr_drop_cols:
+            continue
+        corr_drop_cols += list(corr.iloc[list(range(0, i)) +
+                                         list(range(i + 1, n))].loc[
+                                   corr.iloc[list(range(0, i)) +
+                                             list(range(i + 1, n)), i] == 1]
+                               .index)
+    df = df.drop(columns=corr_drop_cols)
+    binary = [c for c in binary if c not in corr_drop_cols]
+    categorical = [c for c in categorical if c not in corr_drop_cols]
+    dummy_cols = [c for c in dummy_cols if c not in corr_drop_cols]
     df[continuous] = StandardScaler().fit_transform(df[continuous])
     if perc_train:
         train_idx = int(df.shape[0]*perc_train)

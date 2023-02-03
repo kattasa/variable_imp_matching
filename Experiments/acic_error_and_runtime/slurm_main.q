@@ -14,14 +14,15 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
-memory=$"16G"
-k_est_per_500=2
-k_est_max=16
+memory=$"64G"
+k_est_per_500=4
+k_est_max=20
 min_n_splits=2
 max_n_splits=10
 n_sample_per_split_2019=500
 n_sample_per_split_2018=1000
-n_repeats=3
+n_repeats=2
+malts_max=5000
 
 all_acic_2018_files=($(python -c "import glob;import os;print([f.replace('.csv', '') for f in set([c.split('/')[-1].replace('_cf', '') for c in glob.glob('${ACIC_2018_FOLDER}/*.csv')])])" | tr -d '[],'))
 
@@ -38,7 +39,7 @@ do
 #  if [ -f "${save_dir}/df_err.csv" ]; then
 #    echo "${save_dir}/df_err.csv exists"
 #  else
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST_PER_500=$k_est_per_500,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,MIN_N_SPLITS=$min_n_splits,MAX_N_SPLITS=$max_n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split_2019,N_REPEATS=$n_repeats,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST_PER_500=$k_est_per_500,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,MIN_N_SPLITS=$min_n_splits,MAX_N_SPLITS=$max_n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split_2019,N_REPEATS=$n_repeats,MALTS_MAX=$malts_max,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
 #  fi
   ((acic_file++))
 done
@@ -53,5 +54,5 @@ do
     save_dir=$(printf "${RESULTS_FOLDER}/acic_2018-${acic_file}_%03d" $counter | tr -d \"\')
   done
   mkdir $save_dir
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST_PER_500=$k_est_per_500,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,MIN_N_SPLITS=$min_n_splits,MAX_N_SPLITS=$max_n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split_2018,N_REPEATS=$n_repeats,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST_PER_500=$k_est_per_500,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,MIN_N_SPLITS=$min_n_splits,MAX_N_SPLITS=$max_n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split_2018,N_REPEATS=$n_repeats,MALTS_MAX=$malts_max,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
 done
