@@ -1,5 +1,0 @@
-{
-  "n_splits": 2,
-  "k_est": 4,
-  "run_bart": true
-}

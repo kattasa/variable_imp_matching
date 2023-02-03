@@ -29,8 +29,10 @@ acic_file = os.getenv('ACIC_FILE').replace("'", '').replace('"', '')
 k_est_per_500 = int(os.getenv('K_EST_PER_500'))
 k_est_max = int(os.getenv('K_EST_MAX'))
 save_folder = os.getenv('SAVE_FOLDER').replace("'", '').replace('"', '')
-n_splits = int(os.getenv('N_SPLITS'))
+min_n_splits = int(os.getenv('MIN_N_SPLITS'))
+max_n_splits = int(os.getenv('MAX_N_SPLITS'))
 n_samples_per_split = int(os.getenv('N_SAMPLES_PER_SPLIT'))
+n_repeats = int(os.getenv('N_REPEATS'))
 
 df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)'])
 
@@ -42,7 +44,7 @@ df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_ac
 df_true.to_csv(f'{save_folder}/df_true.csv')
 
 new_n_splits = df_data.shape[0] // n_samples_per_split
-n_splits = max(min(new_n_splits, 10), n_splits)
+n_splits = max(min(new_n_splits, max_n_splits), min_n_splits)
 k_est = min(k_est_max, int(k_est_per_500 * (((df_data.shape[0] // n_splits) * (n_splits - 1)) / 500)))
 
 run_bart = True
@@ -75,7 +77,7 @@ method_name = 'LASSO Coefficient Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
-                 n_splits=n_splits, n_repeats=1, random_state=random_state)
+                 n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
     lcm.fit(model='linear')
     lcm.MG(k=k_est)
     lcm.CATE(cate_methods=['mean'])
