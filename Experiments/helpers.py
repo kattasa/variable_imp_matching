@@ -39,7 +39,7 @@ def get_data(data, config):
                                                                                config['unimp_d'],
                                                                                n_train=config['n_train'])
     else:
-        df_train, df_data, df_true, x_cols, discrete = dgp_df(dgp=data, n_samples=config['num_samples'],
+        df_train, df_data, df_true, x_cols, binary = dgp_df(dgp=data, n_samples=config['num_samples'],
                                                               n_imp=config['imp_c'], n_unimp=config['unimp_c'],
                                                               n_train=config['n_train'])
     if config['n_train'] > 0:

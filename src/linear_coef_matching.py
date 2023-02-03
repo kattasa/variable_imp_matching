@@ -91,18 +91,25 @@ class LCM:
                 if return_scores:
                     scores[t] = m.score(self.X[self.T == t, :],
                                         self.Y[self.T == t])
-                M.append(get_model_weights(m, weight_attr, equal_weights, t))
+                M.append(get_model_weights(m, weight_attr, equal_weights,
+                                           not separate_treatments, t))
                 m = clone(estimator=m)
             if metalearner:
                 self.M = dict(zip(self.treatments_classes, M))
             else:
                 self.M = sum(M) / len(self.treatments_classes)
         else:
-            m.fit(self.X, self.Y)
+            m.fit(np.concatenate([self.X, self.T.reshape(-1, 1)], axis=1),
+                  self.Y)
             if return_scores:
-                scores['all'] = m.score(self.X, self.Y)
-            self.M = get_model_weights(m, weight_attr, equal_weights, 'all')
+                scores['all'] = m.score(np.concatenate([self.X,
+                                                        self.T.reshape(-1, 1)],
+                                                       axis=1),
+                                        self.Y)
+            self.M = get_model_weights(m, weight_attr, equal_weights,
+                                       not separate_treatments, 'all')
         if return_scores:
+            print(scores)
             return scores
 
     def get_matched_groups(self, df_estimation, k=10,

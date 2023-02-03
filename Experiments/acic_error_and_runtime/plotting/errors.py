@@ -11,22 +11,18 @@ all_folders = glob(f"{os.getenv('RESULTS_FOLDER')}/*/", recursive=True)
 plot_name = os.getenv('PLOT_NAME')
 q = 0.5
 methods = [
-    'LASSO Coefficient Matching',
-    'Tree Feature Importance Matching',
-    'Equal Weighted LASSO Matching',
-    'MALTS Matching',
-    'MALTS Matching with LASSO Weights',
-    'MALTS Matching with LASSO Feature Selection',
-    'Prognostic Score Matching',
-    'BART',
-    'DoubleML',
-    'DRLearner',
-    'Causal Forest',
-    'Causal Forest DML',
-    'Linear Prognostic Score Matching',
-    'LASSO Coefficient Matching Linear',
+    # 'LASSO Coefficient Matching',
+    # 'Tree Feature Importance Matching',
+    # 'GBR Feature Importance Matching',
+    'GBR Single Model Feature Importance Matching',
+    # 'Equal Weighted LASSO Matching',
+    # 'Linear Prognostic Score Matching',
     'Ensemble Prognostic Score Matching',
-    'LASSO Coefficient Matching Mean'
+    # 'DoubleML',
+    # 'DRLearner',
+    # 'BART',
+    # 'Causal Forest',
+    # 'Causal Forest DML'
 ]
 
 rename_methods = {
@@ -35,34 +31,27 @@ rename_methods = {
     'Tree Feature Importance Matching': 'Tree Feature\nImportance Matching',
     'LASSO Coefficient Matching': 'LASSO Coefficient\nMatching',
     "Equal Weighted LASSO Matching": "Equal Weighted\nLASSO Matching",
-    'MALTS Matching with LASSO Weights': 'MALTS Matching with\nLASSO Weights',
-    'MALTS Matching with LASSO Feature Selection': 'MALTS Matching with\nLASSO Feature Selection',
-    'Prognostic Score Matching': 'Prognostic Score\nMatching',
+    'Linear Prognostic Score Matching': 'Linear Prognostic\nScore Matching',
+    'Ensemble Prognostic Score Matching': 'Ensemble Prognostic\nScore Matching',
     "DoubleML": "Linear DoubleML",
     "DRLearner": "Linear DRLearner",
-    'Linear Prognostic Score Matching': 'Linear Prognostic\nScore Matching',
-    'LASSO Coefficient Matching Linear': 'LASSO Coefficient\nMatching Linear',
-    'Ensemble Prognostic Score Matching': 'Ensemble Prognostic\nScore Matching',
-    'LASSO Coefficient Matching Mean': 'LASSO Coefficient\nMatching Mean'
+    'GBR Feature Importance Matching': 'GBR Feature\nImportance Matching',
+    'GBR Single Model Feature Importance Matching': 'GBR Single Model\nFeature Importance Matching'
 }
 
 order = [
     'LASSO Coefficient\nMatching',
     "Equal Weighted\nLASSO Matching",
     'Tree Feature\nImportance Matching',
-    'MALTS Matching',
-    'MALTS Matching with\nLASSO Weights',
-    'MALTS Matching with\nLASSO Feature Selection',
-    'Prognostic Score\nMatching',
+    'GBR Feature\nImportance Matching',
+    'GBR Single Model\nFeature Importance Matching',
+    'Linear Prognostic\nScore Matching',
+    'Ensemble Prognostic\nScore Matching',
     "T-Learner BART",
     'Causal Forest',
     "Causal Forest\nDML",
     'Linear DoubleML',
     'Linear DRLearner',
-    'Linear Prognostic\nScore Matching',
-    'LASSO Coefficient\nMatching Linear',
-    'Ensemble Prognostic\nScore Matching',
-    'LASSO Coefficient\nMatching Mean'
 ]
 
 all_errors = pd.DataFrame([], index=methods)
@@ -78,6 +67,9 @@ for f in all_folders:
             label = f'ACIC 2018 {acic_2018_file_no}'
             acic_2018_file_no += 1
         all_errors = all_errors.join(pd.read_csv(f'{f}df_err.csv').groupby('Method')['Relative Error (%)'].quantile(q).rename(label).to_frame())
+        # all_errors = all_errors.join(
+        #     pd.read_csv(f'{f}df_err.csv').groupby('Method')[
+        #         'Relative Error (%)'].mean().rename(label).to_frame())
         name_to_label[f.split('/')[-2]] = label
     else:
         failed_files.append(f.split('/')[-2])
@@ -138,7 +130,7 @@ plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-sns.boxplot(data=all_errors, x="Median Relative Error (%)", y="Method", order=order)
+sns.boxplot(data=all_errors, x="Median Relative Error (%)", y="Method", order=order, showfliers=False)
 plt.xticks(rotation=65, horizontalalignment='right')
 plt.tight_layout()
 plt.savefig(f'plots/acic_cate_errors_by_method{plot_name}.png')

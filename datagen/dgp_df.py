@@ -62,6 +62,7 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
     df.columns = [*x_cols, 'Y', 'T', 'Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true']
 
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+    df['T'] = df['T'].astype(int)
 
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])

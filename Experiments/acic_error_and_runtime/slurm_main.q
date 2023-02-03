@@ -15,8 +15,8 @@ source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
 memory=$"8G"
-k_est_per_1000=4
-k_est_max=15
+k_est_per_500=2
+k_est_max=16
 n_splits=2
 n_sample_per_split=2500
 
@@ -35,7 +35,7 @@ do
 #  if [ -f "${save_dir}/df_err.csv" ]; then
 #    echo "${save_dir}/df_err.csv exists"
 #  else
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST_PER_1000=$k_est_per_1000,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2019",ACIC_FILE=$acic_file,K_EST_PER_500=$k_est_per_500,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
 #  fi
   ((acic_file++))
 done
@@ -50,5 +50,5 @@ do
     save_dir=$(printf "${RESULTS_FOLDER}/acic_2018-${acic_file}_%03d" $counter | tr -d \"\')
   done
   mkdir $save_dir
-  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST_PER_1000=$k_est_per_1000,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
+  sbatch -o "${save_dir}/slurm.out" -e "${save_dir}/slurm.err" --mem="$memory" --export=ACIC_YEAR="acic_2018",ACIC_FILE=$acic_file,K_EST_PER_500=$k_est_per_500,K_EST_MAX=$k_est_max,SAVE_FOLDER=$save_dir,N_SPLITS=$n_splits,N_SAMPLES_PER_SPLIT=$n_sample_per_split,ACIC_2018_FOLDER,ACIC_2019_FOLDER,PYTHONPATH,R_HOME slurm_cate_error.q
 done

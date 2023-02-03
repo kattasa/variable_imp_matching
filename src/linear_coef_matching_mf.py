@@ -97,14 +97,16 @@ class LCM_MF:
         self.cate_df[outcome] = self.data[outcome]
 
     def get_MGs(self, return_distance=False):
-        c_mg_list = []
-        t_mg_list = []
+        mg_list = []
         i = 0
         for est_idx, train_idx in self.gen_skf:
-            c_mg_list.append(convert_idx(self.C_MG_list[i], est_idx))
-            t_mg_list.append(convert_idx(self.T_MG_list[i], est_idx))
+            this_mg = {}
+            these_mgs = self.MGs[i]
+            for t, mg in these_mgs.items():
+                this_mg[t] = convert_idx(mg, est_idx)
+            mg_list.append(this_mg)
             i += 1
         if return_distance:
-            return c_mg_list, t_mg_list, self.C_MG_distance, self.T_MG_distance
+            return mg_list, self.MG_distances
         else:
-            return c_mg_list, t_mg_list
+            return mg_list

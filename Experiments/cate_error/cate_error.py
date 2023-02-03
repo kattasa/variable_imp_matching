@@ -110,36 +110,35 @@ def cate_error_test(dataset, n_splits, dataset_config, methods_config, k_est_mea
             bart_treatment_preds = [bart_treatment_preds.iloc[i, :].dropna().tolist() for i in range(n_splits)]
 
         if 'linear_coef_matching' in methods:
-            for double_model in methods_config['linear_coef_matching']['double_model']:
+            start = time.time()
+            lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits,
+                          n_repeats=methods_config['linear_coef_matching']['n_repeats'])
+            init_time = time.time() - start
+            lcm.gen_skf = split_strategy
+            start = time.time()
+            lcm.fit(params=methods_config['linear_coef_matching']['params'], double_model=double_model)
+            fit_time = time.time() - start
+            for e_method in [[m, k_est_mean if m[0] == 'mean' else k_est_linear] for m in
+                             methods_config['linear_coef_matching']['methods']]:
+                method_name = f'{"Double" if double_model else "Single"} Model Lasso Matching ' \
+                              f'{"Augmented " if e_method[0][1] else ""}{" ".join(e_method[0][0].split("_")).title()}'
                 start = time.time()
-                lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits,
-                              n_repeats=methods_config['linear_coef_matching']['n_repeats'])
-                init_time = time.time() - start
-                lcm.gen_skf = split_strategy
+                lcm.MG(k=e_method[1])
+                mg_time = time.time() - start
                 start = time.time()
-                lcm.fit(params=methods_config['linear_coef_matching']['params'], double_model=double_model)
-                fit_time = time.time() - start
-                for e_method in [[m, k_est_mean if m[0] == 'mean' else k_est_linear] for m in
-                                 methods_config['linear_coef_matching']['methods']]:
-                    method_name = f'{"Double" if double_model else "Single"} Model Lasso Matching ' \
-                                  f'{"Augmented " if e_method[0][1] else ""}{" ".join(e_method[0][0].split("_")).title()}'
-                    start = time.time()
-                    lcm.MG(k=e_method[1])
-                    mg_time = time.time() - start
-                    start = time.time()
-                    lcm.CATE(cate_methods=[e_method[0]], precomputed_control_preds=bart_control_preds,
-                             precomputed_treatment_preds=bart_treatment_preds)
-                    # lcm.CATE(cate_methods=[e_method[0]])
-                    times[method_name] = time.time() - start + fit_time + mg_time + init_time
-                    cate_df = lcm.cate_df.sort_index()
-                    cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-                    cate_df['True_CATE'] = df_true['TE'].to_numpy()
-                    cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
-                    cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
-                    cate_df['Iter'] = iter
-                    df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']].copy(deep=True))
-                    if print_progress:
-                        print(f'{method_name} method complete: {time.time() - start + fit_time + mg_time + init_time}')
+                lcm.CATE(cate_methods=[e_method[0]], precomputed_control_preds=bart_control_preds,
+                         precomputed_treatment_preds=bart_treatment_preds)
+                # lcm.CATE(cate_methods=[e_method[0]])
+                times[method_name] = time.time() - start + fit_time + mg_time + init_time
+                cate_df = lcm.cate_df.sort_index()
+                cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
+                cate_df['True_CATE'] = df_true['TE'].to_numpy()
+                cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
+                cate_df['Method'] = [method_name for i in range(cate_df.shape[0])]
+                cate_df['Iter'] = iter
+                df_err = df_err.append(cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)', 'Iter']].copy(deep=True))
+                if print_progress:
+                    print(f'{method_name} method complete: {time.time() - start + fit_time + mg_time + init_time}')
 
         if 'malts' in methods:
             est_methods = [[m, k_est_mean if m == 'mean' else k_est_linear] for m in methods_config['malts']['methods']]
