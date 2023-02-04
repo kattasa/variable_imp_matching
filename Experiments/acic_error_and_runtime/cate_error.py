@@ -42,7 +42,7 @@ print(f'Running {acic_year} file {acic_file}...')
 total_time = time.time()
 
 df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_acic_data(year=acic_year, file=acic_file, n_train=0)
-df_true.to_csv(f'{save_folder}/df_true.csv')
+# df_true.to_csv(f'{save_folder}/df_true.csv')
 
 new_n_splits = df_data.shape[0] // n_samples_per_split
 n_splits = max(min(new_n_splits, max_n_splits), min_n_splits)
@@ -69,14 +69,14 @@ df_dummy_data = df_data.copy(deep=True)
 if dummy_cols is not None:
     df_data = df_data.drop(columns=dummy_cols)
     df_dummy_data = df_dummy_data.drop(columns=categorical)
-    with open(f'{save_folder}/dummy_cols.txt', 'w') as f:
-        f.write(str(dummy_cols))
-    df_dummy_data.to_csv(f'{save_folder}/df_dummy_data.csv')
-df_data.to_csv(f'{save_folder}/df_data.csv')
-with open(f'{save_folder}/binary_cols.txt', 'w') as f:
-    f.write(str(binary))
-with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
-    f.write(str(categorical))
+    # with open(f'{save_folder}/dummy_cols.txt', 'w') as f:
+    #     f.write(str(dummy_cols))
+    # df_dummy_data.to_csv(f'{save_folder}/df_dummy_data.csv')
+# df_data.to_csv(f'{save_folder}/df_data.csv')
+# with open(f'{save_folder}/binary_cols.txt', 'w') as f:
+#     f.write(str(binary))
+# with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
+#     f.write(str(categorical))
 
 
 times = {}
