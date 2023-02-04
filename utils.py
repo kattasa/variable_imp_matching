@@ -45,28 +45,9 @@ def convert_idx(mg, idx):
     return pd.DataFrame(idx[mg.to_numpy()], index=idx)
 
 
-<<<<<<< Updated upstream
 def get_CATES(df_estimation, match_groups, match_distances, outcome,
               covariates, M, method='mean', diameter_prune=None,
               cov_imp_prune=0.01, check_est_df=True):
-=======
-def mg_to_training_set(df_estimation, control_mg, treatment_mg, covariates, treatment, outcome, augmented=False,
-                       control_preds=None, treatment_preds=None):
-    all_matches = np.concatenate([control_mg.to_numpy(), treatment_mg.to_numpy()], axis=1)
-    if augmented:
-        return np.concatenate([df_estimation[covariates + [treatment]].to_numpy()[all_matches],
-                               np.expand_dims(df_estimation[outcome].to_numpy()[all_matches] -
-                                              (((1 - df_estimation[treatment].to_numpy()[all_matches]) *
-                                                control_preds[all_matches]) +
-                                               (df_estimation[treatment].to_numpy()[all_matches] *
-                                                treatment_preds[all_matches])), axis=2)], axis=2)
-    else:
-        return df_estimation[covariates + [treatment, outcome]].to_numpy()[all_matches]
-
-
-def get_CATES(df_estimation, control_mg, treatment_mg, method, outcome, treatment, covariates, M,
-              augmented=False, control_preds=None, treatment_preds=None, check_est_df=True, random_state=None):
->>>>>>> Stashed changes
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
     df_estimation, old_idx = check_mg_indices(df_estimation, match_groups,
