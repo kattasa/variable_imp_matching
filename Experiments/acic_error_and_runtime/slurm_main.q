@@ -27,10 +27,10 @@ n_sample_per_split_2018=1000
 n_repeats=1
 malts_max=5000
 
-large_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/large.csv');acic = list(csv.reader(file, delimiter=","))[0];file.close();print(acic)" | tr -d '[],'))
-medium_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/medium.csv');acic = list(csv.reader(file, delimiter=","))[0];file.close();print(acic)" | tr -d '[],'))
-medium_small_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/medium_small.csv');acic = list(csv.reader(file, delimiter=","))[0];file.close();print(acic)" | tr -d '[],'))
-small_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/small.csv');acic = list(csv.reader(file, delimiter=","))[0];file.close();print(acic)" | tr -d '[],'))
+large_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/large.csv');acic = list(csv.reader(file, delimiter=','))[0];file.close();print(acic)" | tr -d '[],'))
+medium_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/medium.csv');acic = list(csv.reader(file, delimiter=','))[0];file.close();print(acic)" | tr -d '[],'))
+medium_small_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/medium_small.csv');acic = list(csv.reader(file, delimiter=','))[0];file.close();print(acic)" | tr -d '[],'))
+small_acic_2018_files=($(python -c "import csv;file=open('${ACIC_2018_FOLDER}/acic_file_sizes/small.csv');acic = list(csv.reader(file, delimiter=','))[0];file.close();print(acic)" | tr -d '[],'))
 
 #for acic_file in 1 2 5 6 7 8
 #do
