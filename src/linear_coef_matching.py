@@ -99,7 +99,6 @@ class LCM:
             else:
                 self.M = sum(M) / len(self.treatments_classes)
         else:
-<<<<<<< Updated upstream
             m.fit(np.concatenate([self.X, self.T.reshape(-1, 1)], axis=1),
                   self.Y)
             if return_scores:
@@ -112,56 +111,6 @@ class LCM:
         if return_scores:
             print(scores)
             return scores
-=======
-            if method == 'linear':
-                # model = linear.LassoCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
-                # M_hat = np.abs(model.coef_).reshape(-1,)
-                # print('Control Score:')
-                # print(model.score(self.X[self.T == 0, :-1], self.Y[self.T == 0]))
-                # print('Treatment Score:')
-                # print(model.score(self.X[self.T == 1, :-1], self.Y[self.T == 1]))
-                params = {'penalty': 'l1', 'solver': 'saga'}
-                model_C = linear.LogisticRegressionCV(**params).fit(self.X[self.T == 0, :-1], self.Y[self.T == 0])
-                model_T = linear.LogisticRegressionCV(**params).fit(self.X[self.T == 1, :-1], self.Y[self.T == 1])
-                print(f'Control Score: {model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0])}')
-                print(f'Treatment Score: {model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])}')
-                mc = (np.abs(model_C.coef_).reshape(-1,) / np.sum(np.abs(model_C.coef_))) if \
-                    not np.all(model_C.coef_ == 0) else np.ones(self.p)/self.p
-                mt = (np.abs(model_T.coef_).reshape(-1,) / np.sum(np.abs(model_T.coef_))) if \
-                    not np.all(model_T.coef_ == 0) else np.ones(self.p)/self.p
-                M_hat = mc + mt
-                # model = linear.LassoCV(**params).fit(self.X, self.Y)
-                # M_hat = np.abs(model.coef_[:-1]).reshape(-1, )
-                # print('Score:')
-                # print(model.score(self.X, self.Y))
-            elif method == 'tree':
-                model = tree.DecisionTreeRegressor(**params).fit(self.X, self.Y)
-                M_hat = model.feature_importances_[:-1].reshape(-1,)
-            elif method == 'ensemble':
-                model_C = ensemble.GradientBoostingRegressor(random_state=self.random_state).fit(
-                    self.X[self.T == 0, :-1], self.Y[self.T == 0])
-                model_T = ensemble.GradientBoostingRegressor(random_state=self.random_state).fit(
-                    self.X[self.T == 1, :-1], self.Y[self.T == 1])
-                mc = (model_C.feature_importances_.reshape(-1,) / np.sum(model_C.feature_importances_)) if \
-                    not np.all(model_C.feature_importances_ == 0) else np.ones(self.p)/self.p
-                mt = (model_T.feature_importances_.reshape(-1,) / np.sum(model_T.feature_importances_)) if \
-                    not np.all(model_T.feature_importances_ == 0) else np.ones(self.p)/self.p
-                M_hat = mc + mt
-            else:
-                raise Exception(f'Fit method not supported.')
-            # if equal_weights:
-            #     M_hat = np.where(M_hat > 0, 1, 0)
-            self.M = (M_hat / np.sum(M_hat)) * self.p if not np.all(M_hat == 0) else np.ones(self.p)
-            if equal_weights:
-                print(f'Pre trim: {np.sum(self.M > 0)}')
-                self.M = np.where(self.M > 0.03*self.p, 1, 0)
-                print(f'Post trim: {np.sum(self.M > 0)}')
-        if return_score:
-            if double_model:
-                return model_C.score(self.X[self.T == 0, :-1], self.Y[self.T == 0]), \
-                       model_T.score(self.X[self.T == 1, :-1], self.Y[self.T == 1])
-            return model.score(self.X, self.Y)
->>>>>>> Stashed changes
 
     def get_matched_groups(self, df_estimation, k=10,
                            return_original_idx=False, check_est_df=False):

@@ -103,25 +103,45 @@ split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
-method_name = 'Tree Feature Importance Matching'
-start = time.time()
-with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
-                 n_splits=n_splits, n_repeats=1,
-                 random_state=random_state)
-    lcm.gen_skf = split_strategy
-    lcm.fit(model='tree')
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['mean'])
-times[method_name] = time.time() - start
-df_err = pd.concat([df_err,
-                    get_errors(lcm.cate_df[['avg.CATE_mean']],
-                               df_true[['TE']],
-                               method_name=method_name)
-                    ])
-print(f'\n{method_name} method complete: {time.time() - start}')
-summarize_warnings(warning_list, method_name)
-print()
+# method_name = 'Tree Feature Importance Matching'
+# start = time.time()
+# with warnings.catch_warnings(record=True) as warning_list:
+#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+#                  n_splits=n_splits, n_repeats=1,
+#                  random_state=random_state)
+#     lcm.gen_skf = split_strategy
+#     lcm.fit(model='tree')
+#     lcm.MG(k=k_est)
+#     lcm.CATE(cate_methods=['mean'])
+# times[method_name] = time.time() - start
+# df_err = pd.concat([df_err,
+#                     get_errors(lcm.cate_df[['avg.CATE_mean']],
+#                                df_true[['TE']],
+#                                method_name=method_name)
+#                     ])
+# print(f'\n{method_name} method complete: {time.time() - start}')
+# summarize_warnings(warning_list, method_name)
+# print()
+#
+# method_name = 'GBR Feature Importance Matching'
+# start = time.time()
+# with warnings.catch_warnings(record=True) as warning_list:
+#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+#                  n_splits=n_splits, n_repeats=1,
+#                  random_state=random_state)
+#     lcm.gen_skf = split_strategy
+#     lcm.fit(model='ensemble')
+#     lcm.MG(k=k_est)
+#     lcm.CATE(cate_methods=['mean'])
+# times[method_name] = time.time() - start
+# df_err = pd.concat([df_err,
+#                     get_errors(lcm.cate_df[['avg.CATE_mean']],
+#                                df_true[['TE']],
+#                                method_name=method_name)
+#                     ])
+# print(f'\n{method_name} method complete: {time.time() - start}')
+# summarize_warnings(warning_list, method_name)
+# print()
 
 method_name = 'GBR Feature Importance Matching'
 start = time.time()
@@ -130,27 +150,8 @@ with warnings.catch_warnings(record=True) as warning_list:
                  n_splits=n_splits, n_repeats=1,
                  random_state=random_state)
     lcm.gen_skf = split_strategy
-    lcm.fit(model='ensemble')
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['mean'])
-times[method_name] = time.time() - start
-df_err = pd.concat([df_err,
-                    get_errors(lcm.cate_df[['avg.CATE_mean']],
-                               df_true[['TE']],
-                               method_name=method_name)
-                    ])
-print(f'\n{method_name} method complete: {time.time() - start}')
-summarize_warnings(warning_list, method_name)
-print()
-
-method_name = 'GBR Single Model Feature Importance Matching'
-start = time.time()
-with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
-                 n_splits=n_splits, n_repeats=1,
-                 random_state=random_state)
-    lcm.gen_skf = split_strategy
-    lcm.fit(model='ensemble', separate_treatments=False)
+    lcm.fit(model='ensemble', params={'max_depth': 1},
+            separate_treatments=True)
     lcm.MG(k=k_est)
     lcm.CATE(cate_methods=['mean'])
 times[method_name] = time.time() - start
@@ -164,47 +165,48 @@ summarize_warnings(warning_list, method_name)
 print()
 
 
-method_name = 'Equal Weighted LASSO Matching'
-start = time.time()
-with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
-                 random_state=random_state)
-    lcm.gen_skf = split_strategy
-    lcm.fit(model='linear', equal_weights=True)
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['mean'])
-times[method_name] = time.time() - start
-df_err = pd.concat([df_err,
-                    get_errors(lcm.cate_df[['avg.CATE_mean']],
-                               df_true[['TE']],
-                               method_name=method_name)
-                    ])
-print(f'\n{method_name} method complete: {time.time() - start}')
-summarize_warnings(warning_list, method_name)
-print()
 
-if run_malts:
-    method_name = 'MALTS Matching'
-    start = time.time()
-    with warnings.catch_warnings(record=True) as warning_list:
-        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical,
-                             categorical=categorical,
-                             k_est=k_est,
-                             n_splits=n_splits, estimator='mean',
-                             smooth_cate=False,
-                             gen_skf=split_strategy, random_state=random_state)
-    times[method_name] = time.time() - start
-    df_err = pd.concat([df_err,
-                        get_errors(m.CATE_df[['avg.CATE']],
-                                   df_true[['TE']],
-                                   method_name=method_name)
-                        ])
-    print(f'\n{method_name} method complete: {time.time() - start}')
-    print(f'{method_name} complete: {time.time() - start}')
-    summarize_warnings(warning_list, method_name)
-    print()
-
-
+# method_name = 'Equal Weighted LASSO Matching'
+# start = time.time()
+# with warnings.catch_warnings(record=True) as warning_list:
+#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data, n_splits=n_splits, n_repeats=1,
+#                  random_state=random_state)
+#     lcm.gen_skf = split_strategy
+#     lcm.fit(model='linear', equal_weights=True)
+#     lcm.MG(k=k_est)
+#     lcm.CATE(cate_methods=['mean'])
+# times[method_name] = time.time() - start
+# df_err = pd.concat([df_err,
+#                     get_errors(lcm.cate_df[['avg.CATE_mean']],
+#                                df_true[['TE']],
+#                                method_name=method_name)
+#                     ])
+# print(f'\n{method_name} method complete: {time.time() - start}')
+# summarize_warnings(warning_list, method_name)
+# print()
+#
+# if run_malts:
+#     method_name = 'MALTS Matching'
+#     start = time.time()
+#     with warnings.catch_warnings(record=True) as warning_list:
+#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical,
+#                              categorical=categorical,
+#                              k_est=k_est,
+#                              n_splits=n_splits, estimator='mean',
+#                              smooth_cate=False,
+#                              gen_skf=split_strategy, random_state=random_state)
+#     times[method_name] = time.time() - start
+#     df_err = pd.concat([df_err,
+#                         get_errors(m.CATE_df[['avg.CATE']],
+#                                    df_true[['TE']],
+#                                    method_name=method_name)
+#                         ])
+#     print(f'\n{method_name} method complete: {time.time() - start}')
+#     print(f'{method_name} complete: {time.time() - start}')
+#     summarize_warnings(warning_list, method_name)
+#     print()
+#
+#
 method_name = 'Linear Prognostic Score Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
