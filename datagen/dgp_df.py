@@ -131,6 +131,7 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
                                              list(range(i + 1, n)), i] == 1]
                                .index)
     df = df.drop(columns=corr_drop_cols)
+    x_cols = [c for c in x_cols if c not in corr_drop_cols]
     binary = [c for c in binary if c not in corr_drop_cols]
     categorical = [c for c in categorical if c not in corr_drop_cols]
     dummy_cols = [c for c in dummy_cols.columns if c not in corr_drop_cols]
@@ -191,6 +192,8 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
                                              list(range(i + 1, n)), i] == 1]
                                .index)
     df = df.drop(columns=corr_drop_cols)
+    x_cols = [c for c in x_cols if c not in corr_drop_cols]
+    continuous = [c for c in continuous if c not in corr_drop_cols]
     binary = [c for c in binary if c not in corr_drop_cols]
     categorical = [c for c in categorical if c not in corr_drop_cols]
     dummy_cols = [c for c in dummy_cols if c not in corr_drop_cols]
