@@ -9,6 +9,7 @@ import numpy as np
 import os
 import pandas as pd
 import pickle
+from rpy2.rinterface_lib.embedded import RRuntimeError
 import time
 import warnings
 
@@ -53,17 +54,8 @@ if df_data.shape[0] > malts_max:
     print(f'**Not running malts. > {malts_max} samples.')
     run_malts = False
 
-run_bart = True
-if acic_year == 'acic_2018' and acic_file == 'd09f96200455407db569ae33fe06b0d3':
-    print('**Not running bart. BART fails to create predictions due to small '
-          'size of treated group.')
-    run_bart = False
-
-config = {'n_splits': n_splits, 'k_est': k_est, 'run_bart': run_bart,
-          'run_malts': run_malts}
-
-with open(f'{save_folder}/config.txt', 'w') as f:
-    json.dump(config, f, indent=2)
+config = {'n_splits': n_splits, 'k_est': k_est,
+          'bart_ran': True}
 
 df_dummy_data = df_data.copy(deep=True)
 if dummy_cols is not None:
@@ -172,7 +164,6 @@ df_err = pd.concat([df_err,
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
 print()
-
 
 
 # method_name = 'Equal Weighted LASSO Matching'
@@ -292,7 +283,7 @@ print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
 print()
 
-if run_bart:
+try:
     method_name = 'BART'
     start = time.time()
     with warnings.catch_warnings(record=True) as warning_list:
@@ -307,6 +298,10 @@ if run_bart:
     print(f'\n{method_name} method complete: {time.time() - start}')
     summarize_warnings(warning_list, method_name)
     print()
+except RRuntimeError as bart_error:
+    print(f'BART failed with R error')
+    print(bart_error)
+    config['bart_ran'] = False
 
 method_name = 'Causal Forest'
 start = time.time()
@@ -357,5 +352,8 @@ df_err = df_err.reset_index(drop=True)
 df_err.to_csv(f'{save_folder}/df_err.csv')
 times = pd.DataFrame([times]).T
 times.to_csv(f'{save_folder}/times.csv')
+
+with open(f'{save_folder}/config.txt', 'w') as f:
+    json.dump(config, f, indent=2)
 
 print(f'Total time: {time.time() - total_time}\n')
