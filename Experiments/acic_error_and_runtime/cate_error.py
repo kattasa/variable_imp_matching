@@ -189,7 +189,7 @@ if run_malts:
     with warnings.catch_warnings(record=True) as warning_list:
         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical,
                              categorical=categorical,
-                             k_tr=malts_k_train, k_est=k_est_mean,
+                             k_est=k_est,
                              n_splits=n_splits, estimator='mean',
                              smooth_cate=False,
                              gen_skf=split_strategy, random_state=random_state)

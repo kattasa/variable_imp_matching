@@ -6,6 +6,7 @@ datagen/news
 Experiments/dcc_runs
 .idea/
 **/__pycache__/
+.DS_Store
 Experiments/cate_error/Results
 Experiments/acic_error_and_runtime/Results*
 Experiments/coverage/Results*
