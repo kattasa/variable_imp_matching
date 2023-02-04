@@ -13,16 +13,16 @@ q = 0.5
 methods = [
     'LASSO Coefficient Matching',
     # 'Tree Feature Importance Matching',
-    # 'GBR Feature Importance Matching',
-    'GBR Single Model Feature Importance Matching',
+    'GBR Feature Importance Matching',
+    # 'GBR Single Model Feature Importance Matching',
     # 'Equal Weighted LASSO Matching',
     'Linear Prognostic Score Matching',
     'Ensemble Prognostic Score Matching',
-    # 'DoubleML',
-    # 'DRLearner',
-    # 'BART',
-    # 'Causal Forest',
-    # 'Causal Forest DML'
+    'DoubleML',
+    'DRLearner',
+    'BART',
+    'Causal Forest',
+    'Causal Forest DML'
 ]
 
 rename_methods = {
@@ -95,18 +95,18 @@ sns.set_style("darkgrid")
 sns.set(font_scale=6)
 b1 = sns.barplot(data=all_errors[(all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] <= 15)],
                  x="ACIC File", y="Median Relative Error (%)", hue="Method", hue_order=order, ax=axes[0])
-# b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15)) | (all_errors['acic_year'] == 2019)],
-#                  x="ACIC File", y="Median Relative Error (%)", hue="Method", hue_order=order, ax=axes[1])
+b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15) & (all_errors['acic_file_no'] <= 30))],
+                 x="ACIC File", y="Median Relative Error (%)", hue="Method", hue_order=order, ax=axes[1])
 
 handles, labels = axes[0].get_legend_handles_labels()
 fig.legend(handles, labels, loc='right', bbox_to_anchor=(0.95, 1.07), ncol=3)
-axes[0].set_xticks(axes[0].get_xticks(), axes[0].get_xticklabels(), rotation=45, ha='right')
-axes[0].set_yscale('log')
-axes[0].get_legend().remove()
-# for ax in axes:
-#     ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
-#     ax.set_yscale('log')
-#     ax.get_legend().remove()
+# axes[0].set_xticks(axes[0].get_xticks(), axes[0].get_xticklabels(), rotation=45, ha='right')
+# axes[0].set_yscale('log')
+# axes[0].get_legend().remove()
+for ax in axes:
+    ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
+    ax.set_yscale('log')
+    ax.get_legend().remove()
     # ax.set_ylim([0, 2])
 b1.set(xlabel=None, ylabel=None)
 # b2.set(xlabel=None, ylabel=None)

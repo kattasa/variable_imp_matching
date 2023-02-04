@@ -79,6 +79,11 @@ if dummy_cols is not None:
 #     f.write(str(categorical))
 
 
+scaling_factor = (((df_true[df_true['T'] == 1]['Y'].std()) *
+                   df_true[df_true['T'] == 1].shape[0]) +
+                  ((df_true[df_true['T'] == 0]['Y'].std()) *
+                   df_true[df_true['T'] == 0].shape[0])) / df_true.shape[0]
+
 times = {}
 
 method_name = 'LASSO Coefficient Matching'
@@ -93,7 +98,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(lcm.cate_df[['avg.CATE_mean']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -117,7 +123,8 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 # df_err = pd.concat([df_err,
 #                     get_errors(lcm.cate_df[['avg.CATE_mean']],
 #                                df_true[['TE']],
-#                                method_name=method_name)
+#                                method_name=method_name,
+#                                scale=scaling_factor)
 #                     ])
 # print(f'\n{method_name} method complete: {time.time() - start}')
 # summarize_warnings(warning_list, method_name)
@@ -137,7 +144,8 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 # df_err = pd.concat([df_err,
 #                     get_errors(lcm.cate_df[['avg.CATE_mean']],
 #                                df_true[['TE']],
-#                                method_name=method_name)
+#                                method_name=method_name,
+#                                scale=scaling_factor)
 #                     ])
 # print(f'\n{method_name} method complete: {time.time() - start}')
 # summarize_warnings(warning_list, method_name)
@@ -158,7 +166,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(lcm.cate_df[['avg.CATE_mean']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -179,7 +188,8 @@ print()
 # df_err = pd.concat([df_err,
 #                     get_errors(lcm.cate_df[['avg.CATE_mean']],
 #                                df_true[['TE']],
-#                                method_name=method_name)
+#                                method_name=method_name,
+#                                scale=scaling_factor)
 #                     ])
 # print(f'\n{method_name} method complete: {time.time() - start}')
 # summarize_warnings(warning_list, method_name)
@@ -199,7 +209,8 @@ print()
 #     df_err = pd.concat([df_err,
 #                         get_errors(m.CATE_df[['avg.CATE']],
 #                                    df_true[['TE']],
-#                                    method_name=method_name)
+#                                    method_name=method_name,
+#                                scale=scaling_factor)
 #                         ])
 #     print(f'\n{method_name} method complete: {time.time() - start}')
 #     print(f'{method_name} complete: {time.time() - start}')
@@ -221,7 +232,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(cate_est_prog[['avg.CATE']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -241,7 +253,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(cate_est_prog[['avg.CATE']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -256,7 +269,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(cate_est_doubleml[['avg.CATE']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -271,7 +285,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(cate_est_drlearner[['avg.CATE']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -286,7 +301,8 @@ if run_bart:
     df_err = pd.concat([df_err,
                         get_errors(cate_est_bart[['avg.CATE']],
                                    df_true[['TE']],
-                                   method_name=method_name)
+                                   method_name=method_name,
+                                   scale=scaling_factor)
                         ])
     print(f'\n{method_name} method complete: {time.time() - start}')
     summarize_warnings(warning_list, method_name)
@@ -300,7 +316,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(cate_est_cf[['avg.CATE']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
@@ -315,7 +332,8 @@ times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(cate_est_cf[['avg.CATE']],
                                df_true[['TE']],
-                               method_name=method_name)
+                               method_name=method_name,
+                               scale=scaling_factor)
                     ])
 print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
