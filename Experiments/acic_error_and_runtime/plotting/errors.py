@@ -19,7 +19,7 @@ methods = [
     'Linear Prognostic Score Matching',
     'Ensemble Prognostic Score Matching',
     'DoubleML',
-    'DRLearner',
+    # 'DRLearner',
     'BART',
     'Causal Forest',
     'Causal Forest DML'
