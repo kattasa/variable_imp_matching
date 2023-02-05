@@ -6,6 +6,7 @@ Created on Sat May 14 2022
 @author: quinn.lanners
 """
 import numpy as np
+import pandas as pd
 
 from sklearn.base import clone
 import sklearn.ensemble as ensemble
@@ -92,22 +93,23 @@ class LCM:
                     scores[t] = m.score(self.X[self.T == t, :],
                                         self.Y[self.T == t])
                 M.append(get_model_weights(m, weight_attr, equal_weights,
-                                           not separate_treatments, t))
+                                           0, t))
                 m = clone(estimator=m)
             if metalearner:
                 self.M = dict(zip(self.treatments_classes, M))
             else:
                 self.M = sum(M) / len(self.treatments_classes)
         else:
-            m.fit(np.concatenate([self.X, self.T.reshape(-1, 1)], axis=1),
+            t_dummy = pd.get_dummies(self.T.reshape(-1, 1)).to_numpy()
+            m.fit(np.concatenate([self.X, t_dummy], axis=1),
                   self.Y)
             if return_scores:
                 scores['all'] = m.score(np.concatenate([self.X,
-                                                        self.T.reshape(-1, 1)],
+                                                        t_dummy],
                                                        axis=1),
                                         self.Y)
             self.M = get_model_weights(m, weight_attr, equal_weights,
-                                       not separate_treatments, 'all')
+                                       t_dummy.shape[0], 'all')
         if return_scores:
             print(scores)
             return scores

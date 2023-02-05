@@ -91,6 +91,11 @@ def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, std=1.5, t_imp=2, overlap=1, 
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, binary
 
 
+def dgp_learning_df(perc_train=None, n_train=None):
+    df = pd.read_csv(f'{os.getenv("LEARNING_FOLDER")}/df.csv')
+    print('hi')
+
+
 def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10):
     df = pd.read_csv(f'{ACIC_2019_FOLDER}/{"highDim_testdataset[IDX].csv".replace("[IDX]", str(dataset_idx))}')
     df_cf = pd.read_csv(f'{ACIC_2019_FOLDER}/{"highDim_testdataset[IDX].csv".replace("[IDX]", str(dataset_idx) + "_cf")}')

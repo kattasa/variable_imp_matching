@@ -3,6 +3,7 @@ datagen/ihdp
 datagen/acic_2022
 datagen/acic_2018
 datagen/news
+datagen/learning_dataset
 Experiments/dcc_runs
 .idea/
 **/__pycache__/

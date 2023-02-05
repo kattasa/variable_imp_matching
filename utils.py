@@ -130,13 +130,13 @@ def prune_covariates(covariates, M, prune_level=0.01):
     return imp_covs
 
 
-def get_model_weights(model, weight_attr, equal_weights, t_in_covs, t):
+def get_model_weights(model, weight_attr, equal_weights, t_covs, t):
     if type(weight_attr) == str:
         weights = np.abs(getattr(model, weight_attr).reshape(-1,))
     else:
         weights = weight_attr(model)
-    if t_in_covs:
-        weights = weights[:-1]
+    if t_covs > 0:
+        weights = weights[:-t_covs]
     if np.all(weights == 0):
         warnings.warn(f'Model fit to treatment={t} had all zero weights.')
         return np.ones(len(weights))
