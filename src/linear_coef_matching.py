@@ -7,6 +7,7 @@ Created on Sat May 14 2022
 """
 import numpy as np
 import pandas as pd
+import warnings
 
 from sklearn.base import clone
 import sklearn.ensemble as ensemble
@@ -88,7 +89,11 @@ class LCM:
         if metalearner or separate_treatments:
             M = []
             for t in self.treatments_classes:
-                m.fit(self.X[self.T == t, :], self.Y[self.T == t])
+                try:
+                    m.fit(self.X[self.T == t, :], self.Y[self.T == t])
+                except ValueError as err:
+                    setattr(m, weight_attr, np.zeros(shape=self.p))
+                    warnings.warn(f'Set all weights to zero: {err}')
                 if return_scores:
                     scores[t] = m.score(self.X[self.T == t, :],
                                         self.Y[self.T == t])
@@ -100,16 +105,21 @@ class LCM:
             else:
                 self.M = sum(M) / len(self.treatments_classes)
         else:
-            t_dummy = pd.get_dummies(self.T.reshape(-1, 1)).to_numpy()
-            m.fit(np.concatenate([self.X, t_dummy], axis=1),
-                  self.Y)
+            t_dummy = pd.get_dummies(self.T, drop_first=True).to_numpy()
+            try:
+                m.fit(np.concatenate([self.X, t_dummy], axis=1),
+                      self.Y)
+            except ValueError as err:
+                setattr(m, weight_attr, np.zeros(
+                    shape=self.p +t_dummy.shape[1]))
+                warnings.warn(f'Set all weights to zero: {err}')
             if return_scores:
                 scores['all'] = m.score(np.concatenate([self.X,
                                                         t_dummy],
                                                        axis=1),
                                         self.Y)
             self.M = get_model_weights(m, weight_attr, equal_weights,
-                                       t_dummy.shape[0], 'all')
+                                       t_dummy.shape[1], 'all')
         if return_scores:
             print(scores)
             return scores

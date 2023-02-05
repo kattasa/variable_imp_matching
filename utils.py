@@ -139,7 +139,7 @@ def get_model_weights(model, weight_attr, equal_weights, t_covs, t):
         weights = weights[:-t_covs]
     if np.all(weights == 0):
         warnings.warn(f'Model fit to treatment={t} had all zero weights.')
-        return np.ones(len(weights))
+        return np.zeros(len(weights))
     if equal_weights:
         weights = np.where(weights > 0, 1, 0)
     return (weights / np.sum(weights)) * len(weights)
