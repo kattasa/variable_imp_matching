@@ -13,10 +13,10 @@ q = 0.5
 methods = [
     'LASSO Coefficient Matching',
     # 'Tree Feature Importance Matching',
-    'GBR Feature Importance Matching',
+    # 'GBR Feature Importance Matching',
     # 'GBR Single Model Feature Importance Matching',
     # 'Equal Weighted LASSO Matching',
-    'Linear Prognostic Score Matching',
+    # 'Linear Prognostic Score Matching',
     'Ensemble Prognostic Score Matching',
     'DoubleML',
     # 'DRLearner',
