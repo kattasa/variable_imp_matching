@@ -62,7 +62,7 @@ class LCM:
         checks df_estimation is properly formatted.
     """
     def __init__(self, outcome, treatment, data, binary_outcome=False, random_state=None):
-        self.n, self.p =data.shape
+        self.n, self.p = data.shape
         self.p -= 2
         self.outcome = outcome
         self.treatment = treatment
@@ -91,12 +91,14 @@ class LCM:
             for t in self.treatments_classes:
                 try:
                     m.fit(self.X[self.T == t, :], self.Y[self.T == t])
+                    if return_scores:
+                        scores[t] = m.score(self.X[self.T == t, :],
+                                            self.Y[self.T == t])
                 except ValueError as err:
                     setattr(m, weight_attr, np.zeros(shape=self.p))
-                    warnings.warn(f'Set all weights to zero: {err}')
-                if return_scores:
-                    scores[t] = m.score(self.X[self.T == t, :],
-                                        self.Y[self.T == t])
+                    warnings.warn(f'Set all weights to zero: {str(err)}')
+                    if return_scores:
+                        scores[t] = 0
                 M.append(get_model_weights(m, weight_attr, equal_weights,
                                            0, t))
                 m = clone(estimator=m)
@@ -109,15 +111,17 @@ class LCM:
             try:
                 m.fit(np.concatenate([self.X, t_dummy], axis=1),
                       self.Y)
+                if return_scores:
+                    scores['all'] = m.score(np.concatenate([self.X,
+                                                            t_dummy],
+                                                           axis=1),
+                                            self.Y)
             except ValueError as err:
                 setattr(m, weight_attr, np.zeros(
                     shape=self.p +t_dummy.shape[1]))
-                warnings.warn(f'Set all weights to zero: {err}')
-            if return_scores:
-                scores['all'] = m.score(np.concatenate([self.X,
-                                                        t_dummy],
-                                                       axis=1),
-                                        self.Y)
+                warnings.warn(f'Set all weights to zero: {str(err)}')
+                if return_scores:
+                    scores['all'] = 0
             self.M = get_model_weights(m, weight_attr, equal_weights,
                                        t_dummy.shape[1], 'all')
         if return_scores:
@@ -133,8 +137,8 @@ class LCM:
         :param check_df:
         :return:
         """
-        return get_match_groups(df_estimation, k, self.covariates,
-                                self.treatment, M=self.M,
+        return get_match_groups(df_estimation, self.covariates,
+                                self.treatment, M=self.M, k=k,
                                 return_original_idx=return_original_idx,
                                 check_est_df=check_est_df)
 

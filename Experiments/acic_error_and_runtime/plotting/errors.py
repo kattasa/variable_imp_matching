@@ -95,7 +95,7 @@ sns.set_style("darkgrid")
 sns.set(font_scale=6)
 b1 = sns.barplot(data=all_errors[(all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] <= 15)],
                  x="ACIC File", y="Median Relative Error (%)", hue="Method", hue_order=order, ax=axes[0])
-b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15) & (all_errors['acic_file_no'] <= 30))],
+b2 = sns.barplot(data=all_errors[((all_errors['acic_year'] == 2018) & (all_errors['acic_file_no'] > 15) | (all_errors['acic_year'] == 2019))],
                  x="ACIC File", y="Median Relative Error (%)", hue="Method", hue_order=order, ax=axes[1])
 
 handles, labels = axes[0].get_legend_handles_labels()

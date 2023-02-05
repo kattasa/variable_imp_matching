@@ -6,8 +6,9 @@ from sklearn.neighbors import NearestNeighbors
 import warnings
 
 
-def get_match_groups(df_estimation, k, covariates, treatment, M,
-                     return_original_idx=True, check_est_df=True):
+def get_match_groups(df_estimation, covariates, treatment, M, k=None,
+                     return_original_idx=True,
+                     check_est_df=True):
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns,
                             necessary_cols=covariates + [treatment])
@@ -35,7 +36,7 @@ def get_match_groups(df_estimation, k, covariates, treatment, M,
     return match_groups, match_distances
 
 
-def get_nn(X, T, treatment, k):
+def get_nn(X, T, treatment, k=None):
     nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto',
                           metric='cityblock', n_jobs=10).fit(X[T == treatment])
     return nn.kneighbors(X, return_distance=True)

@@ -58,8 +58,9 @@ class LCM_MF:
         i = 0
         for est_idx, _ in self.gen_skf:
             df_estimation = self.data.loc[est_idx]
-            mgs, mg_dists = get_match_groups(df_estimation, k, self.covariates,
+            mgs, mg_dists = get_match_groups(df_estimation, self.covariates,
                                              treatment, M=self.M_list[i],
+                                             k=k,
                                              return_original_idx=False,
                                              check_est_df=False)
             self.MGs.append(mgs)
