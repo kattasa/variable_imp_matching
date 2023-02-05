@@ -268,20 +268,20 @@ summarize_warnings(warning_list, method_name)
 print()
 
 
-method_name = 'DRLearner'
-start = time.time()
-with warnings.catch_warnings(record=True) as warning_list:
-    cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-times[method_name] = time.time() - start
-df_err = pd.concat([df_err,
-                    get_errors(cate_est_drlearner[['avg.CATE']],
-                               df_true[['TE']],
-                               method_name=method_name,
-                               scale=scaling_factor)
-                    ])
-print(f'\n{method_name} method complete: {time.time() - start}')
-summarize_warnings(warning_list, method_name)
-print()
+# method_name = 'DRLearner'
+# start = time.time()
+# with warnings.catch_warnings(record=True) as warning_list:
+#     cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+# times[method_name] = time.time() - start
+# df_err = pd.concat([df_err,
+#                     get_errors(cate_est_drlearner[['avg.CATE']],
+#                                df_true[['TE']],
+#                                method_name=method_name,
+#                                scale=scaling_factor)
+#                     ])
+# print(f'\n{method_name} method complete: {time.time() - start}')
+# summarize_warnings(warning_list, method_name)
+# print()
 
 try:
     method_name = 'BART'
