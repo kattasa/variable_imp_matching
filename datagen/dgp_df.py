@@ -91,7 +91,7 @@ def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, std=1.5, t_imp=2, overlap=1, 
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, binary
 
 
-def dgp_school_df():
+def dgp_schools_df():
     df = pd.read_csv(f'{os.getenv("SCHOOLS_FOLDER")}/df.csv')
     categorical = ['schoolid', 'C1', 'C2', 'C3', 'XC']
     df = df.rename(columns={'Z': 'T'})

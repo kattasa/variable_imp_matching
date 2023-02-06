@@ -11,11 +11,12 @@ dataset_config = {
     'imp_c': int(os.getenv('IMP_C')),
     'unimp_c': int(os.getenv('UNIMP_C')),
     'imp_d': 0,
-    'unimp_d': 0
+    'unimp_d': 0,
+    'n_train': 0
 }
 dataset_config['n_train'] = dataset_config['num_samples']
 
-df_train, df_data, df_true, binary = get_data(data='dense_continuous', config=dataset_config)
+df_data, df_true, binary = get_data(data='dense_continuous', config=dataset_config)
 
-df_train.to_csv(f'{save_folder}/df_train.csv', index=False)
-print(f'Saved to {save_folder}/df_train.csv')
+df_data.to_csv(f'{save_folder}/df.csv', index=False)
+print(f'Saved to {save_folder}/df.csv')

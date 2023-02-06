@@ -54,7 +54,7 @@ class Prognostic:
                     self.ht = linear.LogisticRegressionCV(
                         max_iter=500, random_state=random_state).fit(Xt, Yt)
                 else:
-                    self.ht = linear.RidgeCV().fit(Xt, Yt)
+                    self.ht = linear.LassoCV().fit(Xt, Yt)
 
     def get_sample_cate(self, df_est, sample_idx, k=10):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
@@ -142,18 +142,21 @@ class Prognostic:
 
 def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
                   k_est=1, est_method='mean', n_splits=5, gen_skf=None,
-                  random_state=None):
+                  return_feature_imp=False, random_state=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
     cate_est = pd.DataFrame()
     control_mgs = []
     treatment_mgs = []
+    feature_imps = []
     for est_idx, train_idx in gen_skf:
         df_train = data.iloc[train_idx]
         df_est = data.iloc[est_idx]
         prog = Prognostic(outcome, treatment, df_train, method=method,
                           double=double, random_state=random_state)
+        if return_feature_imp:
+            feature_imps.append(get_feature_imp(prog))
         prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est,
                                                        method=est_method)
         control_mgs.append(c_mgs)
@@ -163,4 +166,20 @@ def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
     cate_est = cate_est.sort_index()
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
+    if return_feature_imp:
+        return cate_est, control_mgs, treatment_mgs, feature_imps
     return cate_est, control_mgs, treatment_mgs
+
+
+def get_feature_imp(prog):
+    if prog.model == 'linear':
+        weight_attr = 'coef_'
+    elif prog.model == 'ensemble':
+        weight_attr = 'feature_importances_'
+    if prog.double:
+        M = [get_model_weights(prog.hc, weight_attr, False, 0, 0),
+             get_model_weights(prog.ht, weight_attr, False, 0, 0)]
+        M = sum(M) / 2
+    else:
+        M = get_model_weights(prog.hc, weight_attr, False, 0, 0)
+    return M

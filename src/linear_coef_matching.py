@@ -125,7 +125,6 @@ class LCM:
             self.M = get_model_weights(m, weight_attr, equal_weights,
                                        t_dummy.shape[1], 'all')
         if return_scores:
-            print(scores)
             return scores
 
     def get_matched_groups(self, df_estimation, k=10,

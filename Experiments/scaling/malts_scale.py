@@ -1,21 +1,16 @@
 import os
-import numpy as np
 import pandas as pd
 import time
 
+from pymalts2 import malts_mf
 
-from other_methods.pymalts import malts
-
-random_state = int(os.getenv('RANDOM_STATE'))
 save_folder = os.getenv('SAVE_FOLDER')
-np.random.seed(random_state)
 
-df_train = pd.read_csv(f'{save_folder}/df_train.csv')
-
-malts = malts(outcome='Y', treatment='T', data=df_train, discrete=[], C=1, k=15, reweight=False,
-              random_state=random_state)
+df = pd.read_csv(f'{save_folder}/df.csv')
 
 start = time.time()
-malts.fit()
+malts = malts_mf(outcome='Y', treatment='T', data=df, k_est=10,
+                 estimator='mean', smooth_cate=False, reweight=False,
+                 n_splits=2, n_repeats=1)
 fit_time = time.time() - start
 print(fit_time)
