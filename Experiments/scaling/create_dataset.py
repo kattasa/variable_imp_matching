@@ -1,10 +1,7 @@
 import os
-import numpy as np
 from Experiments.helpers import get_data
 
-random_state = int(os.getenv('RANDOM_STATE'))
 save_folder = os.getenv('SAVE_FOLDER')
-np.random.seed(random_state)
 
 dataset_config = {
     'num_samples': int(os.getenv('NUM_SAMPLES')),
@@ -14,9 +11,9 @@ dataset_config = {
     'unimp_d': 0,
     'n_train': 0
 }
-dataset_config['n_train'] = dataset_config['num_samples']
 
-df_data, df_true, binary = get_data(data='dense_continuous', config=dataset_config)
+df_data, df_true, binary = get_data(data='dense_continuous',
+                                    config=dataset_config)
 
 df_data.to_csv(f'{save_folder}/df.csv', index=False)
 print(f'Saved to {save_folder}/df.csv')
