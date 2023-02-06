@@ -34,10 +34,12 @@ def get_acic_data(year, file, n_train):
 
 def get_data(data, config):
     if 'dense' in data:
+        std = config['std'] if 'std' in config else 1.5
         df_train, df_data, df_true, x_cols, binary = dgp_dense_mixed_endo_df(config['num_samples'], config['imp_c'],
                                                                                config['imp_d'], config['unimp_c'],
                                                                                config['unimp_d'],
-                                                                               n_train=config['n_train'])
+                                                                               n_train=config['n_train'],
+                                                                             std=config['std'])
     else:
         df_train, df_data, df_true, x_cols, binary = dgp_df(dgp=data, n_samples=config['num_samples'],
                                                               n_imp=config['imp_c'], n_unimp=config['unimp_c'],
@@ -91,7 +93,7 @@ def weights_to_feature_selection(malts_weights, malts_covs):
     return malts_features
 
 
-def get_errors(est_cates, true_cates, method_name, scale=None):
+def get_errors(est_cates, true_cates, method_name, scale=None, iter=None):
     if scale is None:
         scale = np.abs(true_cates).mean()[0]
     cates = est_cates.join(true_cates, how='inner')
@@ -100,5 +102,7 @@ def get_errors(est_cates, true_cates, method_name, scale=None):
         np.abs(cates['Est_CATE'] - cates['True_CATE']) / scale
     cates['Method'] = method_name
     print(f'{method_name} ommitted {round(((true_cates.shape[0] - cates.shape[0]) / true_cates.shape[0])*100, 4)}% of samples.')
-    return cates[['Method', 'True_CATE',
-                  'Est_CATE', 'Relative Error (%)']].copy(deep=True)
+    cates = cates[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']]
+    if iter is not None:
+        cates['Iter'] = iter
+    return cates

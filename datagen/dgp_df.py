@@ -8,7 +8,7 @@ from sklearn.impute import IterativeImputer
 
 from datagen.dgp import dgp_poly_basic, dgp_friedman, \
     data_generation_dense_mixed_endo, dgp_sine, dgp_non_linear_mixed, \
-    dgp_polynomials, dgp_test
+    dgp_polynomials, dgp_test, dgp_combo
 
 np.random.seed(1)
 
@@ -49,6 +49,9 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
         discrete = []
     if dgp == 'test':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_test(n_samples, n_imp, n_unimp)
+        discrete = []
+    if dgp == 'combo':
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_combo(n_samples, n_unimp)
         discrete = []
     elif dgp == 'friedman':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_friedman(n_samples)

@@ -30,8 +30,8 @@ for n in ${num_samples[@]}; do
     while [ $counter -lt $iters ]
     do
         sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/lcm_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/lcm_fit_times/${counter}.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH,R_HOME slurm_lcm_scale.q
-        sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/malts_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/malts_fit_times/${counter}.txt" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH,R_HOME slurm_malts_scale.q
-        sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/genmatch_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/genmatch_fit_times/${counter}.txt" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH,R_HOME slurm_genmatch_scale.q
+        sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/malts_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/malts_fit_times/${counter}.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH,R_HOME slurm_malts_scale.q
+        sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/genmatch_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/genmatch_fit_times/${counter}.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH,R_HOME slurm_genmatch_scale.q
         ((counter++))
     done
 done
@@ -54,8 +54,8 @@ for n in ${num_covs[@]}; do
     while [ $counter -lt $iters ]
     do
         sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/lcm_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/lcm_fit_times/${counter}.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME slurm_lcm_scale.q
-        sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/malts_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/malts_fit_times/${counter}.txt" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME slurm_malts_scale.q
-        sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/genmatch_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/genmatch_fit_times/${counter}.txt" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME slurm_genmatch_scale.q
+        sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/malts_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/malts_fit_times/${counter}.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME slurm_malts_scale.q
+        sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/genmatch_fit_times/${counter}.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/genmatch_fit_times/${counter}.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME slurm_genmatch_scale.q
         ((counter++))
     done
 done

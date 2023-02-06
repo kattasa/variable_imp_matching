@@ -1,19 +1,18 @@
 from glob import glob
-import  json
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import seaborn as sns
 
 num_samples_folder = glob(f"{os.getenv('RESULTS_FOLDER')}/num_samples/*", recursive=True)
 num_covs_folder = glob(f"{os.getenv('RESULTS_FOLDER')}/num_covs/*", recursive=True)
 
-n_repeats = 1
+n_repeats = 10
 methods = [
-    'LASSO',
-    'MALTS'
+    'LCM',
+    'MALTS',
+    'GenMatch'
 ]
 
 q = 0.5
@@ -22,8 +21,9 @@ covs_times = pd.DataFrame([], index=methods)
 failed_files = {}
 name_to_label = {}
 methods_dirs = {
-    'LASSO': 'lcm_fit_times',
-    'MALTS': 'malts_fit_times'
+    'LCM': 'lcm_fit_times',
+    'MALTS': 'malts_fit_times',
+    'GenMatch': 'genmatch_fit_times'
 }
 
 for f in num_samples_folder:

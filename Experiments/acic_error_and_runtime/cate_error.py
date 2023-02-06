@@ -83,7 +83,7 @@ start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
-    lcm.fit(model='linear', separate_treatments=False)
+    lcm.fit(model='linear', separate_treatments=True)
     lcm.MG(k=k_est)
     lcm.CATE(cate_methods=['mean'])
 times[method_name] = time.time() - start

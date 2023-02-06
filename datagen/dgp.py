@@ -29,14 +29,13 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
                                      t_imp=2, overlap=1, weights=None):
     def u(x):
         T = []
-        second_T_term = t_imp * 1 if num_cont_imp >= 2 else t_imp * 0.5
         for row in x:
-            l = scipy.special.expit(np.sum(row[:t_imp]) - second_T_term + np.random.normal(0, overlap))
+            l = scipy.special.expit(np.sum(row[:t_imp]) + np.random.normal(0, overlap))
             t = int(l > 0.5)
             T.append(t)
         return np.array(T)
     # the data generating function that we will use. include second order information
-    xc = np.random.normal(1, std, size=(num_samples, num_cont_imp))
+    xc = np.random.normal(0, std, size=(num_samples, num_cont_imp))
     xd = np.random.binomial(1, 0.5, size=(num_samples, num_disc_imp))
     x = np.hstack((xc, xd))
 
@@ -46,11 +45,12 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     num_cov_dense = num_cont_imp + num_disc_imp
     dense_bs_sign = np.random.choice([-1, 1], num_cov_dense)
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]
+    dense_bs = np.random.normal(0, 5, size=num_cov_dense)
 
     if weights is not None:
         for idx, w in weights:
             dense_bs[idx] = w['control']
-    y0_true = np.dot(x, np.array(dense_bs))
+    y0_true = np.dot(x, np.array(dense_bs)) + x[:, 0]**2 - x[:, 1]**2
 
     treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
     if weights is not None:
@@ -198,5 +198,32 @@ def dgp_poly_basic(n_samples, n_imp, n_unimp, powers=[2]):
     y1 = y1 + y1_errors
     y = (y0 * (1 - t)) + (y1 * t)
     x_unimp = np.random.uniform(-10, 10, size=(n_samples, n_unimp))
+    X = np.concatenate([x_imp, x_unimp], axis=1)
+    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
+
+
+def set_t(x, t_imp, centered=1, overlap=1):
+    T = []
+    for row in x:
+        l = scipy.special.expit(np.sum(row[:t_imp]) - (t_imp*centered) + np.random.normal(0, overlap))
+        t = int(l > 0.5)
+        T.append(t)
+    return np.array(T)
+
+
+def dgp_combo(n_samples, n_unimp):
+    x_imp = np.random.normal(0, 1.5, size=(n_samples, 5))
+    t = set_t(x_imp, t_imp=2, centered=0, overlap=1)
+    y0 = 2*np.where(x_imp[:, 0] > 0, x_imp[:, 0], 0) + \
+         2*np.where(x_imp[:, 1] < 0, -x_imp[:, 1], 0) + \
+         0.1*np.exp(x_imp[:, 2])
+    y1 = y0 - 0.1*np.exp(x_imp[:, 3])
+    y0_errors = np.random.normal(0, 1, size=n_samples)
+    y1_errors = np.random.normal(0, 1, size=n_samples)
+    te = y1 - y0
+    y0 = y0 + y0_errors
+    y1 = y1 + y1_errors
+    y = (y0 * (1 - t)) + (y1 * t)
+    x_unimp = np.random.normal(1, 1.5, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
