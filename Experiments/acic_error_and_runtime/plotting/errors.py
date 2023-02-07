@@ -17,12 +17,12 @@ methods = [
     # 'GBR Single Model Feature Importance Matching',
     # 'Equal Weighted LASSO Matching',
     'Linear Prognostic Score Matching',
-    'Ensemble Prognostic Score Matching',
-    'DoubleML',
+    # 'Ensemble Prognostic Score Matching',
+    # 'DoubleML',
     # 'DRLearner',
-    'BART',
-    'Causal Forest',
-    'Causal Forest DML'
+    # 'BART',
+    # 'Causal Forest',
+    # 'Causal Forest DML'
 ]
 
 rename_methods = {

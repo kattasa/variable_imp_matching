@@ -14,11 +14,11 @@ k_est_linear = 40
 custom_iters = None
 
 datasets = [
-    'dense_continuous',
+    # 'dense_continuous',
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
-    # 'sine',
+    'sine',
     # 'non_linear_mixed',
     # 'test',
     # 'combo',
@@ -29,9 +29,9 @@ datasets = [
 
 methods = [
     'lcm_mean',
-    'malts',
+    # 'malts',
     # 'lcm_linear',
-    # 'linear_prog_mean',
+    'linear_prog_mean',
     # 'linear_prog_linear',
     # 'ensemble_prog_mean',
     # 'ensemble_prog_linear',
@@ -63,13 +63,13 @@ for data in datasets:
             dataset_config['imp_d'] = 15
             dataset_config['unimp_d'] = 10
     if data in ['polynomials', 'sine', 'non_linear_mixed', 'test', 'combo']:
-        n_splits = 2
-        dataset_config['num_samples'] = 2000
-        dataset_config['imp_c'] = 10
-        dataset_config['unimp_c'] = 90
+        n_splits = 5
+        dataset_config['num_samples'] = 2500
+        dataset_config['imp_c'] = 2
+        dataset_config['unimp_c'] = 98
     if data == 'friedman':
-        n_splits = 2
-        dataset_config['num_samples'] = 2000
+        n_splits = 5
+        dataset_config['num_samples'] = 2500
         dataset_config['imp_c'] = 0
         dataset_config['unimp_c'] = 0
 

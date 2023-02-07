@@ -42,7 +42,7 @@ def dgp_df(dgp, n_samples, n_imp=None, n_unimp=None, perc_train=None, n_train=No
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_polynomials(n_samples, n_imp, n_unimp)
         discrete = []
     if dgp == 'sine':
-        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_sine(n_samples, n_imp, n_unimp)
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_sine(n_samples, n_unimp)
         discrete = []
     if dgp == 'non_linear_mixed':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_non_linear_mixed(n_samples, n_imp, n_unimp)
