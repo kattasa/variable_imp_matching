@@ -43,7 +43,7 @@ print(f'Running {acic_year} file {acic_file}...')
 total_time = time.time()
 
 df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_acic_data(year=acic_year, file=acic_file, n_train=0)
-# df_true.to_csv(f'{save_folder}/df_true.csv')
+df_true.to_csv(f'{save_folder}/df_true.csv')
 
 new_n_splits = df_data.shape[0] // n_samples_per_split
 n_splits = max(min(new_n_splits, max_n_splits), min_n_splits)
@@ -55,20 +55,20 @@ if df_data.shape[0] > malts_max:
     run_malts = False
 
 config = {'n_splits': n_splits, 'k_est': k_est,
-          'bart_ran': True}
+          'bart_ran': True, 'malts_run': run_malts}
 
 df_dummy_data = df_data.copy(deep=True)
 if dummy_cols is not None:
     df_data = df_data.drop(columns=dummy_cols)
     df_dummy_data = df_dummy_data.drop(columns=categorical)
-    # with open(f'{save_folder}/dummy_cols.txt', 'w') as f:
-    #     f.write(str(dummy_cols))
-    # df_dummy_data.to_csv(f'{save_folder}/df_dummy_data.csv')
-# df_data.to_csv(f'{save_folder}/df_data.csv')
-# with open(f'{save_folder}/binary_cols.txt', 'w') as f:
-#     f.write(str(binary))
-# with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
-#     f.write(str(categorical))
+    with open(f'{save_folder}/dummy_cols.txt', 'w') as f:
+        f.write(str(dummy_cols))
+    df_dummy_data.to_csv(f'{save_folder}/df_dummy_data.csv')
+df_data.to_csv(f'{save_folder}/df_data.csv')
+with open(f'{save_folder}/binary_cols.txt', 'w') as f:
+    f.write(str(binary))
+with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
+    f.write(str(categorical))
 
 
 scaling_factor = (((df_true[df_true['T'] == 1]['Y'].std()) *
@@ -101,47 +101,26 @@ split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
-# method_name = 'Tree Feature Importance Matching'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
-#                  n_splits=n_splits, n_repeats=1,
-#                  random_state=random_state)
-#     lcm.gen_skf = split_strategy
-#     lcm.fit(model='tree')
-#     lcm.MG(k=k_est)
-#     lcm.CATE(cate_methods=['mean'])
-# times[method_name] = time.time() - start
-# df_err = pd.concat([df_err,
-#                     get_errors(lcm.cate_df[['avg.CATE_mean']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
-#
-# method_name = 'GBR Feature Importance Matching'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
-#                  n_splits=n_splits, n_repeats=1,
-#                  random_state=random_state)
-#     lcm.gen_skf = split_strategy
-#     lcm.fit(model='ensemble')
-#     lcm.MG(k=k_est)
-#     lcm.CATE(cate_methods=['mean'])
-# times[method_name] = time.time() - start
-# df_err = pd.concat([df_err,
-#                     get_errors(lcm.cate_df[['avg.CATE_mean']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
+method_name = 'Tree Feature Importance Matching'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                 n_splits=n_splits, n_repeats=1,
+                 random_state=random_state)
+    lcm.gen_skf = split_strategy
+    lcm.fit(model='tree', separate_treatments=True)
+    lcm.MG(k=k_est)
+    lcm.CATE(cate_methods=['mean'])
+times[method_name] = time.time() - start
+df_err = pd.concat([df_err,
+                    get_errors(lcm.cate_df[['avg.CATE_mean']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
 
 method_name = 'GBR Feature Importance Matching'
 start = time.time()
@@ -185,30 +164,30 @@ print()
 # print(f'\n{method_name} method complete: {time.time() - start}')
 # summarize_warnings(warning_list, method_name)
 # print()
-#
-# if run_malts:
-#     method_name = 'MALTS Matching'
-#     start = time.time()
-#     with warnings.catch_warnings(record=True) as warning_list:
-#         m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical,
-#                              categorical=categorical,
-#                              k_est=k_est,
-#                              n_splits=n_splits, estimator='mean',
-#                              smooth_cate=False,
-#                              gen_skf=split_strategy, random_state=random_state)
-#     times[method_name] = time.time() - start
-#     df_err = pd.concat([df_err,
-#                         get_errors(m.CATE_df[['avg.CATE']],
-#                                    df_true[['TE']],
-#                                    method_name=method_name,
-#                                scale=scaling_factor)
-#                         ])
-#     print(f'\n{method_name} method complete: {time.time() - start}')
-#     print(f'{method_name} complete: {time.time() - start}')
-#     summarize_warnings(warning_list, method_name)
-#     print()
-#
-#
+
+if run_malts:
+    method_name = 'MALTS Matching'
+    start = time.time()
+    with warnings.catch_warnings(record=True) as warning_list:
+        m = pymalts.malts_mf('Y', 'T', data=df_data, discrete=binary + categorical,
+                             categorical=categorical,
+                             k_est=k_est,
+                             n_splits=n_splits, estimator='mean',
+                             smooth_cate=False,
+                             gen_skf=split_strategy, random_state=random_state)
+    times[method_name] = time.time() - start
+    df_err = pd.concat([df_err,
+                        get_errors(m.CATE_df[['avg.CATE']],
+                                   df_true[['TE']],
+                                   method_name=method_name,
+                               scale=scaling_factor)
+                        ])
+    print(f'\n{method_name} method complete: {time.time() - start}')
+    print(f'{method_name} complete: {time.time() - start}')
+    summarize_warnings(warning_list, method_name)
+    print()
+
+
 method_name = 'Linear Prognostic Score Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
@@ -268,20 +247,20 @@ summarize_warnings(warning_list, method_name)
 print()
 
 
-# method_name = 'DRLearner'
-# start = time.time()
-# with warnings.catch_warnings(record=True) as warning_list:
-#     cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
-# times[method_name] = time.time() - start
-# df_err = pd.concat([df_err,
-#                     get_errors(cate_est_drlearner[['avg.CATE']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete: {time.time() - start}')
-# summarize_warnings(warning_list, method_name)
-# print()
+method_name = 'DRLearner'
+start = time.time()
+with warnings.catch_warnings(record=True) as warning_list:
+    cate_est_drlearner = drlearner.drlearner('Y', 'T', df_dummy_data, gen_skf=split_strategy, random_state=random_state)
+times[method_name] = time.time() - start
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_drlearner[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete: {time.time() - start}')
+summarize_warnings(warning_list, method_name)
+print()
 
 try:
     method_name = 'BART'

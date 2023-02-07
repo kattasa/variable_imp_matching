@@ -15,7 +15,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from Experiments.helpers import create_folder, get_data, get_acic_data, summarize_warnings, get_errors
-from other_methods import bart, causalforest, prognostic, doubleml, causalforest_dml
+from other_methods import bart, causalforest, prognostic, doubleml, causalforest_dml, pymalts
 from src.linear_coef_matching_mf import LCM_MF
 
 
@@ -63,8 +63,8 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         else:
             df_data, df_true, binary = get_data(data=dataset,
                                                 config=dataset_config)
-            categorical = None
-            dummy_cols = None
+            categorical = []
+            dummy_cols = []
 
         df_dummy_data = df_data.copy(deep=True)
         if dummy_cols is not None:
@@ -93,7 +93,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         split_strategy = None
 
         if 'lcm_mean' in methods:
-            method_name = 'LASSO Coefficient Matching Mean'
+            method_name = 'LASSO Coefficient\nMatching'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
@@ -138,6 +138,31 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
                                            iter=iter)
                                 ])
             print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
+
+        if 'malts' in methods:
+            method_name = 'MALTS Matching'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                m = pymalts.malts_mf('Y', 'T', data=df_data,
+                                     discrete=binary + categorical,
+                                     categorical=categorical,
+                                     k_est=k_est_mean,
+                                     n_splits=n_splits, estimator='mean',
+                                     smooth_cate=False,
+                                     gen_skf=split_strategy,
+                                     random_state=random_state)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(m.CATE_df[['avg.CATE']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            print(f'{method_name} complete: {time.time() - start}')
             summarize_warnings(warning_list, method_name)
             print()
 
@@ -322,7 +347,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         sns.set(font_scale=6)
         fig, ax = plt.subplots(figsize=(40, 50))
         sns.boxenplot(x='Method', y='Relative Error (%)', data=df_err[df_err['Iter'] == iter])
-        plt.xticks(rotation=65, horizontalalignment='right')
+        # plt.xticks(rotation=65, horizontalalignment='right')
         ax.yaxis.set_major_formatter(ticker.PercentFormatter())
         plt.tight_layout()
         fig.savefig(f'{save_folder}/boxplot_multifold_iter{iter:02d}.png')

@@ -35,7 +35,8 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
             T.append(t)
         return np.array(T)
     # the data generating function that we will use. include second order information
-    xc = np.random.normal(0, std, size=(num_samples, num_cont_imp))
+    # xc = np.random.normal(0, std, size=(num_samples, num_cont_imp))
+    xc = np.random.normal(1, std, size=(num_samples, num_cont_imp))
     xd = np.random.binomial(1, 0.5, size=(num_samples, num_disc_imp))
     x = np.hstack((xc, xd))
 
@@ -45,12 +46,13 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     num_cov_dense = num_cont_imp + num_disc_imp
     dense_bs_sign = np.random.choice([-1, 1], num_cov_dense)
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]
-    dense_bs = np.random.normal(0, 5, size=num_cov_dense)
+    # dense_bs = np.random.normal(0, 5, size=num_cov_dense)
 
     if weights is not None:
         for idx, w in weights:
             dense_bs[idx] = w['control']
-    y0_true = np.dot(x, np.array(dense_bs)) + x[:, 0]**2 - x[:, 1]**2
+    # y0_true = np.dot(x, np.array(dense_bs)) + x[:, 0]**2 - x[:, 1]**2
+    y0_true = np.dot(x, np.array(dense_bs))
 
     treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
     if weights is not None:

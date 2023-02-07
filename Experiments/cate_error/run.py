@@ -29,26 +29,27 @@ datasets = [
 
 methods = [
     'lcm_mean',
+    'malts',
     # 'lcm_linear',
-    'linear_prog_mean',
+    # 'linear_prog_mean',
     # 'linear_prog_linear',
-    'ensemble_prog_mean',
+    # 'ensemble_prog_mean',
     # 'ensemble_prog_linear',
-    'doubleml',
-    'bart',
-    'causal_forest',
-    'causal_forest_dml'
+    # 'doubleml',
+    # 'bart',
+    # 'causal_forest',
+    # 'causal_forest_dml'
 ]
 
 for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
-        n_splits = 10
-        dataset_config['num_samples'] = 5000
-        dataset_config['std'] = 3
+        n_splits = 5
+        dataset_config['num_samples'] = 2500
+        dataset_config['std'] = 1.5
         if 'continuous' in data:
             dataset_config['imp_c'] = 15
-            dataset_config['unimp_c'] = 185
+            dataset_config['unimp_c'] = 25
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
@@ -66,6 +67,11 @@ for data in datasets:
         dataset_config['num_samples'] = 2000
         dataset_config['imp_c'] = 10
         dataset_config['unimp_c'] = 90
+    if data == 'friedman':
+        n_splits = 2
+        dataset_config['num_samples'] = 2000
+        dataset_config['imp_c'] = 0
+        dataset_config['unimp_c'] = 0
 
     if 'acic' not in data:
         cate_error_test(dataset=data, n_splits=n_splits,
