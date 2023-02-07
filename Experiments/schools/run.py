@@ -15,6 +15,8 @@ k_est = 10
 random_state = 0
 n_splits = 25
 n_repeats = 5
+# n_splits = 2
+# n_repeats = 1
 
 df = dgp_schools_df()
 
@@ -33,35 +35,53 @@ lcm_ate = np.mean(lcm_ates)
 lcm_ci = st.t.interval(confidence=0.95, df=len(lcm_ates)-1, loc=np.mean(lcm_ates), scale=st.sem(lcm_ates))
 print('LCM Done')
 
-with open('lcm_ate.txt', 'w') as f:
+with open('schools_results/lcm_ate.txt', 'w') as f:
     f.write(f'{lcm_ate} ({lcm_ci[0]},{lcm_ci[1]})')
 
-prog_cates, prog_c_mg, prog_t_mg, prog_fi = \
+linear_prog_cates, linear_prog_c_mg, linear_prog_t_mg, linear_prog_fi = \
+    prognostic.prognostic_cv(outcome='Y', treatment='T', data=df,
+                             method='linear', double=True, k_est=k_est,
+                             est_method='mean', gen_skf=lcm.gen_skf,
+                             return_feature_imp=True,
+                             random_state=random_state)
+linear_prog_cates = linear_prog_cates['CATE']
+linear_prog_cates.to_csv('linear_prog_cates.csv')
+linear_prog_ates = [linear_prog_cates.iloc[:, i*n_splits:(i+1)*n_splits].mean().mean() for i in range(n_repeats)]
+linear_prog_ate = np.mean(linear_prog_ates)
+linear_prog_ci = st.t.interval(confidence=0.95, df=len(linear_prog_ates)-1, loc=np.mean(linear_prog_ates), scale=st.sem(linear_prog_ates))
+print('Linear Prog Done')
+
+with open('schools_results/linear_prog_ate.txt', 'w') as f:
+    f.write(f'{linear_prog_ate} ({linear_prog_ci[0]},{linear_prog_ci[1]})')
+
+ensemble_prog_cates, ensemble_prog_c_mg, ensemble_prog_t_mg, ensemble_prog_fi = \
     prognostic.prognostic_cv(outcome='Y', treatment='T', data=df,
                              method='ensemble', double=True, k_est=k_est,
                              est_method='mean', gen_skf=lcm.gen_skf,
                              return_feature_imp=True,
                              random_state=random_state)
-prog_cates = prog_cates['CATE']
-prog_cates.to_csv('prog_cates.csv')
-prog_ates = [prog_cates.iloc[:, i*n_splits:(i+1)*n_splits].mean().mean() for i in range(n_repeats)]
-prog_ate = np.mean(prog_ates)
-prog_ci = st.t.interval(confidence=0.95, df=len(prog_ates)-1, loc=np.mean(prog_ates), scale=st.sem(prog_ates))
-print('Prog Done')
+ensemble_prog_cates = ensemble_prog_cates['CATE']
+ensemble_prog_cates.to_csv('ensemble_prog_cates.csv')
+ensemble_prog_ates = [ensemble_prog_cates.iloc[:, i*n_splits:(i+1)*n_splits].mean().mean() for i in range(n_repeats)]
+ensemble_prog_ate = np.mean(ensemble_prog_ates)
+ensemble_prog_ci = st.t.interval(confidence=0.95, df=len(ensemble_prog_ates)-1, loc=np.mean(ensemble_prog_ates), scale=st.sem(ensemble_prog_ates))
+print('Ensemble Prog Done')
 
-with open('prog_ate.txt', 'w') as f:
-    f.write(f'{prog_ate} ({prog_ci[0]},{prog_ci[1]})')
+with open('schools_results/ensemble_prog_ate.txt', 'w') as f:
+    f.write(f'{ensemble_prog_ate} ({ensemble_prog_ci[0]},{ensemble_prog_ci[1]})')
 
 df_orig = pd.read_csv(f'{os.getenv("SCHOOLS_FOLDER")}/df.csv')
 lcm_cates = lcm.cate_df.join(df_orig.drop(columns=['Z', 'Y']))
 
 lcm_top_10 = pd.DataFrame(lcm.M_list, columns=lcm.covariates).mean().sort_values(ascending=False).iloc[:8].index
-prog_top_10 = pd.DataFrame(prog_fi, columns=lcm.covariates).mean().sort_values().sort_values(ascending=False).iloc[:8].index
-imp_covs = [c for c in lcm_top_10 if c in prog_top_10]
+linear_prog_top_10 = pd.DataFrame(linear_prog_fi, columns=lcm.covariates).mean().sort_values().sort_values(ascending=False).iloc[:8].index
+ensemble_prog_top_10 = pd.DataFrame(ensemble_prog_fi, columns=lcm.covariates).mean().sort_values().sort_values(ascending=False).iloc[:8].index
+imp_covs = [c for c in lcm_top_10 if c in linear_prog_top_10]
+imp_covs = [c for c in imp_covs if c in ensemble_prog_top_10]
 imp_covs2 = [c.split('_')[0] for c in imp_covs]
 for cov, v in Counter(imp_covs2).items():
     if v > 1:
-        duplicate_covs = [c for c in lcm_top_10 if cov in c]
+        duplicate_covs = [c for c in imp_covs if cov in c]
         for d in duplicate_covs[1:]:
             imp_covs.remove(d)
 print(f'# imp covs: {len(imp_covs)}')
@@ -82,44 +102,55 @@ sample_num = sample.index[0]
 
 while True:
     iter_number = np.random.randint(0, n_splits*n_repeats)
-    if sample_num in prog_c_mg[iter_number].index:
+    if sample_num in linear_prog_c_mg[iter_number].index:
         break
 print(f'Pulling example MG from iteration {iter_number}')
 
 lcm_c_mg = df_orig.loc[lcm.get_MGs()[iter_number][0].loc[sample_num], imp_covs + ['Z']]
 lcm_t_mg = df_orig.loc[lcm.get_MGs()[iter_number][1].loc[sample_num], imp_covs + ['Z']]
-prog_c_mg = df_orig.loc[prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
-prog_t_mg = df_orig.loc[prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+linear_prog_c_mg = df_orig.loc[linear_prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+linear_prog_t_mg = df_orig.loc[linear_prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+ensemble_prog_c_mg = df_orig.loc[ensemble_prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+ensemble_prog_t_mg = df_orig.loc[ensemble_prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
 
 lcm_mg = pd.concat([lcm_c_mg, lcm_t_mg])
-prog_mg = pd.concat([prog_c_mg, prog_t_mg])
+linear_prog_mg = pd.concat([linear_prog_c_mg, linear_prog_t_mg])
+ensemble_prog_mg = pd.concat([ensemble_prog_c_mg, ensemble_prog_t_mg])
 
 categorical = list(lcm_mg.dtypes[lcm_mg.dtypes == 'int'].index)
 categorical.remove('Z')
 continuous = list(lcm_mg.dtypes[lcm_mg.dtypes == 'float'].index)
 
 lcm_comps = {}
-prog_comps = {}
+linear_prog_comps = {}
+ensemble_prog_comps = {}
 
 for c in categorical:
     lcm_comps[c] = ((lcm_mg[c] == sample[c].values[0]).astype(int).sum() / (k_est*2))*100
-    prog_comps[c] = ((prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
+    linear_prog_comps[c] = ((linear_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
+                k_est * 2)) * 100
+    ensemble_prog_comps[c] = ((ensemble_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
                 k_est * 2)) * 100
 for c in continuous:
     lcm_comps[c] = np.abs(lcm_mg[c] - sample[c].values[0]).mean()
-    prog_comps[c] = np.abs(prog_mg[c] - sample[c].values[0]).mean()
+    linear_prog_comps[c] = np.abs(linear_prog_mg[c] - sample[c].values[0]).mean()
+    ensemble_prog_comps[c] = np.abs(ensemble_prog_mg[c] - sample[c].values[0]).mean()
 
 lcm_comps['Z'] = np.nan
-prog_comps['Z'] = np.nan
+linear_prog_comps['Z'] = np.nan
+ensemble_prog_comps['Z'] = np.nan
 
 lcm_mg = pd.concat([sample, lcm_mg, pd.DataFrame.from_dict([lcm_comps])])
-prog_mg = pd.concat([sample, prog_mg, pd.DataFrame.from_dict([prog_comps])])
+linear_prog_mg = pd.concat([sample, linear_prog_mg, pd.DataFrame.from_dict([linear_prog_comps])])
+ensemble_prog_mg = pd.concat([sample, ensemble_prog_mg, pd.DataFrame.from_dict([ensemble_prog_comps])])
 
 lcm_mg = lcm_mg.rename(columns={'Z': 'T'})
-prog_mg = prog_mg.rename(columns={'Z': 'T'})
+linear_prog_mg = linear_prog_mg.rename(columns={'Z': 'T'})
+ensemble_prog_mg = ensemble_prog_mg.rename(columns={'Z': 'T'})
 
 lcm_mg.to_latex('school_lcm_mg.tex')
-prog_mg.to_latex('school_prog_mg.tex')
+linear_prog_mg.to_latex('school_linear_prog_mg.tex')
+ensemble_prog_mg.to_latex('school_ensemble_prog_mg.tex')
 
 cate_df = lcm.cate_df.join(df_orig.drop(columns=['Z', 'Y']))
 cate_df = cate_df.rename(columns={'avg.CATE_mean': 'Est CATE',

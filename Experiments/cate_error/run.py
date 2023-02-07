@@ -63,8 +63,8 @@ for data in datasets:
             dataset_config['imp_d'] = 15
             dataset_config['unimp_d'] = 10
     if data in ['polynomials', 'sine', 'non_linear_mixed', 'test', 'combo']:
-        n_splits = 5
-        dataset_config['num_samples'] = 2500
+        n_splits = 10
+        dataset_config['num_samples'] = 1000
         dataset_config['imp_c'] = 2
         dataset_config['unimp_c'] = 98
     if data == 'friedman':

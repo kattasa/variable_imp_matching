@@ -105,7 +105,7 @@ def dgp_friedman(n):
 def dgp_sine(n_samples, n_unimp):
     x = np.random.uniform(-np.pi, np.pi, size=(n_samples, 2))
     y0 = np.sin(x[:, 0])
-    y1 = np.sin(x[:, 0]) + np.sin(x[:, 1])
+    y1 = y0 + np.sin(x[:, 1])
     y0_errors = np.random.normal(0, 0, size=n_samples)
     y1_errors = np.random.normal(0, 0, size=n_samples)
     te = y1 - y0

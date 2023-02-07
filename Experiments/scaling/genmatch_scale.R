@@ -8,5 +8,5 @@ cols <- paste(cols, collapse=" + ")
 cols <- substr(cols, 1, nchar(cols)-8)
 
 start <- Sys.time()
-suppressWarnings(m <- matchit(as.formula(paste("T ~ ", cols)), data=df, method="genetic"))
+m <- matchit(as.formula(paste("T ~ ", cols)), data=df, method="genetic")
 cat(as.character(as.numeric(Sys.time() - start)), '\n')

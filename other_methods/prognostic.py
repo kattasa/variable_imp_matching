@@ -144,6 +144,7 @@ class Prognostic:
 
 def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
                   k_est=1, est_method='mean', n_splits=5, gen_skf=None,
+                  diameter_prune=3,
                   return_feature_imp=False, random_state=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
@@ -160,6 +161,7 @@ def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
         if return_feature_imp:
             feature_imps.append(get_feature_imp(prog))
         prog_mg, c_mgs, t_mgs = prog.get_matched_group(df_est, k=k_est,
+                                                       diameter_prune=diameter_prune,
                                                        method=est_method)
         control_mgs.append(c_mgs)
         treatment_mgs.append(t_mgs)
