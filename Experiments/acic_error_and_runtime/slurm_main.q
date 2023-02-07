@@ -14,10 +14,10 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 source /hpc/home/qml/miniconda3/etc/profile.d/conda.sh
 conda activate linear_coef_matching
 
-small_memory=$"8G"
-medium_small_memory=$"12G"
-medium_memory=$"16G"
-large_memory=$"24G"
+small_memory=$"16G"
+medium_small_memory=$"24G"
+medium_memory=$"32G"
+large_memory=$"64G"
 k_est_per_500=3
 k_est_max=15
 min_n_splits=2
