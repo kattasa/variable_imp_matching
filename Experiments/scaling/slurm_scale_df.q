@@ -18,9 +18,6 @@ unimp_c=56
 for n in ${num_samples[@]}; do
     mkdir "${RESULTS_FOLDER}/num_samples/${n}"
     sbatch -o "${RESULTS_FOLDER}/num_samples/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_samples/${n}/dgp.err" --mem="$memory" --export=NUM_SAMPLES=$n,IMP_C=$imp_c,UNIMP_C=$unimp_c,SAVE_FOLDER="${RESULTS_FOLDER}/num_samples/${n}",PYTHONPATH,R_HOME slurm_dgp_scale.q
-    while [ ! -f "${RESULTS_FOLDER}/num_samples/${n}/df.csv" ]; do
-        sleep 10
-    done
 done
 
 mkdir "${RESULTS_FOLDER}/num_covs"
@@ -30,7 +27,4 @@ imp_c=8
 for n in ${num_covs[@]}; do
     mkdir "${RESULTS_FOLDER}/num_covs/${n}"
     sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/dgp.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/dgp.err" --mem="16G" --export=NUM_SAMPLES=$num_samples,IMP_C=$imp_c,UNIMP_C=$n,SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME slurm_dgp_scale.q
-    while [ ! -f "${RESULTS_FOLDER}/num_covs/${n}/df.csv" ]; do
-        sleep 10
-    done
 done
