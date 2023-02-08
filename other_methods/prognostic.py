@@ -50,7 +50,6 @@ class Prognostic:
                     max_iter=500, random_state=random_state).fit(Xc, Yc)
             else:
                 self.hc = linear.LassoCV(random_state=random_state).fit(Xc, Yc)
-                print(self.hc.score(Xc, Yc))
             if self.double:
                 if self.binary_outcome:
                     self.ht = linear.LogisticRegressionCV(
@@ -58,7 +57,9 @@ class Prognostic:
                         max_iter=500, random_state=random_state).fit(Xt, Yt)
                 else:
                     self.ht = linear.LassoCV(random_state=random_state).fit(Xt, Yt)
-                    print(self.ht.score(Xt, Yt))
+
+        print(self.hc.score(Xc, Yc))
+        print(self.ht.score(Xt, Yt))
 
     def get_sample_cate(self, df_est, sample_idx, k=10):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
@@ -123,14 +124,15 @@ class Prognostic:
                 t_mg]
             yt = [linear_cate(these_mgs[i], these_samples[i].reshape(1, -1))
                   for i in range(these_samples.shape[0])]
-        c_diam = c_dist[:, -1]
-        yc = np.where(
-            c_diam <= np.mean(c_diam) + (diameter_prune*np.std(c_diam)), yc,
-            np.nan)
-        t_diam = t_dist[:, -1]
-        yt = np.where(
-            t_diam <= np.mean(t_diam) + (diameter_prune * np.std(t_diam)), yt,
-            np.nan)
+        if diameter_prune:
+            c_diam = c_dist[:, -1]
+            yc = np.where(
+                c_diam <= np.mean(c_diam) + (diameter_prune*np.std(c_diam)), yc,
+                np.nan)
+            t_diam = t_dist[:, -1]
+            yt = np.where(
+                t_diam <= np.mean(t_diam) + (diameter_prune * np.std(t_diam)), yt,
+                np.nan)
         df_mg = pd.DataFrame([yc, yt, T_est]).T
         df_mg.columns = ['Yc', 'Yt', 'T']
         df_mg['CATE'] = df_mg['Yt'] - df_mg['Yc']
@@ -146,7 +148,7 @@ class Prognostic:
 
 def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
                   k_est=1, est_method='mean', n_splits=5, gen_skf=None,
-                  diameter_prune=3,
+                  diameter_prune=None,
                   return_feature_imp=False, random_state=None):
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)

@@ -6,7 +6,7 @@ import pandas as pd
 from Experiments.cate_error.cate_error import cate_error_test
 
 iters = 1
-n_repeats = 1
+n_repeats = 5
 print_progress = True
 k_est_mean = 10
 k_est_linear = 40
@@ -15,16 +15,9 @@ custom_iters = None
 
 datasets = [
     # 'dense_continuous',
-    # 'dense_discrete',
-    # 'dense_mixed',
-    # 'polynomials',
-    # 'sine',
-    # 'non_linear_mixed',
-    'test',
-    # 'combo',
+    'sine',
+    # 'exp',
     # 'friedman',
-    # 'acic_2018',
-    # 'acic_2019',
 ]
 
 methods = [
@@ -44,12 +37,12 @@ methods = [
 for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
-        n_splits = 5
-        dataset_config['num_samples'] = 2500
+        n_splits = 2
+        dataset_config['num_samples'] = 500
         dataset_config['std'] = 1.5
         if 'continuous' in data:
-            dataset_config['imp_c'] = 15
-            dataset_config['unimp_c'] = 25
+            dataset_config['imp_c'] = 8
+            dataset_config['unimp_c'] = 1000
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
@@ -62,11 +55,16 @@ for data in datasets:
             dataset_config['unimp_c'] = 10
             dataset_config['imp_d'] = 15
             dataset_config['unimp_d'] = 10
-    if data in ['polynomials', 'sine', 'non_linear_mixed', 'test', 'combo']:
+    if data == 'sine':
         n_splits = 10
         dataset_config['num_samples'] = 2000
         dataset_config['imp_c'] = 2
         dataset_config['unimp_c'] = 98
+    if data == 'exp':
+        n_splits = 10
+        dataset_config['num_samples'] = 2000
+        dataset_config['imp_c'] = 4
+        dataset_config['unimp_c'] = 96
     if data == 'friedman':
         n_splits = 5
         dataset_config['num_samples'] = 2500

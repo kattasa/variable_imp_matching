@@ -12,6 +12,9 @@ import scipy
 from sklearn import preprocessing
 
 
+np.random.seed(0)
+
+
 def construct_sec_order(arr):
     # an intermediate data generation function used for generating second order information
     second_order_feature = []
@@ -104,10 +107,10 @@ def dgp_friedman(n):
 
 def dgp_sine(n_samples, n_unimp):
     x = np.random.uniform(-np.pi, np.pi, size=(n_samples, 2))
-    y0 = 2*np.sin(x[:, 0])
+    y0 = np.sin(x[:, 0])
     y1 = y0 + np.sin(-x[:, 1])
-    y0_errors = np.random.normal(0, 0, size=n_samples)
-    y1_errors = np.random.normal(0, 0, size=n_samples)
+    y0_errors = np.random.normal(0, 0.1, size=n_samples)
+    y1_errors = np.random.normal(0, 0.1, size=n_samples)
     te = y1 - y0
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
@@ -117,27 +120,6 @@ def dgp_sine(n_samples, n_unimp):
     X = np.concatenate([x, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
            (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
-
-
-# def dgp_sine(n_samples, n_imp, n_unimp):
-#     x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
-#     dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 9, size=(n_imp,))
-#     dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1, )
-#     u = np.matmul(x_imp, dense_bs)
-#     y0 = np.sin(u) + np.sin(2*u) + np.sin(3*u) + np.sin(4*u) + 1
-#     y1 = np.sin(u) + np.sin(2*u) + np.sin(3*u) + np.sin(4*u) + np.sin(5*u) + 1
-#     y0_errors = np.random.normal(0, 0.04, size=n_samples)
-#     y1_errors = np.random.normal(0, 0.04, size=n_samples)
-#     te = y1 - y0
-#     y0 = y0 + y0_errors
-#     y1 = y1 + y1_errors
-#     t_errors = np.random.normal(0, 1, (n_samples,))
-#     t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
-#     y = (y0 * (1 - t)) + (y1 * t)
-#     x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
-#     X = np.concatenate([x_imp, x_unimp], axis=1)
-#     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
-#            (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
 def dgp_polynomials(n_samples, n_imp, n_unimp):
@@ -182,12 +164,12 @@ def dgp_non_linear_mixed(n_samples, n_imp, n_unimp):
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
-def dgp_test(n_samples, n_imp, n_unimp):
+def dgp_exp(n_samples, n_unimp):
     x = np.random.uniform(-3, 3, size=(n_samples, 4))
-    y0 = 2*np.exp(x[:, 0]) - np.sum(np.exp[:, 1:3], axis=1)
+    y0 = 2*np.exp(x[:, 0]) - np.sum(np.exp(x[:, 1:3]), axis=1)
     y1 = y0 + np.exp(x[:, 3])
-    y0_errors = np.random.normal(0, 0, size=n_samples)
-    y1_errors = np.random.normal(0, 0, size=n_samples)
+    y0_errors = np.random.normal(0, 1, size=n_samples)
+    y1_errors = np.random.normal(0, 1, size=n_samples)
     te = y1 - y0
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
@@ -198,25 +180,26 @@ def dgp_test(n_samples, n_imp, n_unimp):
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
-# def dgp_test(n_samples, n_imp, n_unimp):
-#     x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
-#     dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 9, size=(n_imp,))
-#     dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1, )
-#     u = np.matmul(x_imp, dense_bs)
-#     y0 = (u+1)**2 - 2*u
-#     y1 = (u+1)**2 - 2*u + np.exp(u) + 1
-#     y0_errors = np.random.normal(0, 0.04, size=n_samples)
-#     y1_errors = np.random.normal(0, 0.04, size=n_samples)
-#     te = y1 - y0
-#     y0 = y0 + y0_errors
-#     y1 = y1 + y1_errors
-#     t_errors = np.random.normal(0, 1, (n_samples,))
-#     t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
-#     y = (y0 * (1 - t)) + (y1 * t)
-#     x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
-#     X = np.concatenate([x_imp, x_unimp], axis=1)
-#     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
-#                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
+
+def dgp_test(n_samples, n_imp, n_unimp):
+    x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))
+    dense_bs = np.random.choice([-1, 1], size=(n_imp,)) * np.random.normal(10, 9, size=(n_imp,))
+    dense_bs = preprocessing.normalize(dense_bs.reshape(1, -1), norm='l2').reshape(-1, )
+    u = np.matmul(x_imp, dense_bs)
+    y0 = (u+1)**2 - 2*u
+    y1 = (u+1)**2 - 2*u + np.exp(u) + 1
+    y0_errors = np.random.normal(0, 0.04, size=n_samples)
+    y1_errors = np.random.normal(0, 0.04, size=n_samples)
+    te = y1 - y0
+    y0 = y0 + y0_errors
+    y1 = y1 + y1_errors
+    t_errors = np.random.normal(0, 1, (n_samples,))
+    t = (scipy.special.expit(x_imp[:, 0] + x_imp[:, 1] + t_errors) > 0.5).astype(int)
+    y = (y0 * (1 - t)) + (y1 * t)
+    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
+    X = np.concatenate([x_imp, x_unimp], axis=1)
+    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
+                y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 
 def dgp_poly_basic(n_samples, n_imp, n_unimp, powers=[2]):

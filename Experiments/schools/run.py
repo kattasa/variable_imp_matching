@@ -25,7 +25,7 @@ lcm = LCM_MF(outcome='Y', treatment='T', data=df,
 
 lcm.fit(model='linear')
 lcm.MG(k=k_est)
-lcm.CATE()
+lcm.CATE(diameter_prune=None)
 lcm_cates = lcm.cate_df['CATE_mean']
 lcm_cates.to_csv('lcm_cates.csv')
 
@@ -43,6 +43,7 @@ linear_prog_cates_full, linear_prog_c_mg, linear_prog_t_mg, linear_prog_fi = \
     prognostic.prognostic_cv(outcome='Y', treatment='T', data=df,
                              method='linear', double=True, k_est=k_est,
                              est_method='mean', gen_skf=lcm.gen_skf,
+                             diameter_prune=None,
                              return_feature_imp=True,
                              random_state=random_state)
 linear_prog_cates = linear_prog_cates_full['CATE']
@@ -59,7 +60,8 @@ with open('linear_prog_ate.txt', 'w') as f:
 ensemble_prog_cates_full, ensemble_prog_c_mg, ensemble_prog_t_mg, ensemble_prog_fi = \
     prognostic.prognostic_cv(outcome='Y', treatment='T', data=df,
                              method='ensemble', double=True, k_est=k_est,
-                             est_method='mean', gen_skf=lcm.gen_skf,
+                             est_method='mean',
+                             diameter_prune=None, gen_skf=lcm.gen_skf,
                              return_feature_imp=True,
                              random_state=random_state)
 ensemble_prog_cates = ensemble_prog_cates_full['CATE']

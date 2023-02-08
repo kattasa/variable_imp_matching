@@ -20,8 +20,11 @@ from src.linear_coef_matching_mf import LCM_MF
 
 
 warnings.filterwarnings("ignore")
-np.random.seed(1)
-random_state = 1
+np.random.seed(0)
+random_state = 0
+
+method_order = ['LCM', 'Linear PGM', 'Nonparametric PGM', 'MALTS', 'Causal Forest',
+                'Causal Forest DML', 'Linear DML', 'BART']
 
 
 def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
@@ -82,12 +85,6 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
 
         times = {}
 
-        scaling_factor = (((df_true[df_true['T'] == 1]['Y'].std()) *
-                           df_true[df_true['T'] == 1].shape[0]) +
-                          ((df_true[df_true['T'] == 0]['Y'].std()) *
-                           df_true[df_true['T'] == 0].shape[0])) / \
-                         df_true.shape[0]
-
         scaling_factor = np.abs(df_true['TE']).mean()
 
         split_strategy = None
@@ -101,7 +98,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
                              random_state=random_state)
                 lcm.fit(model='linear', separate_treatments=True)
                 lcm.MG(k=k_est_mean)
-                lcm.CATE(cate_methods=['mean'])
+                lcm.CATE(cate_methods=['mean'], diameter_prune=None)
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
                                 get_errors(lcm.cate_df[['avg.CATE_mean']],
@@ -114,32 +111,6 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             summarize_warnings(warning_list, method_name)
             print()
             split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
-
-        if 'lcm_linear' in methods:
-            method_name = 'LASSO Coefficient Matching Linear'
-            start = time.time()
-            with warnings.catch_warnings(record=True) as warning_list:
-                lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
-                             n_splits=n_splits, n_repeats=n_repeats,
-                             random_state=random_state)
-                if split_strategy is not None:
-                    lcm.gen_skf = split_strategy
-                else:
-                    split_strategy = lcm.gen_skf
-                lcm.fit(model='linear', separate_treatments=True)
-                lcm.MG(k=k_est_linear)
-                lcm.CATE(cate_methods=['linear_pruned'])
-            times[method_name] = time.time() - start
-            df_err = pd.concat([df_err,
-                                get_errors(lcm.cate_df[['avg.CATE_linear_pruned']],
-                                           df_true[['TE']],
-                                           method_name=method_name,
-                                           scale=scaling_factor,
-                                           iter=iter)
-                                ])
-            print(f'\n{method_name} method complete: {time.time() - start}')
-            summarize_warnings(warning_list, method_name)
-            print()
 
         if 'malts' in methods:
             method_name = 'MALTS'
@@ -176,30 +147,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
                                                                double=True,
                                                                k_est=k_est_mean,
                                                                est_method='mean',
-                                                               gen_skf=split_strategy,
-                                                               random_state=random_state)
-            times[method_name] = time.time() - start
-            df_err = pd.concat([df_err,
-                                get_errors(cate_est_prog[['avg.CATE']],
-                                           df_true[['TE']],
-                                           method_name=method_name,
-                                           scale=scaling_factor,
-                                           iter=iter)
-                                ])
-            print(f'\n{method_name} method complete: {time.time() - start}')
-            summarize_warnings(warning_list, method_name)
-            print()
-
-        if 'linear_prog_linear' in methods:
-            method_name = 'Linear Prognostic Score Matching Linear'
-            start = time.time()
-            with warnings.catch_warnings(record=True) as warning_list:
-                cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
-                                                               df_dummy_data,
-                                                               method='linear',
-                                                               double=True,
-                                                               k_est=k_est_linear,
-                                                               est_method='linear_pruned',
+                                                               diameter_prune=None,
                                                                gen_skf=split_strategy,
                                                                random_state=random_state)
             times[method_name] = time.time() - start
@@ -224,6 +172,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
                                                                      double=True,
                                                                      k_est=k_est_mean,
                                                                      est_method='mean',
+                                                                     diameter_prune=None,
                                                                      gen_skf=split_strategy,
                                                                      random_state=random_state)
             times[method_name] = time.time() - start
@@ -237,31 +186,6 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print(f'\n{method_name} method complete: {time.time() - start}')
             summarize_warnings(warning_list, method_name)
             print()
-
-        if 'ensemble_prog_linear' in methods:
-            method_name = 'Ensemble Prognostic Score Matching Linear'
-            start = time.time()
-            with warnings.catch_warnings(record=True) as warning_list:
-                cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
-                                                                     df_dummy_data,
-                                                                     method='ensemble',
-                                                                     double=True,
-                                                                     k_est=k_est_linear,
-                                                                     est_method='linear_pruned',
-                                                                     gen_skf=split_strategy,
-                                                                     random_state=random_state)
-            times[method_name] = time.time() - start
-            df_err = pd.concat([df_err,
-                                get_errors(cate_est_prog[['avg.CATE']],
-                                           df_true[['TE']],
-                                           method_name=method_name,
-                                           scale=scaling_factor,
-                                           iter=iter)
-                                ])
-            print(f'\n{method_name} method complete: {time.time() - start}')
-            summarize_warnings(warning_list, method_name)
-            print()
-
 
         if 'doubleml' in methods:
             method_name = 'DoubleML'
@@ -342,17 +266,22 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
 
         df_err.loc[df_err['Iter'] == iter, 'Relative Error (%)'] = df_err.loc[df_err['Iter'] == iter,
                                                                               'Relative Error (%)'] * 100
+
+        order = [m for m in method_order if m in df_err['Method'].unique()]
+        palette = {method_order[i]: sns.color_palette()[i] for i in
+                   range(len(method_order))}
+
+        plt.figure()
         sns.set_context("paper")
         sns.set_style("darkgrid")
-        sns.set(font_scale=6)
-        fig, ax = plt.subplots(figsize=(40, 50))
-        sns.boxplot(x='Method', y='Relative Error (%)', data=df_err[df_err['Iter'] == iter], showfliers=False)
-        # plt.xticks(rotation=65, horizontalalignment='right')
+        sns.set(font_scale=1)
+        ax = sns.boxplot(x='Method', y='Relative Error (%)',
+                         data=df_err[df_err['Iter'] == iter], showfliers=False,
+                         order=order, palette=palette)
         ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-        plt.tight_layout()
-        fig.savefig(f'{save_folder}/boxplot_multifold_iter{iter:02d}.png')
-        all_times.append(times)
+        ax.get_figure().savefig(f'{save_folder}/boxplot_multifold_iter{iter:02d}.png')
 
+        all_times.append(times)
         if print_progress:
             print(f'{iter} total time: {time.time() - total_time}\n')
 
