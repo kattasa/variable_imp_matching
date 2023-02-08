@@ -18,9 +18,9 @@ datasets = [
     # 'dense_discrete',
     # 'dense_mixed',
     # 'polynomials',
-    'sine',
+    # 'sine',
     # 'non_linear_mixed',
-    # 'test',
+    'test',
     # 'combo',
     # 'friedman',
     # 'acic_2018',
@@ -33,7 +33,7 @@ methods = [
     # 'lcm_linear',
     'linear_prog_mean',
     # 'linear_prog_linear',
-    # 'ensemble_prog_mean',
+    'ensemble_prog_mean',
     # 'ensemble_prog_linear',
     # 'doubleml',
     # 'bart',
@@ -64,7 +64,7 @@ for data in datasets:
             dataset_config['unimp_d'] = 10
     if data in ['polynomials', 'sine', 'non_linear_mixed', 'test', 'combo']:
         n_splits = 10
-        dataset_config['num_samples'] = 1000
+        dataset_config['num_samples'] = 2000
         dataset_config['imp_c'] = 2
         dataset_config['unimp_c'] = 98
     if data == 'friedman':

@@ -1,4 +1,5 @@
 suppressWarnings(library('MatchIt'))
+library('rbenchmark')
 
 save_folder <- Sys.getenv("SAVE_FOLDER")
 
@@ -9,4 +10,4 @@ cols <- substr(cols, 1, nchar(cols)-8)
 
 start <- Sys.time()
 m <- matchit(as.formula(paste("T ~ ", cols)), data=df, method="genetic")
-cat(as.character(as.numeric(Sys.time() - start)), '\n')
+write(Sys.time() - start, stdout())

@@ -46,16 +46,18 @@ class Prognostic:
         elif method == 'linear':
             if self.binary_outcome:
                 self.hc = linear.LogisticRegressionCV(
+                    penalty='l1', solver='saga',
                     max_iter=500, random_state=random_state).fit(Xc, Yc)
             else:
-                self.hc = linear.RidgeCV().fit(Xc, Yc)
+                self.hc = linear.LassoCV(random_state=random_state).fit(Xc, Yc)
                 print(self.hc.score(Xc, Yc))
             if self.double:
                 if self.binary_outcome:
                     self.ht = linear.LogisticRegressionCV(
+                        penalty='l1', solver='saga',
                         max_iter=500, random_state=random_state).fit(Xt, Yt)
                 else:
-                    self.ht = linear.RidgeCV().fit(Xt, Yt)
+                    self.ht = linear.LassoCV(random_state=random_state).fit(Xt, Yt)
                     print(self.ht.score(Xt, Yt))
 
     def get_sample_cate(self, df_est, sample_idx, k=10):

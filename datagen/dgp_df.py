@@ -100,6 +100,8 @@ def dgp_schools_df():
     df = df.rename(columns={'Z': 'T'})
     continuous = [c for c in df.columns if c not in categorical + ['T', 'Y']]
     df[continuous] = StandardScaler().fit_transform(df[continuous])
+    categorical.remove('C2')
+    df['C2'] = df['C2'].map({1: 0, 2: 1})
     return pd.get_dummies(df, columns=categorical)
 
 

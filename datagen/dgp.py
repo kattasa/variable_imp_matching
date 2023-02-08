@@ -104,8 +104,8 @@ def dgp_friedman(n):
 
 def dgp_sine(n_samples, n_unimp):
     x = np.random.uniform(-np.pi, np.pi, size=(n_samples, 2))
-    y0 = np.sin(x[:, 0])
-    y1 = y0 + np.sin(x[:, 1])
+    y0 = 2*np.sin(x[:, 0])
+    y1 = y0 + np.sin(-x[:, 1])
     y0_errors = np.random.normal(0, 0, size=n_samples)
     y1_errors = np.random.normal(0, 0, size=n_samples)
     te = y1 - y0
@@ -181,6 +181,22 @@ def dgp_non_linear_mixed(n_samples, n_imp, n_unimp):
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
+
+def dgp_test(n_samples, n_imp, n_unimp):
+    x = np.random.uniform(-3, 3, size=(n_samples, 2))
+    y0 = np.exp(x[:, 0])
+    y1 = y0 - np.sin(x[:, 3])
+    y0_errors = np.random.normal(0, 0, size=n_samples)
+    y1_errors = np.random.normal(0, 0, size=n_samples)
+    te = y1 - y0
+    y0 = y0 + y0_errors
+    y1 = y1 + y1_errors
+    t = set_t(x, 2, centered=0, overlap=1)
+    y = (y0 * (1 - t)) + (y1 * t)
+    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
+    X = np.concatenate([x, x_unimp], axis=1)
+    return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
+                y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 
 def dgp_test(n_samples, n_imp, n_unimp):
     x_imp = np.random.normal(0, 1, size=(n_samples, n_imp))

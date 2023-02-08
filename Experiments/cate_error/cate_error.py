@@ -93,7 +93,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         split_strategy = None
 
         if 'lcm_mean' in methods:
-            method_name = 'LASSO Coefficient\nMatching'
+            method_name = 'LCM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
@@ -142,7 +142,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'malts' in methods:
-            method_name = 'MALTS Matching'
+            method_name = 'MALTS'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 m = pymalts.malts_mf('Y', 'T', data=df_data,
@@ -167,7 +167,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'linear_prog_mean' in methods:
-            method_name = 'Linear Prognostic Score Matching Mean'
+            method_name = 'Linear PGM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
@@ -215,7 +215,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'ensemble_prog_mean' in methods:
-            method_name = 'Ensemble Prognostic Score Matching Mean'
+            method_name = 'Nonparametric PGM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
@@ -346,7 +346,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         sns.set_style("darkgrid")
         sns.set(font_scale=6)
         fig, ax = plt.subplots(figsize=(40, 50))
-        sns.boxenplot(x='Method', y='Relative Error (%)', data=df_err[df_err['Iter'] == iter])
+        sns.boxplot(x='Method', y='Relative Error (%)', data=df_err[df_err['Iter'] == iter], showfliers=False)
         # plt.xticks(rotation=65, horizontalalignment='right')
         ax.yaxis.set_major_formatter(ticker.PercentFormatter())
         plt.tight_layout()
