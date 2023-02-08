@@ -14,7 +14,7 @@ iters=10
 
 mkdir "${RESULTS_FOLDER}/num_samples"
 #num_samples=(128 256 512 1024 2048 4096 8192)
-num_samples=(2048)
+num_samples=(1024)
 imp_c=8
 unimp_c=32
 for n in ${num_samples[@]}; do
