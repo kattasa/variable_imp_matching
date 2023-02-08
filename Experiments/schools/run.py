@@ -13,6 +13,7 @@ from datagen.dgp_df import dgp_schools_df
 from src.linear_coef_matching_mf import LCM_MF
 from other_methods import prognostic
 
+save_folder = os.getenv('SAVE_FOLDER')
 k_est = 10
 random_state = 0
 n_splits = 20
@@ -27,7 +28,7 @@ lcm.fit(model='linear')
 lcm.MG(k=k_est)
 lcm.CATE(diameter_prune=None)
 lcm_cates = lcm.cate_df['CATE_mean']
-lcm_cates.to_csv('lcm_cates.csv')
+lcm_cates.to_csv(f'{save_folder}/lcm_cates.csv')
 
 lcm_ates = [lcm_cates.iloc[:, i*n_splits:(i+1)*n_splits].mean().mean() for i in range(n_repeats)]
 
@@ -36,7 +37,7 @@ lcm_std = np.std(lcm_ates)
 lcm_ci = (lcm_ate - (1.96*lcm_std), lcm_ate + (1.96*lcm_std))
 print('LCM Done')
 
-with open('lcm_ate.txt', 'w') as f:
+with open(f'{save_folder}/lcm_ate.txt', 'w') as f:
     f.write(f'{lcm_ate} ({lcm_ci[0]},{lcm_ci[1]})')
 
 linear_prog_cates_full, linear_prog_c_mg, linear_prog_t_mg, linear_prog_fi = \
@@ -47,14 +48,14 @@ linear_prog_cates_full, linear_prog_c_mg, linear_prog_t_mg, linear_prog_fi = \
                              return_feature_imp=True,
                              random_state=random_state)
 linear_prog_cates = linear_prog_cates_full['CATE']
-linear_prog_cates.to_csv('linear_prog_cates.csv')
+linear_prog_cates.to_csv(f'{save_folder}/linear_prog_cates.csv')
 linear_prog_ates = [linear_prog_cates.iloc[:, i*n_splits:(i+1)*n_splits].mean().mean() for i in range(n_repeats)]
 linear_prog_ate = np.mean(linear_prog_ates)
 linear_prog_std = np.std(linear_prog_ates)
 linear_prog_ci = (linear_prog_ate - (1.96*linear_prog_std), linear_prog_ate + (1.96*linear_prog_std))
 print('Linear Prog Done')
 
-with open('linear_prog_ate.txt', 'w') as f:
+with open(f'{save_folder}/linear_prog_ate.txt', 'w') as f:
     f.write(f'{linear_prog_ate} ({linear_prog_ci[0]},{linear_prog_ci[1]})')
 
 ensemble_prog_cates_full, ensemble_prog_c_mg, ensemble_prog_t_mg, ensemble_prog_fi = \
@@ -65,14 +66,14 @@ ensemble_prog_cates_full, ensemble_prog_c_mg, ensemble_prog_t_mg, ensemble_prog_
                              return_feature_imp=True,
                              random_state=random_state)
 ensemble_prog_cates = ensemble_prog_cates_full['CATE']
-ensemble_prog_cates.to_csv('ensemble_prog_cates.csv')
+ensemble_prog_cates.to_csv(f'{save_folder}/ensemble_prog_cates.csv')
 ensemble_prog_ates = [ensemble_prog_cates.iloc[:, i*n_splits:(i+1)*n_splits].mean().mean() for i in range(n_repeats)]
 ensemble_prog_ate = np.mean(ensemble_prog_ates)
 ensemble_prog_std = np.std(ensemble_prog_ates)
 ensemble_prog_ci = (ensemble_prog_ate - (1.96*ensemble_prog_std), ensemble_prog_ate + (1.96*ensemble_prog_std))
 print('Ensemble Prog Done')
 
-with open('ensemble_prog_ate.txt', 'w') as f:
+with open(f'{save_folder}/ensemble_prog_ate.txt', 'w') as f:
     f.write(f'{ensemble_prog_ate} ({ensemble_prog_ci[0]},{ensemble_prog_ci[1]})')
 
 df_orig = pd.read_csv(f'{os.getenv("SCHOOLS_FOLDER")}/df.csv')
@@ -157,8 +158,8 @@ for c in continuous:
 
 cat_diff_df = pd.concat(cat_diff_df)
 cont_diff_df = pd.concat(cont_diff_df)
-cat_diff_df.to_csv('categorical_diff.csv')
-cont_diff_df.to_csv('continuous_diff.csv')
+cat_diff_df.to_csv(f'{save_folder}/categorical_diff.csv')
+cont_diff_df.to_csv(f'{save_folder}/continuous_diff.csv')
 
 matplotlib.rcParams.update({'font.size': 40})
 sns.set_context("paper")
@@ -180,7 +181,7 @@ for ax in axes:
 axes[0].yaxis.set_major_formatter(ticker.PercentFormatter())
 # axes[1].set_ylim([0, 40])
 fig.tight_layout()
-fig.savefig(f'all_mg.png', bbox_inches='tight')
+fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
 
 
 imp_covs2 = [c.split('_')[0] for c in imp_covs]
@@ -255,9 +256,9 @@ lcm_mg = lcm_mg.rename(columns={'Z': 'T'})
 linear_prog_mg = linear_prog_mg.rename(columns={'Z': 'T'})
 ensemble_prog_mg = ensemble_prog_mg.rename(columns={'Z': 'T'})
 
-lcm_mg.to_latex('school_lcm_mg.tex')
-linear_prog_mg.to_latex('school_linear_prog_mg.tex')
-ensemble_prog_mg.to_latex('school_ensemble_prog_mg.tex')
+lcm_mg.to_latex(f'{save_folder}/school_lcm_mg.tex')
+linear_prog_mg.to_latex(f'{save_folder}/school_linear_prog_mg.tex')
+ensemble_prog_mg.to_latex(f'{save_folder}/school_ensemble_prog_mg.tex')
 
 cate_df = lcm.cate_df.join(df_orig.drop(columns=['Z', 'Y']))
 cate_df = cate_df[['avg.CATE_mean', 'XC', 'S3']]
@@ -278,7 +279,7 @@ sns.set_style("darkgrid")
 sns.set(font_scale=1)
 ax = sns.boxplot(data=cate_df, x="Urbanicity (XC)", y="Est CATE", hue='Method', hue_order=method_order, palette=palette, showfliers=False)
 sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None)
-ax.get_figure().savefig(f'cate_by_xc.png')
+ax.get_figure().savefig(f'{save_folder}/cate_by_xc.png')
 
 plt.figure()
 sns.set_context("paper")
@@ -286,4 +287,4 @@ sns.set_style("darkgrid")
 sns.set(font_scale=1)
 ax = sns.boxplot(data=cate_df, x="Exp Success (S3)", y="Est CATE", hue='Method', hue_order=method_order, palette=palette, showfliers=False)
 sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None)
-ax.get_figure().savefig(f'cate_by_s3.png')
+ax.get_figure().savefig(f'{save_folder}/cate_by_s3.png')

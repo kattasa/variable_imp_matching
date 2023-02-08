@@ -365,9 +365,12 @@ class malts_mf:
             m = malts(outcome, treatment, data=df_train, discrete=discrete,
                       C=self.C, k=self.k_tr, reweight=self.reweight)
             res = m.fit()
+            print(res)
             if not res.success:
                 print(f'MALTS failed to fit for {m.p} covariates')
                 raise Exception
+            else:
+                print('yay')
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est, k_est)
             self.MG_list.append(mg)
