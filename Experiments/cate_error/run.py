@@ -33,7 +33,7 @@ methods = [
     # 'lcm_linear',
     'linear_prog_mean',
     # 'linear_prog_linear',
-    'ensemble_prog_mean',
+    # 'ensemble_prog_mean',
     # 'ensemble_prog_linear',
     # 'doubleml',
     # 'bart',

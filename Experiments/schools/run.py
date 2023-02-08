@@ -16,7 +16,7 @@ from other_methods import prognostic
 k_est = 10
 random_state = 0
 n_splits = 20
-n_repeats = 5
+n_repeats = 50
 
 df = dgp_schools_df()
 

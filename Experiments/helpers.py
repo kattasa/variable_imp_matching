@@ -36,10 +36,10 @@ def get_data(data, config):
     if 'dense' in data:
         std = config['std'] if 'std' in config else 1.5
         df_train, df_data, df_true, x_cols, binary = dgp_dense_mixed_endo_df(config['num_samples'], config['imp_c'],
-                                                                               config['imp_d'], config['unimp_c'],
-                                                                               config['unimp_d'],
-                                                                               n_train=config['n_train'],
-                                                                             std=config['std'])
+                                                                             config['imp_d'], config['unimp_c'],
+                                                                             config['unimp_d'],
+                                                                             n_train=config['n_train'],
+                                                                             std=std)
     else:
         df_train, df_data, df_true, x_cols, binary = dgp_df(dgp=data, n_samples=config['num_samples'],
                                                               n_imp=config['imp_c'], n_unimp=config['unimp_c'],
