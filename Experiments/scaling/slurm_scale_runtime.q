@@ -10,7 +10,7 @@ export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
 memory=$"16G"
-iters=50
+iters=20
 
 mkdir "${RESULTS_FOLDER}/num_samples"
 num_samples=(256 512 1024 2048 4096 8192)

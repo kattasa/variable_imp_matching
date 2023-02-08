@@ -6,7 +6,7 @@ import pandas as pd
 from Experiments.cate_error.cate_error import cate_error_test
 
 iters = 1
-n_repeats = 5
+n_repeats = 1
 print_progress = True
 k_est_mean = 10
 k_est_linear = 40
@@ -57,12 +57,12 @@ for data in datasets:
             dataset_config['unimp_d'] = 10
     if data == 'sine':
         n_splits = 10
-        dataset_config['num_samples'] = 2000
+        dataset_config['num_samples'] = 5000
         dataset_config['imp_c'] = 2
         dataset_config['unimp_c'] = 98
     if data == 'exp':
         n_splits = 10
-        dataset_config['num_samples'] = 2000
+        dataset_config['num_samples'] = 5000
         dataset_config['imp_c'] = 4
         dataset_config['unimp_c'] = 96
     if data == 'friedman':
