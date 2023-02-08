@@ -8,12 +8,12 @@
 export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
-export N_REPEATS=10
+export N_REPEATS=1
 export RANDOM_STATE=0
 
 memory=$"16G"
 
-num_covs=(0 8 24 56 120 248 504 1016)
+num_covs=(0 8 24 56 120 248 504)
 for n in ${num_covs[@]}; do
     echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_covs/${n}/lcm_accuracy"

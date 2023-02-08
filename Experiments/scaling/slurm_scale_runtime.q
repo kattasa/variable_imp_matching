@@ -13,7 +13,7 @@ memory=$"16G"
 iters=50
 
 mkdir "${RESULTS_FOLDER}/num_samples"
-num_samples=(256 512 1024 2048 4096 8192 16384)
+num_samples=(256 512 1024 2048 4096 8192)
 for n in ${num_samples[@]}; do
     echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_samples/${n}/lcm_fit_times"
@@ -30,7 +30,7 @@ for n in ${num_samples[@]}; do
 done
 
 mkdir "${RESULTS_FOLDER}/num_covs"
-num_covs=(0 8 24 56 120 248 504 1016)
+num_covs=(0 8 24 56 120 248 504)
 for n in ${num_covs[@]}; do
     echo "Running scripts for ${n}"
     mkdir "${RESULTS_FOLDER}/num_covs/${n}/lcm_fit_times"

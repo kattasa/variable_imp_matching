@@ -9,10 +9,10 @@ export RESULTS_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/R
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 
-memory=$"16G"
+memory=$"4G"
 
 mkdir "${RESULTS_FOLDER}/num_samples"
-num_samples=(256 512 1024 2048 4096 8192 16384)
+num_samples=(256 512 1024 2048 4096 8192)
 imp_c=8
 unimp_c=56
 for n in ${num_samples[@]}; do
@@ -21,7 +21,7 @@ for n in ${num_samples[@]}; do
 done
 
 mkdir "${RESULTS_FOLDER}/num_covs"
-num_covs=(0 8 24 56 120 248 504 1016)
+num_covs=(0 8 24 56 120 248 504)
 num_samples=2048
 imp_c=8
 for n in ${num_covs[@]}; do
