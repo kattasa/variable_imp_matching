@@ -1,5 +1,4 @@
 suppressWarnings(library('MatchIt'))
-library('rbenchmark')
 
 save_folder <- Sys.getenv("SAVE_FOLDER")
 
