@@ -8,15 +8,15 @@ from Experiments.cate_error.cate_error import cate_error_test
 iters = 1
 n_repeats = 1
 print_progress = True
-k_est_mean = 3
+k_est_mean = 10
 k_est_linear = 40
 
 custom_iters = None
 
 datasets = [
-    # 'dense_continuous',
-    'sine',
-    'exp',
+    'dense_continuous',
+    # 'sine',
+    # 'exp',
     # 'friedman',
 ]
 

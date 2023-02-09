@@ -33,7 +33,7 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     def u(x):
         T = []
         for row in x:
-            l = scipy.special.expit(np.sum(row[:t_imp]) + np.random.normal(0, overlap))
+            l = scipy.special.expit(np.sum(row[:t_imp]) - t_imp + np.random.normal(0, overlap))
             t = int(l > 0.5)
             T.append(t)
         return np.array(T)
@@ -49,12 +49,10 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     num_cov_dense = num_cont_imp + num_disc_imp
     dense_bs_sign = np.random.choice([-1, 1], num_cov_dense)
     dense_bs = [np.random.normal(dense_bs_sign[i]*10, 9) for i in range(num_cov_dense)]
-    # dense_bs = np.random.normal(0, 5, size=num_cov_dense)
 
     if weights is not None:
         for idx, w in weights:
             dense_bs[idx] = w['control']
-    # y0_true = np.dot(x, np.array(dense_bs)) + x[:, 0]**2 - x[:, 1]**2
     y0_true = np.dot(x, np.array(dense_bs))
 
     treatment_eff_coef = np.random.normal(1.0, 0.25, size=num_cov_dense)
@@ -116,7 +114,7 @@ def dgp_sine(n_samples, n_unimp):
     y1 = y1 + y1_errors
     t = set_t(x, 2, centered=0, overlap=1)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
+    x_unimp = np.random.uniform(-np.pi, np.pi, size=(n_samples, n_unimp))
     X = np.concatenate([x, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), \
            (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
@@ -175,7 +173,7 @@ def dgp_exp(n_samples, n_unimp):
     y1 = y1 + y1_errors
     t = set_t(x, 2, centered=0, overlap=1)
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.normal(0, 1, size=(n_samples, n_unimp))
+    x_unimp = np.random.uniform(-3, 3, size=(n_samples, n_unimp))
     X = np.concatenate([x, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (
                 y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)

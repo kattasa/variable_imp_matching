@@ -5,17 +5,18 @@ import pandas as pd
 import time
 
 import seaborn as sns
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from datagen.dgp_df import dgp_dense_mixed_endo_df
+from datagen.dgp import data_generation_dense_mixed_endo
+from Experiments.helpers import get_errors
 from src.linear_coef_matching_mf import LCM_MF
 
-random_state = 1
-np.random.seed(random_state)
+random_state = 0
 
-k_est = 15
-est_method = ['linear_pruned', False]
+k_est = 10
+est_method = 'mean'
 
 n_samples = 500
 n_splits = 5
@@ -29,90 +30,74 @@ preset_weights = [
     [2, {'control': 10, 'treated': 10}]
 ]
 
-_, df, df_true, x_cols, binary = dgp_dense_mixed_endo_df(n=n_samples, nci=x_imp, ndi=0, ncu=x_unimp, ndu=0, std=1.5,
-                                                         t_imp=t_imp, overlap=1000, n_train=0, weights=preset_weights)
+df_orig, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples,
+                                                       num_cont_imp=x_imp,
+                                                       num_disc_imp=0,
+                                                       num_cont_unimp=x_unimp,
+                                                       num_disc_unimp=0,
+                                                       weights=preset_weights)
+df = df_orig.copy(deep=True)
+x_cols = [c for c in df.columns if 'X' in c]
+df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 
-sample_idx = df[(df['X0'].mean() + (2*df['X0'].std())) < df['X0']].index[0]
 
 df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)'])
 df_weights = pd.DataFrame(columns=[f'X{i}' for i in range(x_imp+x_unimp)] + ['Method'])
 df_mgs = pd.DataFrame(columns=list(range(k_est)) + ['Method', 'T'])
 
 start = time.time()
-lcm = LCM_MF(outcome='Y', treatment='T', data=df, n_splits=n_splits,  n_repeats=1)
-sample_mg_splits = []
-i = 0
-for est_idx, _ in lcm.gen_skf:
-    if sample_idx in est_idx:
-        sample_mg_splits.append(i)
-    i += 1
-lcm.fit(double_model=False)
+lcm = LCM_MF(outcome='Y', treatment='T', data=df, n_splits=n_splits,
+             n_repeats=1, random_state=random_state)
+lcm.fit(metalearner=False)
 these_weights = pd.DataFrame(lcm.M_list)
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
 these_weights['Method'] = 'LCM'
 df_weights = pd.concat([df_weights, these_weights.copy(deep=True)])
 lcm.MG(k=k_est)
-for s in sample_mg_splits:
-    this_control_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.C_MG_list[s].iloc[
-        np.where(lcm.gen_skf[s][0] == sample_idx)[0]].to_numpy()])
-    this_treatment_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.T_MG_list[s].iloc[
-        np.where(lcm.gen_skf[s][0] == sample_idx)[0]].to_numpy()])
-    this_control_mg['Method'] = 'LCM'
-    this_control_mg['T'] = 0
-    this_treatment_mg['Method'] = 'LCM'
-    this_treatment_mg['T'] = 1
-    this_control_mg.index = [sample_idx]
-    this_treatment_mg.index = [sample_idx]
-    df_mgs = pd.concat([df_mgs, this_control_mg.copy(deep=True)])
-    df_mgs = pd.concat([df_mgs, this_treatment_mg.copy(deep=True)])
-lcm_c_mgs = copy.deepcopy(lcm.C_MG_list)
-lcm_t_mgs = copy.deepcopy(lcm.T_MG_list)
+
+lcm_diffs = {}
+lcm_metalearner_diffs = {}
+
+idxs = np.concatenate([lcm.gen_skf[i][0] for i in range(n_splits)]).reshape(-1)
+
+for c in x_cols:
+    values = df_orig[c].to_numpy()[idxs].reshape(-1, 1)
+    mg_values = df_orig[c].to_numpy()[pd.concat([pd.concat([lcm.get_MGs()[i][0] for i in range(n_splits)]), pd.concat([lcm.get_MGs()[i][1] for i in range(n_splits)])], axis=1).to_numpy()]
+    lcm_diffs[c] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
+
 lcm.CATE(cate_methods=[est_method])
-cate_df = lcm.cate_df.sort_index()
-cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-cate_df['True_CATE'] = df_true['TE'].to_numpy()
-cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
-cate_df['Method'] = ['LCM' for i in range(cate_df.shape[0])]
-df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
+df_err = pd.concat([df_err, get_errors(lcm.cate_df[['avg.CATE_mean']],
+                                       df_true[['TE']], method_name='LCM',
+                                       scale=np.abs(df_true['TE']).mean())])
 print(f'LCM complete: {time.time() - start}')
 
 start = time.time()
-lcm.fit(double_model=True)
-these_weights = pd.DataFrame(lcm.M_C_list)
+lcm.fit(metalearner=True)
+these_weights = pd.DataFrame([v[0] for v in lcm.M_list])
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
-these_weights['Method'] = 'LCM Metalearner M_C'
+these_weights['Method'] = 'Metalearner\nLCM M_C'
 df_weights = pd.concat([df_weights, these_weights.copy(deep=True)])
-these_weights = pd.DataFrame(lcm.M_T_list)
+
+these_weights = pd.DataFrame([v[1] for v in lcm.M_list])
 these_weights.columns = [f'X{i}' for i in range(x_imp+x_unimp)]
 these_weights = these_weights.div(these_weights.sum(axis=1), axis=0)
-these_weights['Method'] = 'LCM Metalearner M_T'
+these_weights['Method'] = 'Metalearner\nLCM M_T'
 df_weights = pd.concat([df_weights, these_weights.copy(deep=True)])
+
 lcm.MG(k=k_est)
-for s in sample_mg_splits:
-    this_control_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.C_MG_list[s].iloc[
-        np.where(lcm.gen_skf[s][0] == sample_idx)[0]].to_numpy()])
-    this_treatment_mg = pd.DataFrame(lcm.gen_skf[s][0][lcm.T_MG_list[s].iloc[
-        np.where(lcm.gen_skf[s][0] == sample_idx)[0]].to_numpy()])
-    this_control_mg['Method'] = 'LCM Metalearner'
-    this_control_mg['T'] = 0
-    this_treatment_mg['Method'] = 'LCM Metalearner'
-    this_treatment_mg['T'] = 1
-    this_control_mg.index = [sample_idx]
-    this_treatment_mg.index = [sample_idx]
-    df_mgs = pd.concat([df_mgs, this_control_mg.copy(deep=True)])
-    df_mgs = pd.concat([df_mgs, this_treatment_mg.copy(deep=True)])
-meta_lcm_c_mgs = copy.deepcopy(lcm.C_MG_list)
-meta_lcm_t_mgs = copy.deepcopy(lcm.T_MG_list)
+
+for c in x_cols:
+    values = df_orig[c].to_numpy()[idxs].reshape(-1, 1)
+    mg_values = df_orig[c].to_numpy()[pd.concat([pd.concat([lcm.get_MGs()[i][0] for i in range(n_splits)]), pd.concat([lcm.get_MGs()[i][1] for i in range(n_splits)])], axis=1).to_numpy()]
+    lcm_diffs[c] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
+
 lcm.CATE(cate_methods=[est_method])
-cate_df = lcm.cate_df.sort_index()
-cate_df = cate_df.rename(columns={'avg.CATE': 'Est_CATE'})
-cate_df['True_CATE'] = df_true['TE'].to_numpy()
-cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE'] - cate_df['True_CATE']) / np.abs(cate_df['True_CATE']).mean())
-cate_df['Method'] = ['LCM Metalearner' for i in range(cate_df.shape[0])]
-df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)']].copy(deep=True)])
-print(f'LCM Metalearner complete: {time.time() - start}')
+df_err = pd.concat([df_err, get_errors(lcm.cate_df[['avg.CATE_mean']],
+                                       df_true[['TE']], method_name='Metalearner\nLCM',
+                                       scale=np.abs(df_true['TE']).mean())])
+print(f'Metalearner LCM complete: {time.time() - start}')
 
 df_true.to_csv('Results/df_true.csv')
 df_err.to_csv('Results/df_err.csv')

@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
-exp = pd.read_csv('Results/exp_000/df_err.csv')
-sine = pd.read_csv('Results/sine_000/df_err.csv')
+exp = pd.read_csv('Results/exp_002/df_err.csv')
+sine = pd.read_csv('Results/sine_002/df_err.csv')
 
 order = ['LCM', 'Linear PGM']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}

@@ -336,7 +336,7 @@ class malts:
 class malts_mf:
     def __init__(self, outcome, treatment, data, discrete=[], C=1, k_tr=15,
                  k_est=50, estimator='linear', smooth_cate=True,
-                 reweight=False, n_splits=5, n_repeats=1,
+                 reweight=False, n_splits=5, n_repeats=1, split_strategy=None,
                  output_format='brief', random_state=0):
         self.n_splits = n_splits
         self.C = C
@@ -349,9 +349,12 @@ class malts_mf:
             set([outcome] + [treatment] + discrete)))
         self.reweight = reweight
 
-        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
-                                      random_state=random_state)
-        gen_skf = skf.split(data, data[treatment])
+        if split_strategy is None:
+            skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
+                                          random_state=random_state)
+            gen_skf = skf.split(data, data[treatment])
+        else:
+            gen_skf = split_strategy
         self.M_opt_list = []
         self.MG_list = []
         self.CATE_df = pd.DataFrame()
@@ -364,13 +367,7 @@ class malts_mf:
             df_est = data.iloc[est_idx]
             m = malts(outcome, treatment, data=df_train, discrete=discrete,
                       C=self.C, k=self.k_tr, reweight=self.reweight)
-            res = m.fit()
-            print(res)
-            if not res.success:
-                print(f'MALTS failed to fit for {m.p} covariates')
-                raise Exception
-            else:
-                print('yay')
+            m.fit()
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est, k_est)
             self.MG_list.append(mg)

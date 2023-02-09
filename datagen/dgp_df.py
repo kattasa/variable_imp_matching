@@ -94,6 +94,8 @@ def dgp_dense_mixed_endo_df(n, nci, ndi, ncu, ndu, std=1.5, t_imp=2, overlap=1, 
     df_train = df_train.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
+    df_train = df_train[['Y', 'T'] + x_cols]
+    df_assess = df_assess[['Y', 'T'] + x_cols]
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, binary
 
 

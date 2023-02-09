@@ -118,11 +118,10 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             with warnings.catch_warnings(record=True) as warning_list:
                 m = pymalts.malts_mf('Y', 'T', data=df_data,
                                      discrete=binary + categorical,
-                                     categorical=categorical,
                                      k_est=k_est_mean,
                                      n_splits=n_splits, estimator='mean',
                                      smooth_cate=False,
-                                     gen_skf=split_strategy,
+                                     split_strategy=split_strategy,
                                      random_state=random_state)
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
