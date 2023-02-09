@@ -12,7 +12,6 @@ export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 memory=$"16G"
 iters=20
 
-mkdir "${RESULTS_FOLDER}/num_samples"
 num_samples=(256 512 1024 2048 4096 8192)
 for n in ${num_samples[@]}; do
     echo "Running scripts for ${n}"
@@ -29,7 +28,6 @@ for n in ${num_samples[@]}; do
     done
 done
 
-mkdir "${RESULTS_FOLDER}/num_covs"
 num_covs=(0 8 24 56 120 248 504 1016)
 for n in ${num_covs[@]}; do
     echo "Running scripts for ${n}"
