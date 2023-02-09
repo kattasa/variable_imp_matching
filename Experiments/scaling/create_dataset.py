@@ -4,9 +4,9 @@ from Experiments.helpers import get_data
 save_folder = os.getenv('SAVE_FOLDER')
 
 dataset_config = {
-    'num_samples': int(os.getenv('NUM_SAMPLES')),
-    'imp_c': int(os.getenv('IMP_C')),
-    'unimp_c': int(os.getenv('UNIMP_C')),
+    'num_samples': 8192,
+    'imp_c': 8,
+    'unimp_c': 1016,
     'imp_d': 0,
     'unimp_d': 0,
     'n_train': 0
