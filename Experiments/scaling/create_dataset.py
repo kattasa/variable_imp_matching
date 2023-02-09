@@ -16,4 +16,5 @@ df_data, df_true, binary = get_data(data='dense_continuous',
                                     config=dataset_config)
 
 df_data.to_csv(f'{save_folder}/df.csv', index=False)
-print(f'Saved to {save_folder}/df.csv')
+df_true.to_csv(f'{save_folder}/df_true.csv', index=False)
+print(f'Saved df.csv and df_true.csv to {save_folder}.')

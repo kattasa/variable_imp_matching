@@ -21,7 +21,7 @@ for n in ${num_samples[@]}; do
 done
 
 mkdir "${RESULTS_FOLDER}/num_covs"
-num_covs=(0 8 24 56 120 248 504)
+num_covs=(0 8 24 56 120 248 504 1016)
 num_samples=2048
 imp_c=8
 for n in ${num_covs[@]}; do

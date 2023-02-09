@@ -1,38 +1,37 @@
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
-folder = 'Results/acic_2019'
-iters = 8
-methods_to_plot = ['Double Model Lasso Matching Mean',
-       # 'Double Model Lasso Matching Linear Pruned',
-       # 'Single Model Lasso Matching Mean',
-       # 'Single Model Lasso Matching Linear Pruned',
-       #             'MALTS Matching Mean',
-       #             'Linear Prognostic Score Matching',
-                   'BART']
+exp = pd.read_csv('Results/exp_000/df_err.csv')
+sine = pd.read_csv('Results/sine_000/df_err.csv')
 
-df_err = []
-for i in range(iters):
-    this_df_err = pd.read_csv(f'{folder}/acic_2019_00{i}/df_err.csv')
-    this_df_err['Iter'] = i
-    df_err.append(this_df_err)
+order = ['LCM', 'Linear PGM']
+palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 
-df_err = pd.concat(df_err).reset_index(drop=True)
-df_err = df_err.rename(columns={'Iter': 'ACIC File #'})
-df_err['ACIC File #'] += 1
-df_err = df_err[df_err.Method.isin(methods_to_plot)]
-
+matplotlib.rcParams.update({'font.size': 40})
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=3)
-fig, ax = plt.subplots(figsize=(40, 50))
-pp = sns.pointplot(data=df_err.reset_index(drop=True), x='ACIC File #', y='Relative Error (%)', errorbar=("pi", 95),
-                   hue='Method', dodge=True, scale=5)
-plt.setp(pp.get_legend().get_texts(), fontsize='50')
-plt.setp(pp.get_legend().get_title(), fontsize='60')
-plt.legend(ncol=2)
-ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-plt.tight_layout()
-fig.savefig(f'{folder}/all_files.png')
+sns.set(font_scale=4)
+fig, axes = plt.subplots(1, 2, figsize=(26, 14))
+sns.boxplot(ax=axes[0], data=sine,
+            x='Method', y='Relative Error (%)',
+            showfliers=False,
+            order=order,
+            palette=palette)
+sns.boxplot(ax=axes[1], data=exp,
+            x='Method', y='Relative Error (%)',
+            showfliers=False,
+            order=order,
+            palette=palette)
+
+# fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.1),
+#            ncol=3, fontsize=40,
+#            columnspacing=0.5)
+
+axes[0].set_xlabel(xlabel='Sine', labelpad=10, fontdict={'weight': 'bold'})
+axes[1].set_xlabel(xlabel='Exponential', labelpad=10, fontdict={'weight': 'bold'})
+axes[0].yaxis.set_major_formatter(ticker.PercentFormatter())
+fig.tight_layout()
+fig.savefig(f'lcm_vs_lin_pgm.png', bbox_inches='tight')

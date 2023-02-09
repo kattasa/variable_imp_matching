@@ -188,7 +188,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'doubleml' in methods:
-            method_name = 'DoubleML'
+            method_name = 'Linear DML'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data,
