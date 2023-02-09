@@ -8,6 +8,7 @@ Experiments/dcc_runs
 .idea/
 **/__pycache__/
 .DS_Store
+Experiments/.DS_Store
 **/.ipynb_checkpoints/
 Experiments/cate_error/Results
 Experiments/acic_error_and_runtime/Results*
