@@ -1,6 +1,9 @@
 #!/bin/bash
 #
 #SBATCH --get-user-env
+#SBATCH --output=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results/slurm_scale_df.out
+#SBATCH --error=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results/slurm_scale_df.err
+#SBATCH --mem=8G
 
 export SAVE_FOLDER=/hpc/group/volfovskylab/qml/linear_coef_matching/scaling/Results
 export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
