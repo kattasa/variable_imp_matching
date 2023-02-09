@@ -104,75 +104,41 @@ df_err.to_csv('Results/df_err.csv')
 df_weights.to_csv('Results/df_weights.csv')
 df_mgs.to_csv('Results/df_mgs.csv')
 
+method_order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '', 'GenMatch',
+                'Metalearner\nLCM']
+palette = {method_order[i]: sns.color_palette()[i] for i in
+           range(len(method_order))}
+order = [m for m in method_order if m in df_err['Method'].unique()]
+
 df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
+plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=2)
-fig, ax = plt.subplots(figsize=(10, 12))
-sns.boxenplot(x='Method', y='Relative Error (%)', data=df_err)
+sns.set(font_scale=1)
+ax = sns.boxplot(x='Method', y='Relative Error (%)',
+                 data=df_err, showfliers=False,
+                 order=order, palette=palette)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-plt.tight_layout()
-fig.savefig(f'Results/boxplot_err.png')
+ax.get_figure().savefig(f'Results/boxplot_err.png')
+
+palette = {'LCM': sns.color_palette()[0],
+           'Metalearner\nLCM M_C': sns.color_palette()[7],
+           'Metalearner\nLCM M_T': sns.color_palette()[8]}
+order = ['LCM', 'Metalearner\nLCM M_C', 'Metalearner\nLCM M_T']
 
 x_imp += 1  # to include unimportant covariate in plotting
 df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_vars=['Method'])
 df_weights = df_weights.rename(columns={'variable': 'Covariate', 'value': 'Relative Weight (%)'})
+plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
-fig, ax = plt.subplots(figsize=(10, 12))
-sns.catplot(data=df_weights, x="Covariate", y="Relative Weight (%)", hue="Method", kind="bar", legend=False)
-ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-plt.legend(loc='upper right')
-plt.tight_layout()
-plt.savefig('Results/barplot_weights.png')
-
-lcm_std = {f'X{i}': {0: np.array([]), 1: np.array([])} for i in range(x_imp)}
-meta_lcm_std = {f'X{i}': {0: np.array([]), 1: np.array([])} for i in range(x_imp)}
-this_iter = 0
-for est_idx, _ in lcm.gen_skf:
-    for i in range(x_imp):
-        cov = f'X{i}'
-        cov_values = df.loc[est_idx, cov].to_numpy()
-        lcm_std[cov][0] = np.concatenate([lcm_std[cov][0],
-                                          np.mean(np.abs(cov_values[lcm_c_mgs[this_iter].to_numpy()] -
-                                                         cov_values.reshape(-1, 1)),
-                                                  axis=1)])
-        lcm_std[cov][1] = np.concatenate([lcm_std[cov][1],
-                                          np.mean(np.abs(cov_values[lcm_t_mgs[this_iter].to_numpy()] -
-                                                         cov_values.reshape(-1, 1)),
-                                                  axis=1)])
-        meta_lcm_std[cov][0] = np.concatenate([meta_lcm_std[cov][0],
-                                               np.mean(np.abs(cov_values[meta_lcm_c_mgs[this_iter].to_numpy()] -
-                                                              cov_values.reshape(-1, 1)),
-                                                       axis=1)])
-        meta_lcm_std[cov][1] = np.concatenate([meta_lcm_std[cov][1],
-                                               np.mean(np.abs(cov_values[meta_lcm_t_mgs[this_iter].to_numpy()] -
-                                                              cov_values.reshape(-1, 1)),
-                                                       axis=1)])
-    this_iter += 1
-
-lcm_std_df = []
-meta_lcm_std_df = []
-for i in range(x_imp):
-    cov = f'X{i}'
-    this_df = pd.DataFrame(lcm_std[cov]).T.reset_index().rename(columns={'index': 'T'})
-    this_df['Covariate'] = cov
-    lcm_std_df.append(this_df.copy(deep=True))
-    this_df = pd.DataFrame(meta_lcm_std[cov]).T.reset_index().rename(columns={'index': 'T'})
-    this_df['Covariate'] = cov
-    meta_lcm_std_df.append(this_df.copy(deep=True))
-
-lcm_std_df = pd.concat(lcm_std_df)
-meta_lcm_std_df = pd.concat(meta_lcm_std_df)
-lcm_std_df['Method'] = 'LCM'
-meta_lcm_std_df['Method'] = 'LCM Metalearner'
-mg_std = pd.concat([lcm_std_df, meta_lcm_std_df])
-mg_std = pd.melt(mg_std, id_vars=['Method', 'T', 'Covariate'])
-mg_std = mg_std.rename(columns={'value': 'MG Average Difference'})
-mg_hue = mg_std.apply(lambda x: f"{x['Method']} {'Treatment' if x['T'] == 1 else 'Control'} Matches", axis=1)
-mg_hue.name = 'Method, T'
-
+ax = sns.catplot(data=df_weights, x="Covariate", y="Relative Weight (%)",
+                 hue="Method", kind="bar", legend=True, hue_order=order,
+                 palette=palette)
+for a in ax.axes.flat:
+    a.yaxis.set_major_formatter(ticker.PercentFormatter())
+ax.savefig(f'Results/barplot_weights.png')
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
