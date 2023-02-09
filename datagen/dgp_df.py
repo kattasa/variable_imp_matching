@@ -30,6 +30,7 @@ def dgp_poly_basic_df(n_samples, n_imp, n_unimp, powers=[2], perc_train=None, n_
     x_cols = [f'X{i}' for i in range(X.shape[1])]
     df.columns = [*x_cols, 'Y', 'T', 'Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true']
     df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+    df['T'] = df['T'].astype(int)
     df_train = df.copy(deep=True)[:train_idx]
     df_train = df_train.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]

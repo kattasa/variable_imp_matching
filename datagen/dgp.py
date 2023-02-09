@@ -201,7 +201,7 @@ def dgp_test(n_samples, n_imp, n_unimp):
 
 
 def dgp_poly_basic(n_samples, n_imp, n_unimp, powers=[2]):
-    x_imp = np.random.uniform(-10, 10, size=(n_samples, n_imp))
+    x_imp = np.random.uniform(-3, 3, size=(n_samples, n_imp))
     t = np.random.binomial(1, 0.5, size=(n_samples,))
 
     eff_powers = np.random.choice(powers, size=(n_imp,))
