@@ -71,7 +71,7 @@ for c in x_cols:
         pd.concat([lcm.get_MGs()[i][1] for i in range(n_splits)]).to_numpy()]
     lcm_t_diffs[c] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
 
-lcm.CATE(cate_methods=[est_method])
+lcm.CATE(cate_methods=[est_method], diameter_prune=None)
 df_err = pd.concat([df_err, get_errors(lcm.cate_df[['avg.CATE_mean']],
                                        df_true[['TE']], method_name='LCM',
                                        scale=np.abs(df_true['TE']).mean())])
@@ -102,7 +102,7 @@ for c in x_cols:
         pd.concat([lcm.get_MGs()[i][1] for i in range(n_splits)]).to_numpy()]
     lcm_t_metalearner_diffs[c] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
 
-lcm.CATE(cate_methods=[est_method])
+lcm.CATE(cate_methods=[est_method], diameter_prune=None)
 df_err = pd.concat([df_err, get_errors(lcm.cate_df[['avg.CATE_mean']],
                                        df_true[['TE']], method_name='Metalearner\nLCM',
                                        scale=np.abs(df_true['TE']).mean())])
@@ -122,7 +122,7 @@ df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
 plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
+sns.set(font_scale=1.8)
 ax = sns.boxplot(x='Method', y='Relative Error (%)',
                  data=df_err, showfliers=False,
                  order=order, palette=palette)
@@ -138,18 +138,18 @@ x_imp += 1  # to include unimportant covariate in plotting
 df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_vars=['Method'])
 df_weights = df_weights.rename(columns={'variable': 'Covariate', 'value': 'Relative Weight (%)'})
 df_weights['Relative Weight (%)'] *= 100
-plt.figure()
+
+plt.figure(figsize=(6, 8))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
-ax = sns.catplot(data=df_weights, x="Covariate", y="Relative Weight (%)",
-                 hue="Method", kind="bar", legend=True, hue_order=order,
-                 palette=palette)
-for a in ax.axes.flat:
-    a.yaxis.set_major_formatter(ticker.PercentFormatter())
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.45, 0.95), ncol=3,
-                title=None, frameon=True)
-ax.savefig(f'Results/meralearner_barplot_weights.png')
+sns.set(font_scale=2)
+ax = sns.barplot(data=df_weights, x="Covariate", y="Relative Weight (%)",
+                 hue="Method", hue_order=order, palette=palette)
+ax.yaxis.set_major_formatter(ticker.PercentFormatter())
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.36, 1.02), ncol=3,
+                title=None, handletextpad=0.4, columnspacing=0.5, fontsize=18)
+plt.tight_layout()
+ax.get_figure().savefig(f'Results/metalearner_barplot_weights.png')
 
 lcm_c_diffs = pd.melt(pd.DataFrame.from_dict(lcm_c_diffs), var_name='Covariate', value_name='Mean Absolute Difference')
 lcm_c_diffs['Method'] = 'LCM\nControl MGs'
@@ -172,16 +172,17 @@ palette = {'LCM\nControl MGs': sns.color_palette()[0],
 order = ['LCM\nControl MGs', 'LCM\nTreatment MGs',
          'Metalearner LCM\nControl MGs', 'Metalearner LCM\nTreatment MGs']
 
-fig = plt.figure()
+plt.figure(figsize=(6, 8))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
+sns.set(font_scale=2)
 ax = sns.boxplot(x='Covariate', y='Mean Absolute Difference', hue='Method',
                  data=mg_diffs, showfliers=False,
                  order=[f'X{i}' for i in range(x_imp)], palette=palette,
                  hue_order=order)
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=4, title=None,
-                handletextpad=0.4, columnspacing=0.5)
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.42, 1), ncol=2, title=None,
+                handletextpad=0.4, columnspacing=0.5, fontsize=18)
+plt.tight_layout()
 ax.get_figure().savefig(f'Results/metalearner_barplot_mg_avg_diff.png')
 
 

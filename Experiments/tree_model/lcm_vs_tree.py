@@ -23,7 +23,7 @@ method_name = 'LCM'
 lcm = LCM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
 print('LASSO R^2 score:')
 print(lcm.fit(return_scores=True))
-cate_df = lcm.CATE(df_estimation=df_est, k=k_est)
+cate_df = lcm.CATE(df_estimation=df_est, k=k_est, diameter_prune=None)
 cate_df = cate_df.rename(columns={'CATE_mean': 'Est_CATE'})
 cate_df['True_CATE'] = df_true['TE'].to_numpy()
 cate_df['Relative Error (%)'] = np.abs((cate_df['Est_CATE']-cate_df['True_CATE'])/np.abs(cate_df['True_CATE']).mean())
@@ -35,7 +35,7 @@ method_name = 'Tree Feature\nImportance Matching'
 tree = LCM(outcome='Y', treatment='T', data=df_train,
            random_state=random_state)
 tree.fit(model='tree', params={'max_depth': 3})
-cate_df2 = tree.CATE(df_estimation=df_est, k=k_est)
+cate_df2 = tree.CATE(df_estimation=df_est, k=k_est, diameter_prune=None)
 cate_df2 = cate_df2.rename(columns={'CATE_mean': 'Est_CATE'})
 cate_df2['True_CATE'] = df_true['TE'].to_numpy()
 cate_df2['Relative Error (%)'] = np.abs((cate_df2['Est_CATE']-cate_df2['True_CATE'])/np.abs(cate_df2['True_CATE']).mean())
@@ -53,7 +53,7 @@ df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
 plt.figure()
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
+sns.set(font_scale=1.8)
 ax = sns.boxplot(x='Method', y='Relative Error (%)',
                  data=df_err, showfliers=False,
                  order=order, palette=palette)

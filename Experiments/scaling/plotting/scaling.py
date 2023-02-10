@@ -92,7 +92,7 @@ for f in num_covs_folder:
             print(f'Failed {m} for {this_file}')
     if len(times) > 0:
         times = pd.melt(pd.DataFrame.from_dict(times), var_name='Method', value_name='Time (s)')
-        times['# Covariates'] = int(f.split('/')[-1]) + 8
+        times['# Covariates'] = int(f.split('/')[-1])
         covs_times = pd.concat([covs_times, times.copy()])
 
 # for k in failed_files:

@@ -10,11 +10,10 @@ sine = pd.read_csv('Results/sine_002/df_err.csv')
 order = ['LCM', 'Linear PGM']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 
-matplotlib.rcParams.update({'font.size': 40})
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=4)
-fig, axes = plt.subplots(1, 2, figsize=(26, 14))
+sns.set(font_scale=3.3)
+fig, axes = plt.subplots(1, 2, figsize=(15, 9))
 sns.boxplot(ax=axes[0], data=sine,
             x='Method', y='Relative Error (%)',
             showfliers=False,
@@ -26,12 +25,10 @@ sns.boxplot(ax=axes[1], data=exp,
             order=order,
             palette=palette)
 
-# fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.1),
-#            ncol=3, fontsize=40,
-#            columnspacing=0.5)
-
 axes[0].set_xlabel(xlabel='Sine', labelpad=10, fontdict={'weight': 'bold'})
 axes[1].set_xlabel(xlabel='Exponential', labelpad=10, fontdict={'weight': 'bold'})
 axes[0].yaxis.set_major_formatter(ticker.PercentFormatter())
+axes[1].yaxis.set_major_formatter(ticker.PercentFormatter())
+axes[1].set_ylabel(ylabel=None)
 fig.tight_layout()
 fig.savefig(f'lcm_vs_lin_pgm.png', bbox_inches='tight')

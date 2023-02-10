@@ -2,7 +2,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import matplotlib
 import numpy as np
 import os
 from collections import Counter
@@ -79,11 +78,19 @@ with open(f'{save_folder}/ensemble_prog_ate.txt', 'w') as f:
 df_orig = pd.read_csv(f'{os.getenv("SCHOOLS_FOLDER")}/df.csv')
 lcm_cates = lcm.cate_df.join(df_orig.drop(columns=['Z', 'Y']))
 
-lcm_top_10 = pd.DataFrame(lcm.M_list, columns=lcm.covariates).mean().sort_values(ascending=False).iloc[:10].index
-linear_prog_top_10 = pd.DataFrame(linear_prog_fi, columns=lcm.covariates).mean().sort_values().sort_values(ascending=False).iloc[:10].index
-ensemble_prog_top_10 = pd.DataFrame(ensemble_prog_fi, columns=lcm.covariates).mean().sort_values().sort_values(ascending=False).iloc[:10].index
+lcm_fi_df = pd.DataFrame(lcm.M_list, columns=lcm.covariates)
+lcm_fi_df.to_csv(f'{save_folder}/lcm_fi_df.csv')
+lcm_top_10 = lcm_fi_df.mean().sort_values(ascending=False).iloc[:10].index
+linear_prog_fi_df = pd.DataFrame(linear_prog_fi, columns=lcm.covariates)
+linear_prog_fi_df.to_csv(f'{save_folder}/linear_prog_fi_df.csv')
+linear_prog_top_10 = linear_prog_fi_df.mean().sort_values(ascending=False).iloc[:10].index
+ensemble_prog_fi_df = pd.DataFrame(ensemble_prog_fi, columns=lcm.covariates)
+ensemble_prog_fi_df.to_csv(f'{save_folder}/ensemble_prog_fi_df.csv')
+ensemble_prog_top_10 = ensemble_prog_fi_df.mean().sort_values(ascending=False).iloc[:10].index
 imp_covs = [c for c in lcm_top_10 if c in linear_prog_top_10]
 imp_covs = [c for c in imp_covs if c in ensemble_prog_top_10]
+
+imp_covs = ['S3', 'C1_4', 'C2', 'X1']
 
 categorical = [c for c in imp_covs if '_' in c]
 continuous = [c for c in imp_covs if '_' not in c]
@@ -112,14 +119,14 @@ for cov in imp_covs:
     if cov in continuous:
         lcm_diffs[cov] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
     else:
-        lcm_diffs[cov] = copy.copy((np.sum((mg_values == values).astype(int), axis=1) / (k_est*2)))
+        lcm_diffs[cov] = copy.copy((np.sum((mg_values != values).astype(int), axis=1) / (k_est*2)))
     mg_values = df_orig[c].to_numpy()[pd.concat(
         [pd.concat([linear_prog_c_mg[i] for i in range(n_splits * n_repeats)]),
          pd.concat([linear_prog_t_mg[i] for i in range(n_splits * n_repeats)])], axis=1).to_numpy()[good_idxs_i]]
     if cov in continuous:
         linear_prog_diffs[cov] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
     else:
-        linear_prog_diffs[cov] = copy.copy((np.sum((mg_values == values).astype(int), axis=1) / (k_est*2)))
+        linear_prog_diffs[cov] = copy.copy((np.sum((mg_values != values).astype(int), axis=1) / (k_est*2)))
     mg_values = df_orig[c].to_numpy()[pd.concat(
         [pd.concat([ensemble_prog_c_mg[i] for i in range(n_splits * n_repeats)]),
          pd.concat(
@@ -128,10 +135,10 @@ for cov in imp_covs:
     if cov in continuous:
         ensemble_prog_diffs[cov] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
     else:
-        ensemble_prog_diffs[cov] = copy.copy((np.sum((mg_values == values).astype(int), axis=1) / (k_est*2)))
+        ensemble_prog_diffs[cov] = copy.copy((np.sum((mg_values != values).astype(int), axis=1) / (k_est*2)))
 
 
-method_order = ['LCM', 'Linear\nPrognostic Score', 'Ensemble\nPrognostic Score']
+method_order = ['LCM', 'Linear\nPGM', 'Nonparametric\nPGM']
 palette = {method_order[i]: sns.color_palette()[i] for i in range(len(method_order))}
 
 
@@ -143,7 +150,7 @@ for c in categorical:
                                     ensemble_prog_diffs[c]],
                                    index=method_order).T,
                       var_name='Method',
-                      value_name='% Match')
+                      value_name='% Mismatch')
     this_df['Covariate'] = c.replace('_', '=')
     cat_diff_df.append(this_df.copy())
 for c in continuous:
@@ -161,28 +168,27 @@ cont_diff_df = pd.concat(cont_diff_df)
 cat_diff_df.to_csv(f'{save_folder}/categorical_diff.csv')
 cont_diff_df.to_csv(f'{save_folder}/continuous_diff.csv')
 
-matplotlib.rcParams.update({'font.size': 40})
+cat_diff_df['% Mismatch'] *= 100
+
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=4)
-fig, axes = plt.subplots(1, 2, figsize=(26, 14))
+sns.set(font_scale=3.3)
+fig, axes = plt.subplots(1, 2, figsize=(18, 9))
 sns.barplot(ax=axes[0], data=cat_diff_df, x='Covariate',
-            y='% Match', hue='Method', errorbar=None,
+            y='% Mismatch', hue='Method', errorbar=None,
             hue_order=[c.replace('_', '=') for c in categorical].sort())
 sns.boxplot(ax=axes[1], data=cont_diff_df, x='Covariate',
             y='Mean Absolute Difference', hue='Method', showfliers=False)
 handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.1),
-           ncol=3, fontsize=40,
+fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(.55, 0.93),
+           ncol=3, fontsize=40, handletextpad=0.4,
            columnspacing=0.5)
 for ax in axes:
     ax.set(xlabel=None)
     ax.get_legend().remove()
 axes[0].yaxis.set_major_formatter(ticker.PercentFormatter())
-# axes[1].set_ylim([0, 40])
 fig.tight_layout()
 fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
-
 
 imp_covs2 = [c.split('_')[0] for c in imp_covs]
 for cov, v in Counter(imp_covs2).items():
@@ -195,7 +201,6 @@ print(imp_covs)
 
 np.random.seed(0)
 sample = df_orig.copy(deep=True)
-sample = sample[sample['S3'] == 5]
 for c in imp_covs:
     if '_' in c:
         cov, val = c.split('_')
@@ -266,25 +271,20 @@ cate_df = cate_df.rename(columns={'avg.CATE_mean': 'LCM',
                                   'XC': 'Urbanicity (XC)',
                                   'S3': 'Exp Success (S3)'})
 cate_df = cate_df.join(linear_prog_cates_full['avg.CATE'])
-cate_df = cate_df.rename(columns={'avg.CATE': 'Linear\nPrognostic Score'})
+cate_df = cate_df.rename(columns={'avg.CATE': 'Linear\nPGM'})
 cate_df = cate_df.join(ensemble_prog_cates_full['avg.CATE'])
-cate_df = cate_df.rename(columns={'avg.CATE': 'Ensemble\nPrognostic Score'})
+cate_df = cate_df.rename(columns={'avg.CATE': 'Nonparametric\nPGM'})
 
 cate_df = pd.melt(cate_df, id_vars=['Urbanicity (XC)', 'Exp Success (S3)'],
-                  var_name='Method', value_name='Est CATE')
+                  var_name='Method', value_name='Estimated CATE')
 
-fig = plt.figure()
+
+plt.figure(figsize=(8, 6))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
-ax = sns.boxplot(data=cate_df, x="Urbanicity (XC)", y="Est CATE", hue='Method', hue_order=method_order, palette=palette, showfliers=False)
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None)
+sns.set(font_scale=2)
+ax = sns.boxplot(data=cate_df, x="Urbanicity (XC)", y="Estimated CATE", hue='Method', hue_order=method_order, palette=palette, showfliers=False)
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.47, 1.02), ncol=3,
+                title=None, handletextpad=0.4, columnspacing=0.5, fontsize=20)
+plt.tight_layout()
 ax.get_figure().savefig(f'{save_folder}/cate_by_xc.png')
-
-plt.figure()
-sns.set_context("paper")
-sns.set_style("darkgrid")
-sns.set(font_scale=1)
-ax = sns.boxplot(data=cate_df, x="Exp Success (S3)", y="Est CATE", hue='Method', hue_order=method_order, palette=palette, showfliers=False)
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None)
-ax.get_figure().savefig(f'{save_folder}/cate_by_s3.png')

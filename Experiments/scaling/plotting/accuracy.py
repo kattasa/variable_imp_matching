@@ -45,6 +45,8 @@ for file in num_covs_folder:
 
 full_errors = pd.concat(full_errors)
 
+full_errors['Relative Error (%)'] *= 100
+
 order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '', 'GenMatch']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 method_order = [c for c in order if c in full_errors['Method'].unique()]
