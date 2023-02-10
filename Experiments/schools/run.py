@@ -6,6 +6,7 @@ import numpy as np
 import os
 from collections import Counter
 import copy
+import pickle
 
 from datagen.dgp_df import dgp_schools_df
 
@@ -15,7 +16,7 @@ from other_methods import prognostic
 save_folder = os.getenv('SAVE_FOLDER')
 k_est = 10
 random_state = 0
-n_splits = 20
+n_splits = 2
 n_repeats = 50
 
 df = dgp_schools_df()
@@ -90,7 +91,7 @@ ensemble_prog_top_10 = ensemble_prog_fi_df.mean().sort_values(ascending=False).i
 imp_covs = [c for c in lcm_top_10 if c in linear_prog_top_10]
 imp_covs = [c for c in imp_covs if c in ensemble_prog_top_10]
 
-imp_covs = ['S3', 'C1_4', 'C2', 'X1']
+imp_covs = ['S3', 'C1_5', 'C2', 'X1']
 
 categorical = [c for c in imp_covs if '_' in c]
 continuous = [c for c in imp_covs if '_' not in c]
@@ -199,63 +200,82 @@ for cov, v in Counter(imp_covs2).items():
 print(f'# imp covs: {len(imp_covs)}')
 print(imp_covs)
 
+
+def get_mg_comp(sample_num, sample, lcm_mgs, linear_prog_c_mg, linear_prog_t_mg,
+                ensemble_prog_c_mg, ensemble_prog_t_mg):
+    while True:
+        iter_number = np.random.randint(0, n_splits*n_repeats)
+        if sample_num in linear_prog_c_mg[iter_number].index:
+            break
+    print(f'Pulling example MG from iteration {iter_number}')
+
+    lcm_c_mg = df_orig.loc[lcm_mgs[iter_number][0].loc[sample_num], imp_covs + ['Z']]
+    lcm_t_mg = df_orig.loc[lcm_mgs[iter_number][1].loc[sample_num], imp_covs + ['Z']]
+    linear_prog_c_mg = df_orig.loc[linear_prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+    linear_prog_t_mg = df_orig.loc[linear_prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+    ensemble_prog_c_mg = df_orig.loc[ensemble_prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+    ensemble_prog_t_mg = df_orig.loc[ensemble_prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+
+    lcm_mg = pd.concat([lcm_c_mg, lcm_t_mg])
+    linear_prog_mg = pd.concat([linear_prog_c_mg, linear_prog_t_mg])
+    ensemble_prog_mg = pd.concat([ensemble_prog_c_mg, ensemble_prog_t_mg])
+
+    categorical = list(lcm_mg.dtypes[lcm_mg.dtypes == 'int'].index)
+    categorical.remove('Z')
+    categorical.remove('S3')
+    continuous = list(lcm_mg.dtypes[lcm_mg.dtypes == 'float'].index)
+    continuous = ['S3'] + continuous
+
+    lcm_comps = {}
+    linear_prog_comps = {}
+    ensemble_prog_comps = {}
+
+    for c in categorical:
+        lcm_comps[c] = ((lcm_mg[c] == sample[c].values[0]).astype(int).sum() / (k_est*2))*100
+        linear_prog_comps[c] = ((linear_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
+                    k_est * 2)) * 100
+        ensemble_prog_comps[c] = ((ensemble_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
+                    k_est * 2)) * 100
+    for c in continuous:
+        lcm_comps[c] = np.abs(lcm_mg[c] - sample[c].values[0]).mean()
+        linear_prog_comps[c] = np.abs(linear_prog_mg[c] - sample[c].values[0]).mean()
+        ensemble_prog_comps[c] = np.abs(ensemble_prog_mg[c] - sample[c].values[0]).mean()
+
+    lcm_comps['Z'] = np.nan
+    linear_prog_comps['Z'] = np.nan
+    ensemble_prog_comps['Z'] = np.nan
+
+    lcm_mg = pd.concat([sample, lcm_mg, pd.DataFrame.from_dict([lcm_comps])])
+    linear_prog_mg = pd.concat([sample, linear_prog_mg, pd.DataFrame.from_dict([linear_prog_comps])])
+    ensemble_prog_mg = pd.concat([sample, ensemble_prog_mg, pd.DataFrame.from_dict([ensemble_prog_comps])])
+
+    return lcm_mg, linear_prog_mg, ensemble_prog_mg
+
 np.random.seed(0)
 sample = df_orig.copy(deep=True)
 for c in imp_covs:
     if '_' in c:
         cov, val = c.split('_')
         sample = sample[sample[cov] == int(val)]
-print(f'Possible matches: {sample.shape[0]}')
 
 imp_covs = [c.split('_')[0] for c in imp_covs]
-sample = sample.sample(n=1).loc[:, imp_covs + ['Z']]
-sample_num = sample.index[0]
+this_sample = sample.sample(n=1).loc[:, imp_covs + ['Z']]
+sample_num = this_sample.index[0]
 
-while True:
-    iter_number = np.random.randint(0, n_splits*n_repeats)
-    if sample_num in linear_prog_c_mg[iter_number].index:
-        break
-print(f'Pulling example MG from iteration {iter_number}')
+print(f'Possible matches: {sample[sample["S3"] == this_sample["S3"].values[0]].shape[0]}')
 
-lcm_c_mg = df_orig.loc[lcm.get_MGs()[iter_number][0].loc[sample_num], imp_covs + ['Z']]
-lcm_t_mg = df_orig.loc[lcm.get_MGs()[iter_number][1].loc[sample_num], imp_covs + ['Z']]
-linear_prog_c_mg = df_orig.loc[linear_prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
-linear_prog_t_mg = df_orig.loc[linear_prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
-ensemble_prog_c_mg = df_orig.loc[ensemble_prog_c_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
-ensemble_prog_t_mg = df_orig.loc[ensemble_prog_t_mg[iter_number].loc[sample_num], imp_covs + ['Z']]
+pickle.dump(lcm.get_MGs(), open(f"{save_folder}/lcm_mgs.pkl", "wb"))
+pickle.dump(linear_prog_c_mg, open(f"{save_folder}/linear_prog_c_mg.pkl", "wb"))
+pickle.dump(linear_prog_t_mg, open(f"{save_folder}/linear_prog_t_mg.pkl", "wb"))
+pickle.dump(ensemble_prog_c_mg, open(f"{save_folder}/ensemble_prog_c_mg.pkl", "wb"))
+pickle.dump(ensemble_prog_t_mg, open(f"{save_folder}/ensemble_prog_t_mg.pkl", "wb"))
 
-lcm_mg = pd.concat([lcm_c_mg, lcm_t_mg])
-linear_prog_mg = pd.concat([linear_prog_c_mg, linear_prog_t_mg])
-ensemble_prog_mg = pd.concat([ensemble_prog_c_mg, ensemble_prog_t_mg])
-
-categorical = list(lcm_mg.dtypes[lcm_mg.dtypes == 'int'].index)
-categorical.remove('Z')
-categorical.remove('S3')
-continuous = list(lcm_mg.dtypes[lcm_mg.dtypes == 'float'].index)
-continuous = ['S3'] + continuous
-
-lcm_comps = {}
-linear_prog_comps = {}
-ensemble_prog_comps = {}
-
-for c in categorical:
-    lcm_comps[c] = ((lcm_mg[c] == sample[c].values[0]).astype(int).sum() / (k_est*2))*100
-    linear_prog_comps[c] = ((linear_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
-                k_est * 2)) * 100
-    ensemble_prog_comps[c] = ((ensemble_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
-                k_est * 2)) * 100
-for c in continuous:
-    lcm_comps[c] = np.abs(lcm_mg[c] - sample[c].values[0]).mean()
-    linear_prog_comps[c] = np.abs(linear_prog_mg[c] - sample[c].values[0]).mean()
-    ensemble_prog_comps[c] = np.abs(ensemble_prog_mg[c] - sample[c].values[0]).mean()
-
-lcm_comps['Z'] = np.nan
-linear_prog_comps['Z'] = np.nan
-ensemble_prog_comps['Z'] = np.nan
-
-lcm_mg = pd.concat([sample, lcm_mg, pd.DataFrame.from_dict([lcm_comps])])
-linear_prog_mg = pd.concat([sample, linear_prog_mg, pd.DataFrame.from_dict([linear_prog_comps])])
-ensemble_prog_mg = pd.concat([sample, ensemble_prog_mg, pd.DataFrame.from_dict([ensemble_prog_comps])])
+lcm_mg, linear_prog_mg, ensemble_prog_mg = get_mg_comp(sample_num, this_sample,
+                                                       lcm.get_MGs(),
+                                                       linear_prog_c_mg,
+                                                       linear_prog_t_mg,
+                                                       ensemble_prog_c_mg,
+                                                       ensemble_prog_t_mg)
 
 lcm_mg = lcm_mg.rename(columns={'Z': 'T'})
 linear_prog_mg = linear_prog_mg.rename(columns={'Z': 'T'})
