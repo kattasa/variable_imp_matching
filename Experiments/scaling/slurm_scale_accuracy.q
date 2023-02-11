@@ -10,13 +10,10 @@ export PYTHONPATH=/hpc/home/qml/linear_coef_matching:$PYTHONPATH
 export R_HOME=/hpc/home/qml/miniconda3/envs/linear_coef_matching/lib/R
 export N_REPEATS=1
 export RANDOM_STATE=0
+export N_SAMPLES=1024
 
-memory=$"32G"
+memory=$"64G"
 
-num_covs=(0 8 24 56 120 248 504 1016)
-for n in ${num_covs[@]}; do
-    echo "Running scripts for ${n}"
-    sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/lcm_accuracy.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/lcm_accuracy.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME,N_REPEATS,RANDOM_STATE slurm_lcm_accuracy.q
-    sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/malts_accuracy.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/malts_accuracy.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME,N_REPEATS,RANDOM_STATE slurm_malts_accuracy.q
-    sbatch -o "${RESULTS_FOLDER}/num_covs/${n}/genmatch_accuracy.txt" -e "${RESULTS_FOLDER}/num_covs/${n}/genmatch_accuracy.err" --mem="$memory" --export=SAVE_FOLDER="${RESULTS_FOLDER}/num_covs/${n}",PYTHONPATH,R_HOME,N_REPEATS,RANDOM_STATE slurm_genmatch_accuracy.q
-done
+sbatch -o "${RESULTS_FOLDER}/lcm_accuracy.txt" -e "${RESULTS_FOLDER}/lcm_accuracy.err" --mem="$memory" --export=RESULTS_FOLDER,N_SAMPLES,PYTHONPATH,R_HOME,N_REPEATS,RANDOM_STATE slurm_lcm_accuracy.q
+sbatch -o "${RESULTS_FOLDER}/malts_accuracy.txt" -e "${RESULTS_FOLDER}/malts_accuracy.err" --mem="$memory" --export=SAVE_FOLDER=RESULTS_FOLDER,N_SAMPLES,PYTHONPATH,R_HOME,N_REPEATS,RANDOM_STATE slurm_malts_accuracy.q
+sbatch -o "${RESULTS_FOLDER}/genmatch_accuracy.txt" -e "${RESULTS_FOLDER}/genmatch_accuracy.err" --mem="$memory" --export=SAVE_FOLDER=RESULTS_FOLDER,N_SAMPLES,PYTHONPATH,R_HOME,N_REPEATS,RANDOM_STATE slurm_genmatch_accuracy.q

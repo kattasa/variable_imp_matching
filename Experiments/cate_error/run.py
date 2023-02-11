@@ -22,9 +22,9 @@ datasets = [
 
 methods = [
     'lcm_mean',
-    # 'malts',
+    'malts',
     # 'lcm_linear',
-    'linear_prog_mean',
+    # 'linear_prog_mean',
     # 'linear_prog_linear',
     # 'ensemble_prog_mean',
     # 'ensemble_prog_linear',
@@ -38,11 +38,11 @@ for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
         n_splits = 2
-        dataset_config['num_samples'] = 500
+        dataset_config['num_samples'] = 512
         dataset_config['std'] = 1.5
         if 'continuous' in data:
-            dataset_config['imp_c'] = 16
-            dataset_config['unimp_c'] = 200
+            dataset_config['imp_c'] = 8
+            dataset_config['unimp_c'] = 0
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
