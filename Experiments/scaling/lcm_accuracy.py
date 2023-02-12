@@ -12,7 +12,7 @@ n_covs = [8, 16, 32, 64, 128, 256, 512, 1024]
 df = pd.read_csv(f'{save_folder}/df.csv', nrows=n_samples)
 
 for n in n_covs:
-    this_df = df.iloc[:, 2+n].copy()
+    this_df = df.iloc[:, :2+n].copy()
     lcm = LCM_MF(outcome='Y', treatment='T', data=this_df, n_splits=2,
                  n_repeats=n_repeats, random_state=random_state)
     lcm.fit()
