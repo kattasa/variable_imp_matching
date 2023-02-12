@@ -139,7 +139,7 @@ df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_va
 df_weights = df_weights.rename(columns={'variable': 'Covariate', 'value': 'Relative Weight (%)'})
 df_weights['Relative Weight (%)'] *= 100
 
-plt.figure(figsize=(6, 8))
+plt.figure(figsize=(6, 6))
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=2)

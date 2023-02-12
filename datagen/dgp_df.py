@@ -176,17 +176,17 @@ def dgp_acic_2019_df(dataset_idx, perc_train=None, n_train=None, dummy_cutoff=10
 
 
 def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
-    if os.path.isfile(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv'):
-        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv').set_index('sample_id')
-        with open(f'{ACIC_2018_FOLDER}/covariates/x_binary.csv') as d:
-            binary = d.read().replace('\n', '').split(',')
-        with open(f'{ACIC_2018_FOLDER}/covariates/x_categorical.csv') as d:
-            categorical = d.read().replace('\n', '').split(',')
-        with open(f'{ACIC_2018_FOLDER}/covariates/x_dummy.csv') as d:
-            dummy_cols = d.read().replace('\n', '').split(',')
-    else:
-        df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv').set_index('sample_id')
-        df, binary, categorical, dummy_cols = clean_2018_covariates(df)
+    # if os.path.isfile(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv'):
+    #     df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x_preprocessed.csv').set_index('sample_id')
+    #     with open(f'{ACIC_2018_FOLDER}/covariates/x_binary.csv') as d:
+    #         binary = d.read().replace('\n', '').split(',')
+    #     with open(f'{ACIC_2018_FOLDER}/covariates/x_categorical.csv') as d:
+    #         categorical = d.read().replace('\n', '').split(',')
+    #     with open(f'{ACIC_2018_FOLDER}/covariates/x_dummy.csv') as d:
+    #         dummy_cols = d.read().replace('\n', '').split(',')
+    # else:
+    df = pd.read_csv(f'{ACIC_2018_FOLDER}/covariates/x.csv').set_index('sample_id')
+    df, binary, categorical, dummy_cols = clean_2018_covariates(df)
     categorical_to_dummy = {}
     for c in categorical:
         categorical_to_dummy[c] = [k for k in dummy_cols if '_'.join(k.split('_')[:-1]) == c]
@@ -212,6 +212,7 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
                                    corr.iloc[list(range(0, i)) +
                                              list(range(i + 1, n)), i] == 1]
                                .index)
+    corr_drop_cols = corr_drop_cols
     df = df.drop(columns=corr_drop_cols)
     x_cols = [c for c in x_cols if c not in corr_drop_cols]
     continuous = [c for c in continuous if c not in corr_drop_cols]
@@ -227,32 +228,40 @@ def dgp_acic_2018_df(acic_file, perc_train=None, n_train=None):
     df_train = df_train.drop(columns=['TE', 'Y0_true', 'Y1_true'])
     df_true = df.copy(deep=True)[train_idx:]
     df_assess = df_true.copy(deep=True).drop(columns=['TE', 'Y0_true', 'Y1_true'])
+    sample_nums = list(df_true.index)
     return df_train.reset_index(drop=True), df_assess.reset_index(drop=True), df_true.reset_index(drop=True), x_cols, \
-           binary, categorical, dummy_cols, categorical_to_dummy
+           binary, categorical, dummy_cols, categorical_to_dummy, sample_nums
 
 
 def clean_2018_covariates(df):
-    ordinal_unknowns = {'meduc': 9, 'fagecomb': 99, 'ufagecomb': 99, 'precare': 99, 'precare_rec': 5, 'uprevis': 99, 'previs_rec': 12,
-                        'wtgain': 99, 'wtgain_rec': 9, 'cig_1': 99, 'cig_2': 99, 'cig_3': 99, 'rf_ncesar': 99, 'apgar5': 99, 'apgar5r': 5,
-                        'estgest': 99, 'combgest': 99, 'gestrec10': 99, 'bwtr14': 14}
-    int_type = ['mager41', 'mager14', 'mager9', 'meduc', 'fagecomb', 'ufagecomb', 'precare', 'precare_rec', 'uprevis', 'previs_rec',
-               'wtgain', 'wtgain_rec', 'cig_1', 'cig_2', 'cig_3', 'rf_ncesar', 'apgar5', 'apgar5r', 'dplural', 'estgest', 'combgest',
-               'gestrec10', 'dbwt', 'bwtr14']
+    ordinal_unknowns = {'meduc': 9, 'precare': 99, 'uprevis': 99,
+                        'wtgain': 99, 'cig_1': 99, 'cig_2': 99, 'cig_3': 99,
+                        'rf_ncesar': 99, 'apgar5': 99,
+                        'estgest': 99, 'combgest': 99, 'bwtr14': 14}
+    int_type = ['mager41', 'meduc', 'precare', 'uprevis', 'wtgain', 'cig_1',
+                'cig_2', 'cig_3', 'rf_ncesar', 'apgar5', 'dplural', 'estgest',
+                'combgest', 'bwtr14']
     float_type = ['recwt']
 
     edited_cols = ['sample_id']
 
-    ordinal_unknowns_cols = [list(df.columns).index(i) for i in ordinal_unknowns.keys()]
-    binary = []
-    for k, v in ordinal_unknowns.items():
-        new_col = f'{k}_missing'
-        binary.append(new_col)
-        df.loc[:, new_col] = 0
-        df.loc[df[k] == v, new_col] = 1
-        df.loc[df[k] == v, k] = np.nan
-    df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df[df.columns.difference(binary)])[:, ordinal_unknowns_cols]
-    edited_cols += list(ordinal_unknowns.keys())
+    recode_drops = ['precare_rec', 'wtgain_rec', 'previs_rec',
+                    'cig_rec', 'mager14', 'mager9', 'apgar5r', 'gestrec10',
+                    'gestrec3', 'bwtr4', 'dbwt', 'rf_cesar']
 
+    df = df.drop(columns=recode_drops)
+
+    # ordinal_unknowns_cols = [list(df.columns).index(i) for i in ordinal_unknowns.keys()]
+    for k, v in ordinal_unknowns.items():
+        df = df.loc[~(df[k] == v)]
+        # new_col = f'{k}_missing'
+        # binary.append(new_col)
+        # df.loc[:, new_col] = 0
+        # df.loc[df[k] == v, new_col] = 1
+        # df.loc[df[k] == v, k] = np.nan
+    # df.iloc[:, ordinal_unknowns_cols] = IterativeImputer().fit_transform(df[df.columns.difference(binary)])[:, ordinal_unknowns_cols]
+    edited_cols += list(ordinal_unknowns.keys())
+    binary = []
     for c in df.columns:
         if len(df[c].unique()) == 2:
             df[c] = df[c].map(dict(zip(set(df[c].unique()), [0, 1])))

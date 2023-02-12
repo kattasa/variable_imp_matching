@@ -82,6 +82,9 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
             f.write(str(categorical))
 
+        df_dummy_data = df_dummy_data[
+            df_dummy_data.columns[np.abs(df_dummy_data).sum(axis=0) > 0]] # drop any useless covs
+        print(f'{df_dummy_data.shape[1] - 2} covs')
 
         times = {}
 

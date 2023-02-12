@@ -4,7 +4,7 @@ import pandas as pd
 from src.linear_coef_matching_mf import LCM_MF
 
 save_folder = os.getenv('RESULTS_FOLDER')
-n_samples = os.getenv('N_SAMPLES')
+n_samples = int(os.getenv('N_SAMPLES'))
 n_repeats = int(os.getenv('N_REPEATS'))
 random_state = int(os.getenv('RANDOM_STATE'))
 n_covs = [8, 16, 32, 64, 128, 256, 512, 1024]

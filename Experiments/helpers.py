@@ -20,15 +20,19 @@ def create_folder(data, print_progress=True):
     return save_folder
 
 
-def get_acic_data(year, file, n_train):
+def get_acic_data(year, file, n_train, return_ids=False):
     if year == 'acic_2019':
-        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols, categorical_to_dummy = dgp_acic_2019_df(
-            file, n_train=n_train)
+        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols, \
+        categorical_to_dummy, sample_ids = dgp_acic_2019_df(file, n_train=n_train)
     elif year == 'acic_2018':
-        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols, categorical_to_dummy = dgp_acic_2018_df(
-            file, n_train=n_train)
+        df_train, df_data, df_true, x_cols, binary, categorical, dummy_cols, \
+        categorical_to_dummy, sample_ids = dgp_acic_2018_df(file, n_train=n_train)
     if n_train > 0:
+        if return_ids:
+            return df_train, df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy, sample_ids
         return df_train, df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy
+    if return_ids:
+        return df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy, sample_ids
     return df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy
 
 
@@ -106,3 +110,56 @@ def get_errors(est_cates, true_cates, method_name, scale=None, iter=None):
     if iter is not None:
         cates['Iter'] = iter
     return cates
+
+
+def get_mg_comp(df_orig, sample_num, sample, lcm_mgs, linear_prog_c_mg, linear_prog_t_mg,
+                ensemble_prog_c_mg, ensemble_prog_t_mg, n_iters, treatment, ordinal,
+                k_est, imp_covs):
+    while True:
+        iter_number = np.random.randint(0, n_iters)
+        if sample_num in linear_prog_c_mg[iter_number].index:
+            break
+    print(f'Pulling example MG from iteration {iter_number}')
+
+    lcm_c_mg = df_orig.loc[lcm_mgs[iter_number][0].loc[sample_num], imp_covs + [treatment]]
+    lcm_t_mg = df_orig.loc[lcm_mgs[iter_number][1].loc[sample_num], imp_covs + [treatment]]
+    linear_prog_c_mg = df_orig.loc[linear_prog_c_mg[iter_number].loc[sample_num], imp_covs + [treatment]]
+    linear_prog_t_mg = df_orig.loc[linear_prog_t_mg[iter_number].loc[sample_num], imp_covs + [treatment]]
+    ensemble_prog_c_mg = df_orig.loc[ensemble_prog_c_mg[iter_number].loc[sample_num], imp_covs + [treatment]]
+    ensemble_prog_t_mg = df_orig.loc[ensemble_prog_t_mg[iter_number].loc[sample_num], imp_covs + [treatment]]
+
+    lcm_mg = pd.concat([lcm_c_mg, lcm_t_mg])
+    linear_prog_mg = pd.concat([linear_prog_c_mg, linear_prog_t_mg])
+    ensemble_prog_mg = pd.concat([ensemble_prog_c_mg, ensemble_prog_t_mg])
+
+    categorical = list(lcm_mg.dtypes[lcm_mg.dtypes == 'int'].index)
+    categorical.remove(treatment)
+    for o in ordinal:
+        categorical.remove(o)
+    continuous = list(lcm_mg.dtypes[lcm_mg.dtypes == 'float'].index)
+    continuous = ordinal + continuous
+
+    lcm_comps = {}
+    linear_prog_comps = {}
+    ensemble_prog_comps = {}
+
+    for c in categorical:
+        lcm_comps[c] = ((lcm_mg[c] == sample[c].values[0]).astype(int).sum() / (k_est*2))*100
+        linear_prog_comps[c] = ((linear_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
+                    k_est * 2)) * 100
+        ensemble_prog_comps[c] = ((ensemble_prog_mg[c] == sample[c].values[0]).astype(int).sum() / (
+                    k_est * 2)) * 100
+    for c in continuous:
+        lcm_comps[c] = np.abs(lcm_mg[c] - sample[c].values[0]).mean()
+        linear_prog_comps[c] = np.abs(linear_prog_mg[c] - sample[c].values[0]).mean()
+        ensemble_prog_comps[c] = np.abs(ensemble_prog_mg[c] - sample[c].values[0]).mean()
+
+    lcm_comps[treatment] = np.nan
+    linear_prog_comps[treatment] = np.nan
+    ensemble_prog_comps[treatment] = np.nan
+
+    lcm_mg = pd.concat([sample, lcm_mg, pd.DataFrame.from_dict([lcm_comps])])
+    linear_prog_mg = pd.concat([sample, linear_prog_mg, pd.DataFrame.from_dict([linear_prog_comps])])
+    ensemble_prog_mg = pd.concat([sample, ensemble_prog_mg, pd.DataFrame.from_dict([ensemble_prog_comps])])
+
+    return lcm_mg, linear_prog_mg, ensemble_prog_mg
