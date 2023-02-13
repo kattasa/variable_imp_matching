@@ -9,8 +9,9 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from datagen.dgp import data_generation_dense_mixed_endo
+from datagen.dgp import data_generation_dense_mixed_endo, dgp_exp, dgp_sine
 from Experiments.helpers import get_errors
+from other_methods import prognostic, pymalts, tlearner, bart, matchit
 from src.linear_coef_matching_mf import LCM_MF
 
 random_state = 0
@@ -18,28 +19,41 @@ random_state = 0
 k_est = 10
 est_method = 'mean'
 
-n_samples = 500
-n_splits = 5
-x_imp = 3
-x_unimp = 1
-t_imp = 3
+n_samples = 5000
+n_splits = 10
+x_imp = 2
+x_unimp = 98
 
-preset_weights = [
-    [0, {'control': 20, 'treated': 0}],
-    [1, {'control': 0, 'treated': 20}],
-    [2, {'control': 10, 'treated': 10}]
-]
+# preset_weights = [
+#     [0, {'control': 20, 'treated': 0}],
+#     [1, {'control': 0, 'treated': 20}],
+#     [2, {'control': 10, 'treated': 10}]
+# ]
 
-df_orig, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples,
-                                                       num_cont_imp=x_imp,
-                                                       num_disc_imp=0,
-                                                       num_cont_unimp=x_unimp,
-                                                       num_disc_unimp=0,
-                                                       weights=preset_weights)
+# df_orig, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples,
+#                                                        num_cont_imp=x_imp,
+#                                                        num_disc_imp=0,
+#                                                        num_cont_unimp=x_unimp,
+#                                                        num_disc_unimp=0,
+#                                                        weights=preset_weights)
+# df = df_orig.copy(deep=True)
+# x_cols = [c for c in df.columns if 'X' in c]
+# df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+
+X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_sine(n_samples, x_unimp)
+
+df_orig = pd.DataFrame(np.concatenate([X, Y, T, Y0, Y1, TE, Y0_true, Y1_true], axis=1))
+x_cols = [f'X{i}' for i in range(X.shape[1])]
+df_orig.columns = [*x_cols, 'Y', 'T', 'Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true']
 df = df_orig.copy(deep=True)
-x_cols = [c for c in df.columns if 'X' in c]
-df[x_cols] = StandardScaler().fit_transform(df[x_cols])
 
+df[x_cols] = StandardScaler().fit_transform(df[x_cols])
+df['T'] = df['T'].astype(int)
+
+df_true = df.copy(deep=True)
+df = df.drop(columns=['Y0', 'Y1', 'TE', 'Y0_true', 'Y1_true'])
+
+scaling_factor = np.abs(df_true['TE']).mean()
 
 df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)'])
 df_weights = pd.DataFrame(columns=[f'X{i}' for i in range(x_imp+x_unimp)] + ['Method'])
@@ -74,7 +88,7 @@ for c in x_cols:
 lcm.CATE(cate_methods=[est_method], diameter_prune=None)
 df_err = pd.concat([df_err, get_errors(lcm.cate_df[['avg.CATE_mean']],
                                        df_true[['TE']], method_name='LCM',
-                                       scale=np.abs(df_true['TE']).mean())])
+                                       scale=scaling_factor)])
 print(f'LCM complete: {time.time() - start}')
 
 start = time.time()
@@ -105,17 +119,121 @@ for c in x_cols:
 lcm.CATE(cate_methods=[est_method], diameter_prune=None)
 df_err = pd.concat([df_err, get_errors(lcm.cate_df[['avg.CATE_mean']],
                                        df_true[['TE']], method_name='Metalearner\nLCM',
-                                       scale=np.abs(df_true['TE']).mean())])
+                                       scale=scaling_factor)])
 print(f'Metalearner LCM complete: {time.time() - start}')
+
+split_strategy = lcm.gen_skf
+
+method_name = 'Linear\nPGM'
+cate_est_lpgm, lpgm_c_mg, \
+lpgm_t_mg, lpgm_fi   = prognostic.prognostic_cv('Y', 'T', df,
+                                                method='linear', double=True,
+                                                k_est=k_est, est_method='mean',
+                                                diameter_prune=None,
+                                                gen_skf=split_strategy,
+                                                return_feature_imp=True,
+                                                random_state=random_state)
+df_err = pd.concat([df_err, get_errors(cate_est_lpgm[['avg.CATE']],
+                                       df_true[['TE']],
+                                       method_name=method_name,
+                                       scale=scaling_factor)])
+print(f'\n{method_name} method complete')
+
+method_name = 'Nonparametric\nPGM'
+cate_est_epgm, epgm_c_mg, \
+epgm_t_mg, epgm_fi   = prognostic.prognostic_cv('Y', 'T', df,
+                                                method='ensemble', double=True,
+                                                k_est=k_est, est_method='mean',
+                                                diameter_prune=None,
+                                                gen_skf=split_strategy,
+                                                return_feature_imp=True,
+                                                random_state=random_state)
+df_err = pd.concat([df_err, get_errors(cate_est_epgm[['avg.CATE']],
+                                       df_true[['TE']],
+                                       method_name=method_name,
+                                       scale=scaling_factor)])
+print(f'\n{method_name} method complete')
+
+method_name = 'GenMatch'
+ate, t_hat = matchit.matchit(outcome='Y', treatment='T', data=df,
+                             method='genetic', replace=True)
+df_err = pd.concat([df_err, get_errors(t_hat[['CATE']],
+                                       df_true[['TE']],
+                                       method_name=method_name,
+                                       scale=scaling_factor)])
+print(f'\n{method_name} method complete')
+
+method_name = 'MALTS'
+m = pymalts.malts_mf('Y', 'T', data=df,
+                     discrete=[],
+                     k_est=k_est,
+                     n_splits=n_splits, estimator='mean',
+                     smooth_cate=False,
+                     split_strategy=split_strategy,
+                     random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(m.CATE_df[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
+
+method_name = 'BART'
+cate_est_bart = bart.bart('Y', 'T', df,
+                          gen_skf=split_strategy,
+                          random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_bart[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
+
+method_name = 'Linear\nTLearner'
+cate_est_tlearner = tlearner.tlearner('Y', 'T', df, method='linear',
+                                      gen_skf=split_strategy,
+                                      random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_tlearner[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
+
+method_name = 'Nonparametric\nTLearner'
+cate_est_tlearner = tlearner.tlearner('Y', 'T', df, method='ensemble',
+                                      gen_skf=split_strategy,
+                                      random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_tlearner[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
+
 
 df_true.to_csv('Results/df_true.csv')
 df_err.to_csv('Results/df_err.csv')
 df_weights.to_csv('Results/df_weights.csv')
 
-method_order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '', 'GenMatch',
-                'Metalearner\nLCM']
-palette = {method_order[i]: sns.color_palette()[i] for i in
-           range(len(method_order))}
+color_order = ['LCM', 'Linear\nPGM', 'Nonparametric\nPGM', 'MALTS',
+               'Metalearner\nLCM', 'BART', 'GenMatch', 'Linear\nTLearner',
+               'Nonparametric\nTLearner']
+palette = {color_order[i]: sns.color_palette()[i] for i in range(len(color_order))}
+
+method_order = ['Metalearner\nLCM', 'LCM', 'MALTS', 'GenMatch', 'Linear\nPGM',
+                'Nonparametric\nPGM',  'BART', 'Linear\nTLearner',
+                'Nonparametric\nTLearner'
+                ]
+
+# method_order = ['Metalearner\nLCM', 'LCM', 'MALTS', 'Linear\nPGM',
+#                 'Nonparametric\nPGM',  'BART', 'Causal Forest', 'Linear\nDML',
+#                 'Causal Forest\nDML'
+#                 ]
 order = [m for m in method_order if m in df_err['Method'].unique()]
 
 df_err.loc[:, 'Relative Error (%)'] = df_err.loc[:, 'Relative Error (%)'] * 100
@@ -127,7 +245,8 @@ ax = sns.boxplot(x='Method', y='Relative Error (%)',
                  data=df_err, showfliers=False,
                  order=order, palette=palette)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-ax.get_figure().savefig(f'Results/metalearner_boxplot_err.png', bbox_inches='tight')
+ax.get_figure().savefig(f'Results/metalearner_boxplot_err.png',
+                        bbox_inches='tight')
 
 palette = {'LCM': sns.color_palette()[0],
            'Metalearner\nLCM M_C': sns.color_palette()[7],
@@ -139,7 +258,7 @@ df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_va
 df_weights = df_weights.rename(columns={'variable': 'Covariate', 'value': 'Relative Weight (%)'})
 df_weights['Relative Weight (%)'] *= 100
 
-plt.figure(figsize=(6, 8))
+plt.figure(figsize=(6, 6))
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=2)

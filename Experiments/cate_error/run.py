@@ -8,25 +8,26 @@ from Experiments.cate_error.cate_error import cate_error_test
 iters = 1
 n_repeats = 1
 print_progress = True
-k_est_mean = 10
+k_est_mean = 5
 k_est_linear = 40
 
 custom_iters = None
 
 datasets = [
-    'dense_continuous',
+    # 'dense_continuous',
     # 'sine',
     # 'exp',
     # 'friedman',
+    'acic_2018'
 ]
 
 methods = [
     'lcm_mean',
-    'malts',
+    # 'malts',
     # 'lcm_linear',
-    # 'linear_prog_mean',
+    'linear_prog_mean',
     # 'linear_prog_linear',
-    # 'ensemble_prog_mean',
+    'ensemble_prog_mean',
     # 'ensemble_prog_linear',
     # 'doubleml',
     # 'bart',
@@ -70,21 +71,22 @@ for data in datasets:
         dataset_config['num_samples'] = 2500
         dataset_config['imp_c'] = 0
         dataset_config['unimp_c'] = 0
+    if data == 'acic_2018':
+        n_splits = 2
+        dataset_config['acic_file'] = '5cc4cad434a74f20aa259898eb07af5d'
 
-    if 'acic' not in data:
-        cate_error_test(dataset=data, n_splits=n_splits,
-                        dataset_config=dataset_config,
-                        methods=methods, n_repeats=n_repeats,
-                        k_est_mean=k_est_mean, k_est_linear=k_est_linear,
-                        print_progress=print_progress,
-                        iters=iters, custom_iters=custom_iters)
-    else:
-        for acic_file in all_acic_2019_files:
-            dataset_config['acic_file'] = acic_file
-            n_splits = 4
-            cate_error_test(dataset=data, n_splits=n_splits,
-                            dataset_config=dataset_config,
-                            methods=methods, n_repeats=n_repeats,
-                            k_est_mean=k_est_mean, k_est_linear=k_est_linear,
-                            print_progress=print_progress, iters=iters,
-                            custom_iters=custom_iters)
+        #  5cc4cad434a74f20aa259898eb07af5d.csv
+        # 630bc1cb56204013be94f6a7d2766892
+        # a6c1b082d4984a4d9b3a604797c707f6
+        # a386e1395acd439281351a5cfac0ddf3
+        # c55e20ac7b8042c086e363321a75aa12
+        # d09f96200455407db569ae33fe06b0d3
+        # ea8ec4f5364049a19cb6cf92df0e2593
+        # f2e5cac9902246fba6e5a5c3b11d1605
+
+    cate_error_test(dataset=data, n_splits=2,
+                    dataset_config=dataset_config,
+                    methods=methods, n_repeats=n_repeats,
+                    k_est_mean=k_est_mean, k_est_linear=k_est_linear,
+                    print_progress=print_progress,
+                    iters=iters, custom_iters=custom_iters)
