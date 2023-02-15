@@ -3,7 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-df_err = pd.read_csv('Results/df_err.csv', index_col=[0])
+df_err = pd.read_csv('Results2/df_err.csv', index_col=[0])
 
 color_order = ['LCM', 'Linear\nPGM', 'Nonparametric\nPGM', 'MALTS',
                'Metalearner\nLCM', 'BART', 'Linear\nTLearner',

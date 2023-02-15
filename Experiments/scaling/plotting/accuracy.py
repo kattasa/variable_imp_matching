@@ -22,14 +22,15 @@ genmatch_cates = []
 
 full_errors = []
 
+df_true = pd.read_csv(f"{os.getenv('RESULTS_FOLDER')}/df_true.csv")
+
 for file in num_covs_folder:
     try:
         lcm = pd.read_csv(f'{file}/lcm_cates.csv', index_col=0)[['avg.CATE_mean']]
         malts = pd.read_csv(f'{file}/malts_cates.csv', index_col=0)[['avg.CATE']]
         genmatch = pd.read_csv(f'{file}/genmatch_cates.csv', index_col=0)
         genmatch.index -= 1
-        df_true = pd.read_csv(f'{file}/df_true.csv')
-        df = df_true[['TE']].join(lcm).join(malts).join(genmatch)
+        df = df_true[['TE']].join(lcm).join(malts).join(genmatch).dropna()
         df = df.rename(columns={'avg.CATE_mean': 'LCM', 'avg.CATE': 'MALTS',
                                 'CATE': 'GenMatch'})
         ate = np.abs(df['TE']).mean()
@@ -51,13 +52,15 @@ order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '', 'GenMatch']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 method_order = [c for c in order if c in full_errors['Method'].unique()]
 
-plt.figure()
+plt.figure(figsize=(8, 6))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=1)
+sns.set(font_scale=2)
 ax = sns.boxplot(data=full_errors, x="# Covariates", y="Relative Error (%)",
                  hue='Method', hue_order=method_order, palette=palette,
                  showfliers=False)
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.5, 1), ncol=3, title=None)
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.47, 1.02), ncol=3,
+                title=None, handletextpad=0.4, columnspacing=0.5, fontsize=20)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
+plt.tight_layout()
 ax.get_figure().savefig(f'accuracy.png')

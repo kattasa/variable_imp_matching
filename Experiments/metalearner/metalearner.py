@@ -19,10 +19,10 @@ random_state = 0
 k_est = 10
 est_method = 'mean'
 
-n_samples = 5000
-n_splits = 10
+n_samples = 500
+n_splits = 2
 x_imp = 2
-x_unimp = 98
+x_unimp = 2
 
 # preset_weights = [
 #     [0, {'control': 20, 'treated': 0}],
@@ -156,7 +156,7 @@ print(f'\n{method_name} method complete')
 
 method_name = 'GenMatch'
 ate, t_hat = matchit.matchit(outcome='Y', treatment='T', data=df,
-                             method='genetic', replace=True)
+                             method='genetic', replace=True, k_est=k_est)
 df_err = pd.concat([df_err, get_errors(t_hat[['CATE']],
                                        df_true[['TE']],
                                        method_name=method_name,
