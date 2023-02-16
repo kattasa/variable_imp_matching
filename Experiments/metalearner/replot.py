@@ -43,17 +43,17 @@ ax.get_figure().savefig(f'Results/metalearner_boxplot_err.png',
 
 rename_methods = {
     'LCM': 'LCM\n'+r"$\mathcal{M}^*$",
-    'Metalearner\nLCM M_C': "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)}$",
-    'Metalearner\nLCM M_T': "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)}$"
+    'Metalearner\nLCM M_C': "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)*}$",
+    'Metalearner\nLCM M_T': "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)*}$"
 }
 
 df_weights['Method'] = df_weights['Method'].replace(rename_methods)
 
 palette = {'LCM\n'+r"$\mathcal{M}^*$": sns.color_palette()[0],
-           "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)}$": sns.color_palette()[7],
-           "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)}$": sns.color_palette()[8]}
-order = ['LCM\n'+r"$\mathcal{M}^*$", "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)}$",
-         "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)}$"]
+           "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)*}$": sns.color_palette()[7],
+           "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)*}$": sns.color_palette()[8]}
+order = ['LCM\n'+r"$\mathcal{M}^*$", "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)*}$",
+         "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)*}$"]
 
 x_imp = 3  # to include unimportant covariate in plotting
 df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_vars=['Method'])
@@ -80,15 +80,15 @@ palette = {'LCM\nControl MGs': sns.color_palette()[0],
 order = ['LCM\nControl MGs', 'LCM\nTreatment MGs',
          'Metalearner LCM\nControl MGs', 'Metalearner LCM\nTreatment MGs']
 
-plt.figure(figsize=(6, 8))
+plt.figure(figsize=(6, 7))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=2)
+sns.set(font_scale=2, font="times")
 ax = sns.boxplot(x='Covariate', y='Mean Absolute Difference', hue='Method',
                  data=mg_diffs, showfliers=False,
                  order=[f'X{i}' for i in range(x_imp)], palette=palette,
                  hue_order=order)
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.42, 1), ncol=2, title=None,
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.45, 1), ncol=2, title=None,
                 handletextpad=0.4, columnspacing=0.5, fontsize=18)
 plt.tight_layout()
 ax.get_figure().savefig(f'Results/metalearner_barplot_mg_avg_diff.png')

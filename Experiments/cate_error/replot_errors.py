@@ -12,7 +12,7 @@ palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=3.3)
+sns.set(font_scale=3.3, font="times")
 fig, axes = plt.subplots(1, 2, figsize=(15, 9))
 sns.boxplot(ax=axes[0], data=sine,
             x='Method', y='Relative Error (%)',

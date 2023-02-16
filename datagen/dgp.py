@@ -201,7 +201,8 @@ def dgp_test(n_samples, n_imp, n_unimp):
 
 
 def dgp_poly_basic(n_samples, n_imp, n_unimp, powers=[2]):
-    x_imp = np.random.uniform(-3, 3, size=(n_samples, n_imp))
+    x_imp = np.random.normal(0, 2.5, size=(n_samples, n_imp))
+    # x_imp = np.random.uniform(-3, 3, size=(n_samples, n_imp))
     t = np.random.binomial(1, 0.5, size=(n_samples,))
 
     eff_powers = np.random.choice(powers, size=(n_imp,))
@@ -213,7 +214,9 @@ def dgp_poly_basic(n_samples, n_imp, n_unimp, powers=[2]):
     y0 = y0 + y0_errors
     y1 = y1 + y1_errors
     y = (y0 * (1 - t)) + (y1 * t)
-    x_unimp = np.random.uniform(-10, 10, size=(n_samples, n_unimp))
+    # x_unimp = np.random.uniform(-10, 10, size=(n_samples, n_unimp))
+    x_unimp = np.random.normal(0, 2.5, size=(n_samples, n_unimp))
+    # x_unimp = np.random.uniform(-3, 3, size=(n_samples, n_unimp))
     X = np.concatenate([x_imp, x_unimp], axis=1)
     return X, y.reshape(-1, 1), t.reshape(-1, 1), y0.reshape(-1, 1), y1.reshape(-1, 1), te.reshape(-1, 1), (y0 - y0_errors).reshape(-1, 1), (y1 - y1_errors).reshape(-1, 1)
 

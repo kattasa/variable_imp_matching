@@ -107,14 +107,21 @@ palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 method_order = [c for c in order if c in samples_times['Method'].unique()]
 markers = ['o', '^', 's']
 
+samples_times[r"# Samples ($\log_2$)"] = np.log2(samples_times['# Samples'].astype(int))
+samples_times[r"# Samples ($\log_2$)"] = samples_times[r"# Samples ($\log_2$)"].astype(int)
+
+covs_times[r"# Covariates ($\log_2$)"] = np.log2(covs_times['# Covariates'].astype(int))
+covs_times[r"# Covariates ($\log_2$)"] = covs_times[r"# Covariates ($\log_2$)"].astype(int)
+
+
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=1)
 fig, axes = plt.subplots(1, 2)
-sns.pointplot(ax=axes[0], data=samples_times, x='# Samples', y='Time (s)',
+sns.pointplot(ax=axes[0], data=samples_times, x=r"# Samples ($\log_2$)", y='Time (s)',
               errorbar='sd', hue='Method',
               hue_order=method_order, palette=palette, markers=markers, scale=1.25)
-sns.pointplot(ax=axes[1], data=covs_times, x='# Covariates', y='Time (s)',
+sns.pointplot(ax=axes[1], data=covs_times, x=r"# Covariates ($\log_2$)", y='Time (s)',
               errorbar='sd', hue='Method',
               hue_order=method_order, palette=palette, markers=markers, scale=1.25)
 handles, labels = axes[0].get_legend_handles_labels()
