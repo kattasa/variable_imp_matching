@@ -14,20 +14,21 @@ k_est_linear = 40
 custom_iters = None
 
 datasets = [
-    # 'dense_continuous',
+    'dense_continuous',
     # 'sine',
     # 'exp',
     # 'friedman',
-    'acic_2018'
+    # 'acic_2018'
 ]
 
 methods = [
     'lcm_mean',
+    'lasso fs',
     # 'malts',
     # 'lcm_linear',
-    'linear_prog_mean',
+    # 'linear_prog_mean',
     # 'linear_prog_linear',
-    'ensemble_prog_mean',
+    # 'ensemble_prog_mean',
     # 'ensemble_prog_linear',
     # 'doubleml',
     # 'bart',
@@ -38,12 +39,12 @@ methods = [
 for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
-        n_splits = 2
-        dataset_config['num_samples'] = 512
+        n_splits = 5
+        dataset_config['num_samples'] = 2500
         dataset_config['std'] = 1.5
         if 'continuous' in data:
-            dataset_config['imp_c'] = 8
-            dataset_config['unimp_c'] = 0
+            dataset_config['imp_c'] = 10
+            dataset_config['unimp_c'] = 90
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:

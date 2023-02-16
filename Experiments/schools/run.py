@@ -18,7 +18,7 @@ save_folder = os.getenv('SAVE_FOLDER')
 k_est = 10
 random_state = 0
 n_splits = 2
-n_repeats = 1
+n_repeats = 50
 
 df = dgp_schools_df()
 

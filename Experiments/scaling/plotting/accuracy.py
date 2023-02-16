@@ -39,7 +39,7 @@ for file in num_covs_folder:
             all_errors.append(get_errors(df[[m]], df[['TE']],
                                         method_name=m, scale=ate))
         all_errors = pd.concat(all_errors)
-        all_errors['# Covariates'] = int(file.split('/')[-1]) + 8
+        all_errors['# Covariates'] = int(file.split('/')[-1])
         full_errors.append(all_errors.copy())
     except:
         print('uh oh')
@@ -61,6 +61,7 @@ ax = sns.boxplot(data=full_errors, x="# Covariates", y="Relative Error (%)",
                  showfliers=False)
 sns.move_legend(ax, "lower center", bbox_to_anchor=(.47, 1.02), ncol=3,
                 title=None, handletextpad=0.4, columnspacing=0.5, fontsize=20)
+ax.set_xscale('log', basex=2)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 ax.get_figure().savefig(f'accuracy.png')

@@ -24,7 +24,7 @@ np.random.seed(0)
 random_state = 0
 
 method_order = ['LCM', 'Linear PGM', 'Nonparametric PGM', 'MALTS', 'Causal Forest',
-                'Causal Forest DML', 'Linear DML', 'BART']
+                'Causal Forest DML', 'Linear DML', 'BART', 'LASSO FS']
 
 
 def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
@@ -114,6 +114,25 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             summarize_warnings(warning_list, method_name)
             print()
             split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
+
+        if 'lasso fs' in methods:
+            method_name = 'LASSO FS'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                lcm.fit(model='linear', separate_treatments=True, equal_weights=True)
+                lcm.MG(k=k_est_mean)
+                lcm.CATE(cate_methods=['mean'], diameter_prune=None)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(lcm.cate_df[['avg.CATE_mean']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
 
         if 'malts' in methods:
             method_name = 'MALTS'

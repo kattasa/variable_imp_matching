@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import matplotlib
 
-save_folder = 'Results_Tables'
+save_folder = 'Debug'
 method_order = ['LCM', 'Linear PGM', 'Nonparametric PGM']
 palette = {method_order[i]: sns.color_palette()[i] for i in range(len(method_order))}
 
@@ -15,21 +15,21 @@ rename_methods = {
     'Ensemble\nPrognostic Score': 'Nonparametric PGM'
 }
 
-cat_diff_df = pd.read_csv(f'Results2/categorical_diff.csv', index_col=[0])
-cont_diff_df = pd.read_csv(f'Results2/continuous_diff.csv', index_col=[0])
-cat_diff_df['Method'] = cat_diff_df['Method'].map(rename_methods)
-cont_diff_df['Method'] = cont_diff_df['Method'].map(rename_methods)
+cat_diff_df = pd.read_csv(f'Results/categorical_diff.csv', index_col=[0])
+cont_diff_df = pd.read_csv(f'Results/continuous_diff.csv', index_col=[0])
+cat_diff_df['Method'] = cat_diff_df['Method'].replace(rename_methods)
+cont_diff_df['Method'] = cont_diff_df['Method'].replace(rename_methods)
 
 categorical = ['XC_1', 'C1_4', 'C1_5', 'C2']
 
-cat_diff_df['% Match'] *= 100
+cat_diff_df['% Mismatch'] *= 100
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=3.3)
 fig, axes = plt.subplots(1, 2, figsize=(18, 9))
 sns.barplot(ax=axes[0], data=cat_diff_df, x='Covariate',
-            y='% Match', hue='Method', errorbar=None,
+            y='% Mismatch', hue='Method', errorbar=None,
             hue_order=[c.replace('_', '=') for c in categorical].sort())
 sns.boxplot(ax=axes[1], data=cont_diff_df, x='Covariate',
             y='Mean Absolute Difference', hue='Method', showfliers=False)
@@ -46,7 +46,7 @@ fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
 
 
 # df_orig = pd.read_csv(f'{os.getenv("SCHOOLS_FOLDER")}/df.csv')
-# lcm_cates_full = pd.read_csv('Results/lcm_cates.csv', index_col=[0])
+# lcm_cates_full = pd.read_csv('Results2/lcm_cates.csv', index_col=[0])
 # linear_prog_cates_full = pd.read_csv('Results/linear_prog_cates.csv',
 #                                      index_col=[0])
 # ensemble_prog_cates_full = pd.read_csv('Results/ensemble_prog_cates.csv',
