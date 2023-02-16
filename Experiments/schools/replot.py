@@ -7,43 +7,26 @@ import matplotlib
 
 results_folder = 'Results'
 save_folder = 'Final_Plots'
-method_order = ['LCM', 'Linear\nPGM', 'Nonparametric\nPGM']
+method_order = ['LCM', 'Linear\nPGM', 'NP\nPGM']
 palette = {method_order[i]: sns.color_palette()[i] for i in range(len(method_order))}
 
 rename_methods = {
-    'LCM': 'LCM',
-    'Linear\nPrognostic Score': 'Linear PGM',
-    'Ensemble\nPrognostic Score': 'Nonparametric PGM'
+    'Nonparametric\nPGM': 'NP\nPGM'
 }
 
-cat_diff_df = pd.read_csv(f'{results_folder}/categorical_diff.csv', index_col=[0])
 cont_diff_df = pd.read_csv(f'{results_folder}/continuous_diff.csv', index_col=[0])
-cat_diff_df['Method'] = cat_diff_df['Method'].replace(rename_methods)
 cont_diff_df['Method'] = cont_diff_df['Method'].replace(rename_methods)
 
-categorical = ['XC_1', 'C1_4', 'C1_5', 'C2']
-
-cat_diff_df['% Mismatch'] *= 100
-
+plt.figure(figsize=(5, 6))
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=3.3, font="times")
-fig, axes = plt.subplots(1, 2, figsize=(18, 9))
-sns.barplot(ax=axes[1], data=cat_diff_df, x='Covariate',
-            y='% Mismatch', hue='Method', errorbar=None,
-            hue_order=[c.replace('_', '=') for c in categorical].sort())
-sns.boxplot(ax=axes[0], data=cont_diff_df, x='Covariate',
-            y='Mean Absolute Difference', hue='Method', showfliers=False)
-handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(.55, 0.93),
-           ncol=3, fontsize=40, handletextpad=0.4,
-           columnspacing=0.5)
-for ax in axes:
-    ax.set(xlabel=None)
-    ax.get_legend().remove()
-axes[1].yaxis.set_major_formatter(ticker.PercentFormatter())
-fig.tight_layout()
-fig.savefig(f'{save_folder}/all_mg.png', bbox_inches='tight')
+sns.set(font_scale=2, font="times")
+ax = sns.boxplot(data=cont_diff_df, x='Covariate',
+                 y='Mean Absolute Difference', hue='Method', showfliers=False)
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.43, 1), ncol=3, title=None,
+                handletextpad=0.4, columnspacing=0.5, fontsize=18)
+plt.tight_layout()
+ax.get_figure().savefig(f'{save_folder}/mg_diff.png')
 
 
 df_orig = pd.read_csv(f'{os.getenv("SCHOOLS_FOLDER")}/df.csv')

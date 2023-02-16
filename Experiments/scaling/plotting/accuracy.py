@@ -52,17 +52,17 @@ order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '', 'GenMatch']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 method_order = [c for c in order if c in full_errors['Method'].unique()]
 
-full_errors['# Covariates (log2)'] = np.log2(full_errors['# Covariates'])
-full_errors['# Covariates (log2)'] = full_errors['# Covariates (log2)'].astype(int)
+full_errors[r'# Covariates $_{\left(\log_2\right)}$'] = np.log2(full_errors['# Covariates'])
+full_errors[r'# Covariates $_{\left(\log_2\right)}$'] = full_errors[r'# Covariates $_{\left(\log_2\right)}$'].astype(int)
 
 plt.figure(figsize=(8, 6))
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=2, font="times")
-ax = sns.boxplot(data=full_errors, x="# Covariates (log2)", y="Relative Error (%)",
+ax = sns.boxplot(data=full_errors, x=r"# Covariates $_{\left(\log_2\right)}$", y="Relative Error (%)",
                  hue='Method', hue_order=method_order, palette=palette,
                  showfliers=False)
-sns.move_legend(ax, "lower center", bbox_to_anchor=(.47, 1.02), ncol=3,
+sns.move_legend(ax, "lower center", bbox_to_anchor=(.47, 0.98), ncol=3,
                 title=None, handletextpad=0.4, columnspacing=0.5, fontsize=20)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
