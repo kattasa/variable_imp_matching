@@ -72,13 +72,15 @@ sns.move_legend(ax, "lower center", bbox_to_anchor=(.36, 1.02), ncol=3,
 plt.tight_layout()
 ax.get_figure().savefig(f'Results/metalearner_barplot_weights.png')
 
+mg_diffs['Method'] = mg_diffs['Method'].str.replace('MGs', 'KNN')
+mg_diffs['Covariate'] = mg_diffs['Covariate'].apply(lambda x: f'X{int(x[-1])+1}')
 
-palette = {'LCM\nControl MGs': sns.color_palette()[0],
-            'LCM\nTreatment MGs': sns.color_palette()[9],
-           'Metalearner LCM\nControl MGs': sns.color_palette()[7],
-           'Metalearner LCM\nTreatment MGs': sns.color_palette()[8]}
-order = ['LCM\nControl MGs', 'LCM\nTreatment MGs',
-         'Metalearner LCM\nControl MGs', 'Metalearner LCM\nTreatment MGs']
+palette = {'LCM\nControl KNN': sns.color_palette()[0],
+            'LCM\nTreatment KNN': sns.color_palette()[9],
+           'Metalearner LCM\nControl KNN': sns.color_palette()[7],
+           'Metalearner LCM\nTreatment KNN': sns.color_palette()[8]}
+order = ['LCM\nControl KNN', 'LCM\nTreatment KNN',
+         'Metalearner LCM\nControl KNN', 'Metalearner LCM\nTreatment KNN']
 
 plt.figure(figsize=(6, 7))
 sns.set_context("paper")
@@ -86,7 +88,7 @@ sns.set_style("darkgrid")
 sns.set(font_scale=2, font="times")
 ax = sns.boxplot(x='Covariate', y='Mean Absolute Difference', hue='Method',
                  data=mg_diffs, showfliers=False,
-                 order=[f'X{i}' for i in range(x_imp)], palette=palette,
+                 order=[f'X{i}' for i in range(1,x_imp+1)], palette=palette,
                  hue_order=order)
 sns.move_legend(ax, "lower center", bbox_to_anchor=(.45, 1), ncol=2, title=None,
                 handletextpad=0.4, columnspacing=0.5, fontsize=18)

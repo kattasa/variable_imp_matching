@@ -8,7 +8,7 @@ from Experiments.cate_error.cate_error import cate_error_test
 iters = 1
 n_repeats = 1
 print_progress = True
-k_est_mean = 5
+k_est_mean = 10
 k_est_linear = 40
 
 custom_iters = None
@@ -40,11 +40,11 @@ for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
         n_splits = 5
-        dataset_config['num_samples'] = 2500
+        dataset_config['num_samples'] = 5000
         dataset_config['std'] = 1.5
         if 'continuous' in data:
-            dataset_config['imp_c'] = 10
-            dataset_config['unimp_c'] = 90
+            dataset_config['imp_c'] = 5
+            dataset_config['unimp_c'] = 95
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
@@ -85,7 +85,7 @@ for data in datasets:
         # ea8ec4f5364049a19cb6cf92df0e2593
         # f2e5cac9902246fba6e5a5c3b11d1605
 
-    cate_error_test(dataset=data, n_splits=2,
+    cate_error_test(dataset=data, n_splits=n_splits,
                     dataset_config=dataset_config,
                     methods=methods, n_repeats=n_repeats,
                     k_est_mean=k_est_mean, k_est_linear=k_est_linear,

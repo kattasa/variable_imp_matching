@@ -24,7 +24,7 @@ np.random.seed(0)
 random_state = 0
 
 method_order = ['LCM', 'Linear PGM', 'Nonparametric PGM', 'MALTS', 'Causal Forest',
-                'Causal Forest DML', 'Linear DML', 'BART', 'LASSO FS']
+                'Causal Forest DML', 'Linear DML', 'BART', 'LASSO FS', 'Oracle FS']
 
 
 def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
@@ -118,10 +118,28 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         if 'lasso fs' in methods:
             method_name = 'LASSO FS'
             start = time.time()
-            with warnings.catch_warnings(record=True) as warning_list:
-                lcm.fit(model='linear', separate_treatments=True, equal_weights=True)
-                lcm.MG(k=k_est_mean)
-                lcm.CATE(cate_methods=['mean'], diameter_prune=None)
+            lcm.M_list = [np.where(m > 0, 1, 0) for m in lcm.M_list]
+            lcm.MG(k=k_est_mean)
+            lcm.CATE(cate_methods=['mean'], diameter_prune=None)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(lcm.cate_df[['avg.CATE_mean']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
+
+            method_name = 'Oracle FS'
+            start = time.time()
+            lcm.M_list = [np.concatenate([np.ones(dataset_config['imp_c'],),
+                                          np.zeros(dataset_config['unimp_c'],)])
+                          for i in range(n_splits)]
+            lcm.MG(k=k_est_mean)
+            lcm.CATE(cate_methods=['mean'], diameter_prune=None)
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
                                 get_errors(lcm.cate_df[['avg.CATE_mean']],
