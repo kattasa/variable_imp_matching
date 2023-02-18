@@ -15,10 +15,10 @@ from src.linear_coef_matching_mf import LCM_MF
 from other_methods import prognostic
 
 save_folder = os.getenv('SAVE_FOLDER')
-k_est = 10
+k_est = 3
 random_state = 0
-n_splits = 2
-n_repeats = 50
+n_splits = 5
+n_repeats = 1
 
 df = dgp_schools_df()
 
@@ -92,7 +92,7 @@ ensemble_prog_top_10 = ensemble_prog_fi_df.mean().sort_values(ascending=False).i
 imp_covs = [c for c in lcm_top_10 if c in linear_prog_top_10]
 imp_covs = [c for c in imp_covs if c in ensemble_prog_top_10]
 
-imp_covs = ['S3', 'C1_5', 'C2', 'X1']
+imp_covs = ['S3', 'X1', 'X2', 'C1_1', 'C1_13', 'C1_14']
 
 categorical = [c for c in imp_covs if '_' in c]
 continuous = [c for c in imp_covs if '_' not in c]

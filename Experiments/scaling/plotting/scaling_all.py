@@ -117,31 +117,37 @@ palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 method_order = [c for c in order if c in samples_times['Method'].unique()]
 markers = ['o', '^', 's', 'p']
 
-samples_times[r"# Samples $_{\left(\log_2\right)}$"] = np.log2(samples_times['# Samples'].astype(int))
-samples_times[r"# Samples $_{\left(\log_2\right)}$"] = samples_times[r"# Samples $_{\left(\log_2\right)}$"].astype(int)
+samples_times['# Samples'] = samples_times['# Samples'].astype(int)
+covs_times['# Covariates'] = covs_times['# Covariates'].astype(int)
 
-covs_times[r"# Covariates $_{\left(\log_2\right)}$"] = np.log2(covs_times['# Covariates'].astype(int))
-covs_times[r"# Covariates $_{\left(\log_2\right)}$"] = covs_times[r"# Covariates $_{\left(\log_2\right)}$"].astype(int)
+# samples_times[r"# Samples $_{\left(\log_2\right)}$"] = np.log2(samples_times['# Samples'].astype(int))
+# samples_times[r"# Samples $_{\left(\log_2\right)}$"] = samples_times[r"# Samples $_{\left(\log_2\right)}$"].astype(int)
+#
+# covs_times[r"# Covariates $_{\left(\log_2\right)}$"] = np.log2(covs_times['# Covariates'].astype(int))
+# covs_times[r"# Covariates $_{\left(\log_2\right)}$"] = covs_times[r"# Covariates $_{\left(\log_2\right)}$"].astype(int)
 
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=2, font="times")
-fig, axes = plt.subplots(1, 2, figsize=(9, 6))
-sns.pointplot(ax=axes[0], data=samples_times, x=r"# Samples $_{\left(\log_2\right)}$", y='Time (s)',
+fig, axes = plt.subplots(2, 1, figsize=(8, 9))
+sns.pointplot(ax=axes[0], data=samples_times, x="# Samples", y='Time (s)',
               errorbar='sd', hue='Method',
-              hue_order=method_order, palette=palette, markers=markers, scale=1.25)
-sns.pointplot(ax=axes[1], data=covs_times, x=r"# Covariates $_{\left(\log_2\right)}$", y='Time (s)',
+              hue_order=method_order, palette=palette, markers=markers,
+              scale=2)
+sns.pointplot(ax=axes[1], data=covs_times, x="# Covariates", y='Time (s)',
               errorbar='sd', hue='Method',
-              hue_order=method_order, palette=palette, markers=markers, scale=1.25)
+              hue_order=method_order, palette=palette, markers=markers,
+              scale=2)
 handles, labels = axes[0].get_legend_handles_labels()
-fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(.53, 0.93),
-           ncol=4, fontsize=22, handletextpad=0.2,
-           columnspacing=0.5, markerscale=2)
+fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(.55, 0.96),
+           ncol=4, fontsize=20, handletextpad=0.2,
+           columnspacing=0.5, markerscale=1.5)
 for ax in axes:
     ax.get_legend().remove()
     ax.set_yscale('log')
-axes[1].set_ylabel(ylabel=None)
+    # ax.set_xscale('log')
+# axes[1].set_ylabel(ylabel=None)
 fig.tight_layout()
 fig.savefig(f'scaling_all.png', bbox_inches='tight')
 

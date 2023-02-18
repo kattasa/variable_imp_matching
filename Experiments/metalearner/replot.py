@@ -56,7 +56,7 @@ order = ['LCM\n'+r"$\mathcal{M}^*$", "Metalearner\n"+ r"LCM $\mathcal{M}^{(0)*}$
          "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)*}$"]
 
 x_imp = 3  # to include unimportant covariate in plotting
-df_weights = df_weights[['Method'] + [f'X{i}' for i in range(x_imp)]].melt(id_vars=['Method'])
+df_weights = df_weights[['Method'] + [f'X{i}' for i in range(1,x_imp+1)]].melt(id_vars=['Method'])
 df_weights = df_weights.rename(columns={'variable': 'Covariate', 'value': 'Relative Weight (%)'})
 df_weights['Relative Weight (%)'] *= 100
 

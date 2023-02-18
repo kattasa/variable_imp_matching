@@ -67,5 +67,5 @@ sns.set(font_scale=2, font="times")
 ax = sns.boxplot(x='Method', y='Relative Error (%)',
                  data=df_err, showfliers=False,
                  order=order, palette=palette)
-ax.yaxis.set_major_formatter(ticker.PercentFormatter())
+ax.yaxis.set_major_formatter(ticker.PercentFormatter(decimals=0))
 ax.get_figure().savefig(f'lcm_vs_tree.png', bbox_inches='tight')

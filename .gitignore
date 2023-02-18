@@ -19,5 +19,6 @@ Experiments/coverage/.DS_Store
 Experiments/scaling/Results*
 Experiments/coverage/plotting/.DS_Store
 Experiments/schools/Results*
+Experiments/schools/Testing*
 Experiments/acic_mg
 *data.csv
