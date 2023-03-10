@@ -17,49 +17,47 @@ import sklearn.tree as tree
 from utils import get_match_groups, get_CATES, get_model_weights
 
 
-class LCM:
+class VIM:
     """
     A class to calculate the conditional treatment effect on samples.
 
-    Arguments
+    Parameters
     ----------
-    outcome (str) : column label corresponding to the outcome values in the DataFrame passed as the data argument
-    treatment (str) : column label corresponding to the treatment values in the DataFrame passed as the data argument
-    data (pandas.DataFrame) : data to train on. Must include 'outcome' and 'treatment' columns specified above
-    discrete (list) : indicates which columns of data to treat as discrete covariates
-    adaptive (boolean, DEFAULT=TRUE) : whether to learn adaptive stretch weights
-    M_init (np.array, DEFAULT=None) : if passed, and adaptive=True, used as the initial M value from which to learn
-        adaptive M weights. If None, this value will be determined using a subset of the training data when .fit()
-        is called.
-    k (int, DEFAULT=10) : number of neighbors to use for finding optimal M
-    gpu (Boolean, DEFAULT=False) : whether to run code optimized for GPU or not.
+    outcome : str
+        Column label corresponding to the outcome.
+    treatment : str
+        Column label corresponding to the treatment.
+    data : pandas.DataFrame
+        Training data that must include 'outcome' and 'treatment' columns
+        specified above.
+    binary_outcome : boolean, default=False
+        Whether the treatment is binary.
+    random_state : None or int, default=None
+        Random state to run on.
 
-    Methods
+    Attributes
     -------
-    calc_x_distances(data):
-        Run during initialization. Computes the distance between each covariates for each sample. Stored and used
-        for optimizing M.
-    set_init_M():
-        scales and reformats initial M value into appropriate form for training.
-    get_delta(M=None, treatment_filter=None):
-        get objective function loss for a given M. If M is None, use self.M. If treatment_filter is not None, only
-        compute loss for control group (0) or treatment group (1)
-    get_pod_args(pod_center, pod_size):
-        collects the arguments needed to perform optimization for a given pod_center and pod_size.
-    fit(...):
-        fits adaptive Amect model (if self.adaptive == True). See method doc for further details.
-    train_M_model(...):
-        trains model to predict adaptive M weights. See method doc for further details.
-    model_compare(...):
-        compares models to use to predict adaptive M weights. See method doc for further details.
-    get_X(treatment_filter=None):
-        get X values.
-    get_matched_groups(df_estimation, k, check_df=True, return_error=False):
-        get match groups of size k for a passed df_estimation.
-    CATE(self, df_estimation, match_groups=None, k=10, method='mean'):
-        calculate CATE values for samples in df_estimation.
-    check_df_estimation(df_estimation):
-        checks df_estimation is properly formatted.
+    n : int
+        Number of samples.
+    p : int
+        Number of covariates.
+    outcome : str
+    treatment : str
+    col_order : list
+        Stores the order of the columns.
+    binary_outcome : bool
+    X : numpy.array
+        Matrix of all training covariates.
+    T : numpy.array
+        Vector of training treatments.
+    Y : numpy.array
+        Vector of training outcomes.
+    treatment_classes : numpy.array
+        Vector of unique treatments.
+    M : None, list type, or dict
+        Covariate weights to use for matching. Is dictionary containing weights
+        for each treatment is class run as metalearner.
+    random_state : None or int
     """
     def __init__(self, outcome, treatment, data, binary_outcome=False, random_state=None):
         self.n, self.p = data.shape
@@ -73,14 +71,62 @@ class LCM:
         self.X = data[self.covariates].to_numpy()
         self.T = data[self.treatment].to_numpy()
         self.Y = data[self.outcome].to_numpy()
-        self.treatments_classes = np.unique(self.T)
+        self.treatment_classes = np.unique(self.T)
         self.M = None
         self.random_state = random_state
 
     def fit(self, model='linear', params=None, model_weight_attr=None,
             separate_treatments=True, equal_weights=False, metalearner=False,
             return_scores=False):
-        self.M = None
+        """
+        Calculates variable importances to use for distance metric and stores
+        in self.M.
+
+        Parameters
+        ----------
+        model : str or machine learning class, default='linear'
+            Model to use for calculating feature importances. If
+            model='linear', L1-regularized regression (i.e. LASSO). If
+            model='tree', uses shallow decision tree. If model='ensemble',
+            uses gradient boosting regressor/classifier. Otherwise, if a model
+            class is passed, it uses that model. Note that is a model class is
+            passed, you must specify an accompanying 'model_weight_attr' that
+            is used to pull the variable importance values from the trained
+            model.
+        params : None or dict, default=None
+            Parameters for model. If None but model='linear' or model='tree',
+            then it uses the default params laid out in the create_model()
+            method. Otherwise, uses the default params of the specified model.
+        model_weight_attr : None or str, default=None
+            Indicates the name of the model attribute that stores the variable
+            importance values. If None but model='linear', model='tree', or
+            model='ensemble' then uses the attribute laid out in the
+            create_model() method. Otherwise, the user must provide the correct
+            attribute name.
+        separate_treatments : bool, default=False
+            Whether the fit separate models to each treatment. If False, will
+            fit one model to all samples and use the treatment indicator as a
+            predictive feature. Note that is metalearner=True, this value is
+            overriden.
+        equal_weights : bool, default=False
+            Whether to give equal weight to all features that have a nonzero
+            variable importance.
+        metalearner : bool, default=False
+            Whether to run metalearner VIM.
+        return_scores : bool, default=False
+            Whether to return the 'score()' of each fitted model.
+
+        Raises
+        ------
+        ValueError
+            No weights learned.
+
+        Returns
+        ------
+        scores
+            Only returned it return_scores=True.
+        """
+        self.M = None  # overwrite M is class previously fit
         scores = None
         if return_scores:
             scores = {}
@@ -88,7 +134,7 @@ class LCM:
                                            weight_attr=model_weight_attr)
         if metalearner or separate_treatments:
             M = []
-            for t in self.treatments_classes:
+            for t in self.treatment_classes:
                 try:
                     m.fit(self.X[self.T == t, :], self.Y[self.T == t])
                     if return_scores:
@@ -103,9 +149,9 @@ class LCM:
                                            0, t))
                 m = clone(estimator=m)
             if metalearner:
-                self.M = dict(zip(self.treatments_classes, M))
+                self.M = dict(zip(self.treatment_classes, M))
             else:
-                self.M = sum(M) / len(self.treatments_classes)
+                self.M = sum(M) / len(self.treatment_classes)
         else:
             t_dummy = pd.get_dummies(self.T, drop_first=True).to_numpy()
             try:
@@ -128,31 +174,66 @@ class LCM:
             return scores
 
     def get_matched_groups(self, df_estimation, k=10,
-                           return_original_idx=False, check_est_df=False):
-        """Get the match groups for a given
+                           return_original_idx=False):
+        """Get the match groups for a given estimation set.
 
-        :param df_estimation:
-        :param k:
-        :param check_df:
-        :return:
+        Parameters
+        ----------
+        df_estimation : pandas.DataFrame
+            Estimation set. Should include same columns as the training set.
+        k : int, default=10
+            Matched group size for each treatment. I.e. is there are two
+            treatments, each sample is matched to 10 samples that recieved
+            each treatment.
+        return_original_idx : bool, default=False
+            Whether to return the matched groups using the original index to
+            label the samples. If False, the index is reset before computing
+            matched groups (i.e. the first sample in the dataframe will be
+            sample 0).
+
+        Returns
+        -------
+        match_groups
+            Matched groups for each sample.
+        match_distances
+            The distances between each sample and each of its matched samples.
+            The position of each distance corresponds to the match in the
+            returned match_groups.
         """
         return get_match_groups(df_estimation, self.covariates,
                                 self.treatment, M=self.M, k=k,
-                                return_original_idx=return_original_idx,
-                                check_est_df=check_est_df)
+                                return_original_idx=return_original_idx)
 
     def CATE(self, df_estimation, match_groups=None, match_distances=None,
-             k=10, method='mean', diameter_prune=None, cov_imp_prune=0.01,
-             check_est_df=False):
+             k=10, method='mean', diameter_prune=None, cov_imp_prune=0.01):
+        """Get CATE estimates for each sample in an estimation set.
+
+        Parameters
+        ----------
+        df_estimation : pandas.DataFrame
+            Estimation set. Should include same columns as the training set.
+        return_original_idx : bool, default=False
+            Whether to return the matched groups using the original index to
+            label the samples. If False, the index is reset before computing
+            matched groups (i.e. the first sample in the dataframe will be
+            sample 0).
+
+        Returns
+        -------
+        match_groups
+            Matched groups for each sample.
+        match_distances
+            The distances between each sample and each of its matched samples.
+            The position of each distance corresponds to the match in the
+            returned match_groups.
+        """
         if (match_groups is None) or (match_distances is None):
             match_groups, match_distances = self.get_matched_groups(
-                df_estimation=df_estimation, k=k, return_original_idx=False,
-                check_est_df=check_est_df)
+                df_estimation=df_estimation, k=k, return_original_idx=False)
         return get_CATES(df_estimation, match_groups, match_distances,
                          self.outcome, self.covariates, self.M,
                          method=method, diameter_prune=diameter_prune,
-                         cov_imp_prune=cov_imp_prune,
-                         check_est_df=check_est_df)
+                         cov_imp_prune=cov_imp_prune)
 
     def create_model(self, model='linear', params=None, weight_attr=None):
         if params is None:

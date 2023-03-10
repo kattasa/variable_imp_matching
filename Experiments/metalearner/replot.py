@@ -65,7 +65,8 @@ sns.set_context("paper")
 sns.set_style("darkgrid")
 sns.set(font_scale=2, font="times")
 ax = sns.barplot(data=df_weights, x="Covariate", y="Relative Weight (%)",
-                 hue="Method", hue_order=order, palette=palette)
+                 hue="Method", hue_order=order, palette=palette,
+                 errorbar=None)
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 sns.move_legend(ax, "lower center", bbox_to_anchor=(.36, 1.02), ncol=3,
                 title=None, handletextpad=0.4, columnspacing=0.5, fontsize=18)
