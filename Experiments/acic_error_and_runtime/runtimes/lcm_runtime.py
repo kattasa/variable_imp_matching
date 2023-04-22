@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 import time
 
-from src.linear_coef_matching import LCM
+from src.variable_imp_matching import LCM
 from sample_utils import sample_match_group, sample_linear_cate
 
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]

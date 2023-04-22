@@ -20,7 +20,7 @@ import seaborn as sns
 from Experiments.helpers import get_acic_data, summarize_warnings, get_errors
 from other_methods import bart, causalforest, prognostic, doubleml, \
     drlearner, causalforest_dml, pymalts
-from src.linear_coef_matching_mf import LCM_MF
+from src.variable_imp_matching_mf import VIM_MF
 
 np.random.seed(1)
 random_state = 1
@@ -81,11 +81,11 @@ times = {}
 method_name = 'LASSO Coefficient Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+    lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
     lcm.fit(model='linear', separate_treatments=True)
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['mean'])
+    lcm.create_mgs(k=k_est)
+    lcm.est_cate(cate_methods=['mean'])
 times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(lcm.cate_df[['avg.CATE_mean']],
@@ -97,20 +97,20 @@ print(f'\n{method_name} method complete: {time.time() - start}')
 summarize_warnings(warning_list, method_name)
 print()
 
-split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
+split_strategy = lcm.split_strategy  # save split strategy to use for all other methods
 with open(f'{save_folder}/split.pkl', 'wb') as f:
     pickle.dump(split_strategy, f)
 
 method_name = 'Tree Feature Importance Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+    lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=1,
                  random_state=random_state)
-    lcm.gen_skf = split_strategy
+    lcm.split_strategy = split_strategy
     lcm.fit(model='tree', separate_treatments=True)
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['mean'])
+    lcm.create_mgs(k=k_est)
+    lcm.est_cate(cate_methods=['mean'])
 times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(lcm.cate_df[['avg.CATE_mean']],
@@ -125,14 +125,14 @@ print()
 method_name = 'GBR Feature Importance Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+    lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=1,
                  random_state=random_state)
-    lcm.gen_skf = split_strategy
+    lcm.split_strategy = split_strategy
     lcm.fit(model='ensemble', params={'max_depth': 1},
             separate_treatments=True)
-    lcm.MG(k=k_est)
-    lcm.CATE(cate_methods=['mean'])
+    lcm.create_mgs(k=k_est)
+    lcm.est_cate(cate_methods=['mean'])
 times[method_name] = time.time() - start
 df_err = pd.concat([df_err,
                     get_errors(lcm.cate_df[['avg.CATE_mean']],

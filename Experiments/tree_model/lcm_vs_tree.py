@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from datagen.dgp_df import dgp_poly_basic_df
-from src.linear_coef_matching_mf import LCM_MF
+from src.variable_imp_matching_mf import VIM_MF
 
 
 random_state = 0
@@ -23,13 +23,13 @@ _, df, df_true, x_cols = dgp_poly_basic_df(n_samples=n_samples,
 df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)'])
 
 method_name = 'LCM'
-lcm = LCM_MF(outcome='Y', treatment='T', data=df, random_state=random_state,
+lcm = VIM_MF(outcome='Y', treatment='T', data=df, random_state=random_state,
              n_splits=n_splits, n_repeats=1)
 print('LASSO R^2 score:')
 lcm.fit()
 print(lcm.model_scores)
-lcm.MG(k=k_est)
-lcm.CATE(diameter_prune=None)
+lcm.create_mgs(k=k_est)
+lcm.est_cate(diameter_prune=None)
 cate_df = lcm.cate_df
 cate_df = cate_df.rename(columns={'avg.CATE_mean': 'Est_CATE'})
 cate_df['True_CATE'] = df_true['TE'].to_numpy()
@@ -39,12 +39,12 @@ df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relativ
 print(f'{method_name} method complete')
 
 method_name = 'Tree Feature\nImportance Matching'
-tree = LCM_MF(outcome='Y', treatment='T', data=df, n_splits=2,
+tree = VIM_MF(outcome='Y', treatment='T', data=df, n_splits=2,
               n_repeats=n_splits, random_state=random_state)
-tree.gen_skf = lcm.gen_skf
+tree.split_strategy = lcm.split_strategy
 tree.fit(model='tree', params={'max_depth': 3})
-tree.MG(k=k_est)
-tree.CATE(diameter_prune=None)
+tree.create_mgs(k=k_est)
+tree.est_cate(diameter_prune=None)
 cate_df2 = tree.cate_df
 cate_df2 = cate_df2.rename(columns={'avg.CATE_mean': 'Est_CATE'})
 cate_df2['True_CATE'] = df_true['TE'].to_numpy()

@@ -16,14 +16,14 @@ import seaborn as sns
 
 from Experiments.helpers import create_folder, get_data, get_acic_data, summarize_warnings, get_errors
 from other_methods import bart, causalforest, prognostic, doubleml, causalforest_dml, pymalts
-from src.linear_coef_matching_mf import LCM_MF
+from src.variable_imp_matching_mf import VIM_MF
 
 
 warnings.filterwarnings("ignore")
 np.random.seed(0)
 random_state = 0
 
-method_order = ['LCM', 'Linear PGM', 'Nonparametric PGM', 'MALTS', 'Causal Forest',
+method_order = ['LCM Linear', 'Linear PGM Linear', 'Nonparametric PGM Linear', 'MALTS', 'Causal Forest',
                 'Causal Forest DML', 'Linear DML', 'BART', 'LASSO FS', 'Oracle FS']
 
 
@@ -96,12 +96,12 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'LCM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                lcm = LCM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
                              n_splits=n_splits, n_repeats=n_repeats,
                              random_state=random_state)
                 lcm.fit(model='linear', separate_treatments=True)
-                lcm.MG(k=k_est_mean)
-                lcm.CATE(cate_methods=['mean'], diameter_prune=None)
+                lcm.create_mgs(k=k_est_mean)
+                lcm.est_cate(cate_methods=['mean'], diameter_prune=None)
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
                                 get_errors(lcm.cate_df[['avg.CATE_mean']],
@@ -113,14 +113,40 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print(f'\n{method_name} method complete: {time.time() - start}')
             summarize_warnings(warning_list, method_name)
             print()
-            split_strategy = lcm.gen_skf  # save split strategy to use for all other methods
+            split_strategy = lcm.split_strategy  # save split strategy to use for all other methods
+
+        if 'lcm_linear' in methods:
+            method_name = 'LCM Linear'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                             n_splits=n_splits, n_repeats=n_repeats,
+                             random_state=random_state)
+                if split_strategy is not None:
+                    lcm.split_strategy = split_strategy
+                else:
+                    split_strategy = lcm.split_strategy
+                lcm.fit(model='linear', separate_treatments=True)
+                lcm.create_mgs(k=k_est_linear)
+                lcm.est_cate(cate_methods=['linear_pruned'], diameter_prune=None)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(lcm.cate_df[['avg.CATE_linear_pruned']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
 
         if 'lasso fs' in methods:
             method_name = 'LASSO FS'
             start = time.time()
             lcm.M_list = [np.where(m > 0, 1, 0) for m in lcm.M_list]
-            lcm.MG(k=k_est_mean)
-            lcm.CATE(cate_methods=['mean'], diameter_prune=None)
+            lcm.create_mgs(k=k_est_mean)
+            lcm.est_cate(cate_methods=['mean'], diameter_prune=None)
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
                                 get_errors(lcm.cate_df[['avg.CATE_mean']],
@@ -138,8 +164,8 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             lcm.M_list = [np.concatenate([np.ones(dataset_config['imp_c'],),
                                           np.zeros(dataset_config['unimp_c'],)])
                           for i in range(n_splits)]
-            lcm.MG(k=k_est_mean)
-            lcm.CATE(cate_methods=['mean'], diameter_prune=None)
+            lcm.create_mgs(k=k_est_mean)
+            lcm.est_cate(cate_methods=['mean'], diameter_prune=None)
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
                                 get_errors(lcm.cate_df[['avg.CATE_mean']],
@@ -201,6 +227,31 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             summarize_warnings(warning_list, method_name)
             print()
 
+        if 'linear_prog_linear' in methods:
+            method_name = 'Linear PGM Linear'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
+                                                               df_dummy_data,
+                                                               method='linear',
+                                                               double=True,
+                                                               k_est=k_est_linear,
+                                                               est_method='linear_pruned',
+                                                               diameter_prune=None,
+                                                               gen_skf=split_strategy,
+                                                               random_state=random_state)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(cate_est_prog[['avg.CATE']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
+
         if 'ensemble_prog_mean' in methods:
             method_name = 'Nonparametric PGM'
             start = time.time()
@@ -211,6 +262,31 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
                                                                      double=True,
                                                                      k_est=k_est_mean,
                                                                      est_method='mean',
+                                                                     diameter_prune=None,
+                                                                     gen_skf=split_strategy,
+                                                                     random_state=random_state)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(cate_est_prog[['avg.CATE']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
+
+        if 'ensemble_prog_linear' in methods:
+            method_name = 'Nonparametric PGM Linear'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
+                                                                     df_dummy_data,
+                                                                     method='ensemble',
+                                                                     double=True,
+                                                                     k_est=k_est_linear,
+                                                                     est_method='linear_pruned',
                                                                      diameter_prune=None,
                                                                      gen_skf=split_strategy,
                                                                      random_state=random_state)

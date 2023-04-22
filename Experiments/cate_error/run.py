@@ -22,29 +22,29 @@ datasets = [
 ]
 
 methods = [
-    'lcm_mean',
-    'lasso fs',
+    # 'lcm_mean',
+    # 'lasso fs',
     # 'malts',
-    # 'lcm_linear',
+    'lcm_linear',
     # 'linear_prog_mean',
     # 'linear_prog_linear',
     # 'ensemble_prog_mean',
     # 'ensemble_prog_linear',
-    # 'doubleml',
-    # 'bart',
-    # 'causal_forest',
-    # 'causal_forest_dml'
+    'doubleml',
+    'bart',
+    'causal_forest',
+    'causal_forest_dml'
 ]
 
 for data in datasets:
     dataset_config = {'n_train': 0}
     if 'dense' in data:
         n_splits = 5
-        dataset_config['num_samples'] = 5000
+        dataset_config['num_samples'] = 2500
         dataset_config['std'] = 1.5
         if 'continuous' in data:
-            dataset_config['imp_c'] = 5
-            dataset_config['unimp_c'] = 95
+            dataset_config['imp_c'] = 15
+            dataset_config['unimp_c'] = 25
             dataset_config['imp_d'] = 0
             dataset_config['unimp_d'] = 0
         elif 'discrete' in data:
@@ -58,15 +58,15 @@ for data in datasets:
             dataset_config['imp_d'] = 15
             dataset_config['unimp_d'] = 10
     if data == 'sine':
-        n_splits = 10
-        dataset_config['num_samples'] = 5000
+        n_splits = 5
+        dataset_config['num_samples'] = 500
         dataset_config['imp_c'] = 2
-        dataset_config['unimp_c'] = 98
+        dataset_config['unimp_c'] = 8
     if data == 'exp':
-        n_splits = 10
-        dataset_config['num_samples'] = 5000
+        n_splits = 5
+        dataset_config['num_samples'] = 500
         dataset_config['imp_c'] = 4
-        dataset_config['unimp_c'] = 96
+        dataset_config['unimp_c'] = 12
     if data == 'friedman':
         n_splits = 5
         dataset_config['num_samples'] = 2500

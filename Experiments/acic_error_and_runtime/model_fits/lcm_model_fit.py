@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pickle
 
-from src.linear_coef_matching import LCM
+from src.variable_imp_matching import LCM
 import os
 
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]

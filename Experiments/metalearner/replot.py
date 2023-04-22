@@ -10,19 +10,20 @@ mg_diffs = pd.read_csv('Results/mg_diffs.csv', index_col=[0])
 rename_methods = {
     'BART': 'BART\nTLearner',
     'Nonparametric\nPGM': 'Nonparam\nPGM',
-    'Nonparametric\nTLearner': 'Nonparam\nTLearner'
+    'Nonparametric\nTLearner': 'Nonparam\nTLearner',
+    'Causal Forest': 'Causal\nForest'
 }
 
 df_err['Method'] = df_err['Method'].replace(rename_methods)
 
 color_order = ['LCM', 'Linear\nPGM', 'Nonparam\nPGM', 'MALTS',
                'Metalearner\nLCM', 'BART\nTLearner', 'GenMatch', 'Linear\nTLearner',
-               'Nonparam\nTLearner']
+               'Nonparam\nTLearner', 'Causal\nForest']
 palette = {color_order[i]: sns.color_palette()[i] for i in range(len(color_order))}
 
 method_order = ['Metalearner\nLCM', 'LCM', 'MALTS', 'GenMatch', 'Linear\nPGM',
                 'Nonparam\nPGM', 'Linear\nTLearner',
-                'Nonparam\nTLearner', 'BART\nTLearner'
+                'Nonparam\nTLearner', 'BART\nTLearner', 'Causal\nForest'
                 ]
 
 order = [m for m in method_order if m in df_err['Method'].unique()]

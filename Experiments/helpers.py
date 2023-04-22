@@ -79,7 +79,7 @@ def lcm_to_malts_weights(lcm, malts_covs, categorical_to_dummy):
         print(f'ERROR: {len(lcm_mismatches)} lcm covariate(s) not mapped to malts covariate.')
 
     malts_weights = []
-    for i in range(len(lcm.gen_skf)):
+    for i in range(len(lcm.split_strategy)):
         M = pd.DataFrame([lcm.M_list[i]], columns=lcm.covariates)
         these_malts_weights = pd.DataFrame([np.zeros(shape=len(malts_covs))], columns=malts_covs)
         these_malts_weights[matching_cols] = M[matching_cols]

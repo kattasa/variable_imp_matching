@@ -163,9 +163,9 @@ def dgp_non_linear_mixed(n_samples, n_imp, n_unimp):
 
 
 def dgp_exp(n_samples, n_unimp):
-    x = np.random.uniform(-3, 3, size=(n_samples, 4))
-    y0 = 2*np.exp(x[:, 0]) - np.sum(np.exp(x[:, 1:3]), axis=1)
-    y1 = y0 + np.exp(x[:, 3])
+    x = np.random.uniform(-3, 3, size=(n_samples, 25))
+    y0 = 2*np.exp(x[:, 0]) - np.sum(np.exp(x[:, 1:14]), axis=1)
+    y1 = y0 + np.sum(np.exp(x[:, 1:24]), axis=1)
     y0_errors = np.random.normal(0, 1, size=n_samples)
     y1_errors = np.random.normal(0, 1, size=n_samples)
     te = y1 - y0

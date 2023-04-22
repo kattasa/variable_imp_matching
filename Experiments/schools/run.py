@@ -11,7 +11,7 @@ import pickle
 from datagen.dgp_df import dgp_schools_df
 
 from Experiments.helpers import get_mg_comp
-from src.linear_coef_matching_mf import LCM_MF
+from src.variable_imp_matching_mf import VIM_MF
 from other_methods import prognostic
 
 save_folder = os.getenv('SAVE_FOLDER')
@@ -22,12 +22,12 @@ n_repeats = 1
 
 df = dgp_schools_df()
 
-lcm = LCM_MF(outcome='Y', treatment='T', data=df,
+lcm = VIM_MF(outcome='Y', treatment='T', data=df,
              n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
 
 lcm.fit(model='linear')
-lcm.MG(k=k_est)
-lcm.CATE(diameter_prune=None)
+lcm.create_mgs(k=k_est)
+lcm.est_cate(diameter_prune=None)
 lcm_cates = lcm.cate_df['CATE_mean']
 lcm_cates.to_csv(f'{save_folder}/lcm_cates.csv')
 
@@ -44,7 +44,7 @@ with open(f'{save_folder}/lcm_ate.txt', 'w') as f:
 linear_prog_cates_full, linear_prog_c_mg, linear_prog_t_mg, linear_prog_fi = \
     prognostic.prognostic_cv(outcome='Y', treatment='T', data=df,
                              method='linear', double=True, k_est=k_est,
-                             est_method='mean', gen_skf=lcm.gen_skf,
+                             est_method='mean', gen_skf=lcm.split_strategy,
                              diameter_prune=None,
                              return_feature_imp=True,
                              random_state=random_state)
@@ -63,7 +63,7 @@ ensemble_prog_cates_full, ensemble_prog_c_mg, ensemble_prog_t_mg, ensemble_prog_
     prognostic.prognostic_cv(outcome='Y', treatment='T', data=df,
                              method='ensemble', double=True, k_est=k_est,
                              est_method='mean',
-                             diameter_prune=None, gen_skf=lcm.gen_skf,
+                             diameter_prune=None, gen_skf=lcm.split_strategy,
                              return_feature_imp=True,
                              random_state=random_state)
 ensemble_prog_cates = ensemble_prog_cates_full['CATE']
@@ -104,7 +104,7 @@ lcm_diffs = {}
 linear_prog_diffs = {}
 ensemble_prog_diffs = {}
 
-idxs = np.concatenate([lcm.gen_skf[i][0] for i in range(n_splits*n_repeats)])
+idxs = np.concatenate([lcm.split_strategy[i][0] for i in range(n_splits * n_repeats)])
 
 for cov in imp_covs:
     if '_' in cov:
@@ -117,7 +117,7 @@ for cov in imp_covs:
         good_idxs_i = np.array([range(idxs.shape[0])]).reshape(-1)
         good_idxs = idxs
     values = df_orig[c].to_numpy()[good_idxs].reshape(-1, 1)
-    mg_values = df_orig[c].to_numpy()[pd.concat([pd.concat([lcm.get_MGs()[i][0] for i in range(n_splits * n_repeats)]), pd.concat([lcm.get_MGs()[i][1] for i in range(n_splits * n_repeats)])], axis=1).to_numpy()[good_idxs_i]]
+    mg_values = df_orig[c].to_numpy()[pd.concat([pd.concat([lcm.get_mgs()[i][0] for i in range(n_splits * n_repeats)]), pd.concat([lcm.get_mgs()[i][1] for i in range(n_splits * n_repeats)])], axis=1).to_numpy()[good_idxs_i]]
     if cov in continuous:
         lcm_diffs[cov] = copy.copy(np.mean(np.abs(mg_values - values), axis=1))
     else:
@@ -214,14 +214,14 @@ sample_num = this_sample.index[0]
 
 print(f'Possible matches: {sample[sample["S3"] == this_sample["S3"].values[0]].shape[0]}')
 
-pickle.dump(lcm.get_MGs(), open(f"{save_folder}/lcm_mgs.pkl", "wb"))
+pickle.dump(lcm.get_mgs(), open(f"{save_folder}/lcm_mgs.pkl", "wb"))
 pickle.dump(linear_prog_c_mg, open(f"{save_folder}/linear_prog_c_mg.pkl", "wb"))
 pickle.dump(linear_prog_t_mg, open(f"{save_folder}/linear_prog_t_mg.pkl", "wb"))
 pickle.dump(ensemble_prog_c_mg, open(f"{save_folder}/ensemble_prog_c_mg.pkl", "wb"))
 pickle.dump(ensemble_prog_t_mg, open(f"{save_folder}/ensemble_prog_t_mg.pkl", "wb"))
 
 lcm_mg, linear_prog_mg, ensemble_prog_mg = get_mg_comp(df_orig, sample_num, this_sample,
-                                                       lcm.get_MGs(),
+                                                       lcm.get_mgs(),
                                                        linear_prog_c_mg,
                                                        linear_prog_t_mg,
                                                        ensemble_prog_c_mg,
