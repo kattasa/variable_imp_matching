@@ -12,7 +12,7 @@ import matplotlib.ticker as ticker
 from datagen.dgp import data_generation_dense_mixed_endo, dgp_exp, dgp_sine, dgp_friedman
 from Experiments.helpers import get_errors
 from other_methods import prognostic, pymalts, tlearner, bart, matchit, causalforest
-from src.variable_imp_matching_mf import VIM_MF
+from src.variable_imp_matching import VIM_CF
 
 random_state = 0
 
@@ -59,7 +59,7 @@ df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Erro
 df_weights = pd.DataFrame(columns=[f'X{i}' for i in range(x_imp+x_unimp)] + ['Method'])
 
 start = time.time()
-lcm = VIM_MF(outcome='Y', treatment='T', data=df, n_splits=n_splits,
+lcm = VIM_CF(outcome='Y', treatment='T', data=df, n_splits=n_splits,
              n_repeats=1, random_state=random_state)
 lcm.fit(metalearner=False)
 these_weights = pd.DataFrame(lcm.M_list)

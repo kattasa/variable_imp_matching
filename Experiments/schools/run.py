@@ -11,7 +11,7 @@ import pickle
 from datagen.dgp_df import dgp_schools_df
 
 from Experiments.helpers import get_mg_comp
-from src.variable_imp_matching_mf import VIM_MF
+from src.variable_imp_matching import VIM_CF
 from other_methods import prognostic
 
 save_folder = os.getenv('SAVE_FOLDER')
@@ -22,7 +22,7 @@ n_repeats = 1
 
 df = dgp_schools_df()
 
-lcm = VIM_MF(outcome='Y', treatment='T', data=df,
+lcm = VIM_CF(outcome='Y', treatment='T', data=df,
              n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
 
 lcm.fit(model='linear')

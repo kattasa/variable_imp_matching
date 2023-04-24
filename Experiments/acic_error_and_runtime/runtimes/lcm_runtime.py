@@ -16,9 +16,8 @@ equal_weights = int(os.getenv('LCM_EQUAL_WEIGHTS')) == 1
 
 np.random.seed(random_state)
 
-if method == 'linear':
-    params = None
-elif method == 'tree':
+params = None
+if method == 'tree':
     params = {'max_depth': 4}
 
 with open(f'{acic_results_folder}/split.pkl', 'rb') as f:
@@ -29,7 +28,7 @@ df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).lo
 
 start = time.time()
 lcm = VIM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
-lcm.fit(method=method, params=params, equal_weights=equal_weights)
+lcm.fit(model=method, params=params, equal_weights=equal_weights)
 fit_time = time.time() - start
 
 covariates = np.array(lcm.covariates)
@@ -37,7 +36,8 @@ sample_idx = np.random.randint(0, df_est.shape[0])
 df_est = df_est[lcm.col_order]
 
 start = time.time()
-mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est, covariates=covariates,
-                        treatment='T', M=lcm.M)
-sample_linear_cate(mg, lcm.covariates, lcm.M, treatment='T', outcome='Y', prune=True)
+mg = sample_match_group(df_estimation=df_est, sample_idx=sample_idx, k=k_est,
+                        covariates=covariates, treatment='T', M=lcm.M)
+sample_linear_cate(mg, lcm.covariates, lcm.M, treatment='T', outcome='Y',
+                   prune=True)
 print(time.time() - start + fit_time)

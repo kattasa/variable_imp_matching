@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 from datagen.dgp_df import dgp_poly_basic_df
-from src.variable_imp_matching_mf import VIM_MF
+from src.variable_imp_matching import VIM_CF
 
 
 random_state = 0
@@ -23,7 +23,7 @@ _, df, df_true, x_cols = dgp_poly_basic_df(n_samples=n_samples,
 df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE', 'Relative Error (%)'])
 
 method_name = 'LCM'
-lcm = VIM_MF(outcome='Y', treatment='T', data=df, random_state=random_state,
+lcm = VIM_CF(outcome='Y', treatment='T', data=df, random_state=random_state,
              n_splits=n_splits, n_repeats=1)
 print('LASSO R^2 score:')
 lcm.fit()
@@ -39,7 +39,7 @@ df_err = pd.concat([df_err, cate_df[['Method', 'True_CATE', 'Est_CATE', 'Relativ
 print(f'{method_name} method complete')
 
 method_name = 'Tree Feature\nImportance Matching'
-tree = VIM_MF(outcome='Y', treatment='T', data=df, n_splits=2,
+tree = VIM_CF(outcome='Y', treatment='T', data=df, n_splits=2,
               n_repeats=n_splits, random_state=random_state)
 tree.split_strategy = lcm.split_strategy
 tree.fit(model='tree', params={'max_depth': 3})

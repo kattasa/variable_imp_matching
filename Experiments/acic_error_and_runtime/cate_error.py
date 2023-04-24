@@ -20,7 +20,7 @@ import seaborn as sns
 from Experiments.helpers import get_acic_data, summarize_warnings, get_errors
 from other_methods import bart, causalforest, prognostic, doubleml, \
     drlearner, causalforest_dml, pymalts
-from src.variable_imp_matching_mf import VIM_MF
+from src.variable_imp_matching import VIM_CF
 
 np.random.seed(1)
 random_state = 1
@@ -81,7 +81,7 @@ times = {}
 method_name = 'LASSO Coefficient Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+    lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
     lcm.fit(model='linear', separate_treatments=True)
     lcm.create_mgs(k=k_est)
@@ -104,7 +104,7 @@ with open(f'{save_folder}/split.pkl', 'wb') as f:
 method_name = 'Tree Feature Importance Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+    lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=1,
                  random_state=random_state)
     lcm.split_strategy = split_strategy
@@ -125,7 +125,7 @@ print()
 method_name = 'GBR Feature Importance Matching'
 start = time.time()
 with warnings.catch_warnings(record=True) as warning_list:
-    lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+    lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
                  n_splits=n_splits, n_repeats=1,
                  random_state=random_state)
     lcm.split_strategy = split_strategy

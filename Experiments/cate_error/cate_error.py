@@ -16,7 +16,7 @@ import seaborn as sns
 
 from Experiments.helpers import create_folder, get_data, get_acic_data, summarize_warnings, get_errors
 from other_methods import bart, causalforest, prognostic, doubleml, causalforest_dml, pymalts
-from src.variable_imp_matching_mf import VIM_MF
+from src.variable_imp_matching import VIM_CF
 
 
 warnings.filterwarnings("ignore")
@@ -96,7 +96,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'LCM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
                              n_splits=n_splits, n_repeats=n_repeats,
                              random_state=random_state)
                 lcm.fit(model='linear', separate_treatments=True)
@@ -119,7 +119,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'LCM Linear'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                lcm = VIM_MF(outcome='Y', treatment='T', data=df_dummy_data,
+                lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
                              n_splits=n_splits, n_repeats=n_repeats,
                              random_state=random_state)
                 if split_strategy is not None:
