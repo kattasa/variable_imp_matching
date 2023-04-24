@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 import time
 
-from src.variable_imp_matching import LCM
+from src.variable_imp_matching import VIM
 from sample_utils import sample_match_group, sample_linear_cate
 
 acic_results_folder = f"{os.getenv('RESULTS_FOLDER')}/{os.getenv('ACIC_FOLDER')}"[:-1]
@@ -28,7 +28,7 @@ df_train = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).
 df_est = pd.read_csv(f'{acic_results_folder}/df_dummy_data.csv', index_col=0).loc[est_idx].reset_index(drop=True)
 
 start = time.time()
-lcm = LCM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
+lcm = VIM(outcome='Y', treatment='T', data=df_train, random_state=random_state)
 lcm.fit(method=method, params=params, equal_weights=equal_weights)
 fit_time = time.time() - start
 

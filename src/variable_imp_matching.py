@@ -1,20 +1,243 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sat May 14 2022
+"""Class for Variable Importance Matching
 
+Created on April 24 2023
 @author: quinn.lanners
 """
 import numpy as np
 import pandas as pd
-import warnings
-
 from sklearn.base import clone
-import sklearn.ensemble as ensemble
-import sklearn.linear_model as linear
-import sklearn.tree as tree
+from sklearn.model_selection import RepeatedStratifiedKFold
 
-from utils import get_match_groups, get_CATES, get_model_weights
+from utils import config_model, calc_var_imp, get_match_groups, get_CATES, \
+    convert_idx
+
+
+class VIM_CF:
+    """
+    Uses cross-fitting to learn a distance metric for Variable Importance
+    Matching and estimate CATEs for all samples in a dataset.
+
+    Parameters
+    ----------
+    outcome : str
+        Column label corresponding to the outcome.
+    treatment : str
+        Column label corresponding to the treatment.
+    data : pandas.DataFrame
+        Data that must include 'outcome' and 'treatment' columns
+        specified above.
+    n_splits : int, default=5
+        Number of splits to use for cross-fitting. For each split, 1/n_splits
+        of the samples are used for training and the remaining samples are
+        used for estimation
+    n_repeats : int, default=1
+        Number of times to shuffle the data and repeat the splitting process.
+    random_state : None or int, default=None
+        Random state to run on.
+
+    Attributes
+    -------
+    covariates : list[str]
+    outcome : str
+    treatment : str
+    p : int
+        Number of covariates.
+    data : pd.DataFrame
+        Copy of data with columns ordered properly.
+    binary_outcome : bool
+        Indicates whether the outcome is binary or not.
+    split_strategy : list[(list[int],list[int])]
+        Split strategy where each value in list is tuple indicating the indices
+        of the (est_set, training_set)
+    M_list : list[list[float]]
+        Each list corresponds to the stretches for that split. Run
+        self.fit() to populate.
+    model_scores : list[dict[str,float]]
+        Each dict contains the scores of each model fit on the training data.
+        Scores are computed on the same training set using the sklearn
+        .score() function associated with the model.
+    MGs : list[dict[str,pd.DataFrame]]
+        Each dictionary corresponds to the MGs generated for each split. Run
+        self.MG()
+    MG_distances : list[dict[str,pd.DataFrame]]
+        Each value to the distance of each matched sample from
+        the corresponding MGs dictionary.
+    cate_df : pd.DataFrame
+        CATE estimates for each sample. Run self.est_cate() to populate.
+    est_C_list :
+    random_state : None or int
+    """
+    def __init__(self, outcome, treatment, data, n_splits=5, n_repeats=1,
+                 random_state=None):
+        self.covariates = [c for c in data.columns if c not in
+                           [outcome, treatment]]
+        self.outcome = outcome
+        self.treatment = treatment
+        self.p = len(self.covariates)
+        self.data = data[[*self.covariates,
+                          self.treatment, self.outcome]].reset_index(drop=True)
+        self.binary_outcome = self.data[self.outcome].nunique() == 2
+
+        skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats,
+                                      random_state=random_state)
+        self.split_strategy = list(skf.split(data, data[treatment]))
+        self.M_list = []
+        self.model_scores = []
+        self.MGs = []
+        self.MG_distances = []
+        self.cate_df = pd.DataFrame()
+        self.random_state = random_state
+
+    def fit(self, model='linear', params=None, model_weight_attr=None,
+            separate_treatments=True, equal_weights=False, metalearner=False,
+            save_scores=True):
+        """
+        Calculate variable importances to use for the distance metric for each
+        split. Overwrites and populates self.M_list and self.model_scores.
+
+        Parameters
+        ----------
+        model : str or machine learning class, default='linear'
+            Model to use for calculating feature importances. If
+            model='linear', L1-regularized regression (i.e. LASSO). If
+            model='tree', uses shallow decision tree. If model='ensemble',
+            uses gradient boosting regressor/classifier. Otherwise, if a model
+            class is passed, it uses that model. Note that is a model class is
+            passed, you must specify an accompanying 'model_weight_attr' that
+            is used to pull the variable importance values from the trained
+            model.
+        params : None or dict, default=None
+            Parameters for model. If None but model='linear' or model='tree',
+            then it uses the default params laid out in the create_model()
+            method. Otherwise, uses the default params of the specified model.
+        model_weight_attr : None or str, default=None
+            Indicates the name of the model attribute that stores the variable
+            importance values. If None but model='linear', model='tree', or
+            model='ensemble' then uses the attribute laid out in the
+            create_model() method. Otherwise, the user must provide the correct
+            attribute name.
+        separate_treatments : bool, default=False
+            Whether the fit separate models to each treatment. If False, will
+            fit one model to all samples and use the treatment indicator as a
+            predictive feature. Note that is metalearner=True, this value is
+            overriden.
+        equal_weights : bool, default=False
+            Whether to give equal weight to all features that have a nonzero
+            variable importance.
+        metalearner : bool, default=False
+            Whether to run metalearner VIM.
+        save_scores : bool, default=True
+            Whether to save the .score() value for each fit model.
+
+        Raises
+        ------
+        ValueError
+            No weights learned.
+        """
+        self.M_list = []
+        self.model_scores = []
+        m, weight_attr = config_model(model=model, params=params,
+                                      weight_attr=model_weight_attr,
+                                      binary_outcome=self.binary_outcome,
+                                      random_state=self.random_state)
+        for _, train_idx in self.split_strategy:
+            df_train = self.data.loc[train_idx]
+            final_m, scores = calc_var_imp(
+                df_train[self.covariates].to_numpy(),
+                df_train[self.treatment].to_numpy(),
+                df_train[self.outcome].to_numpy(), m, weight_attr,
+                separate_treatments=separate_treatments,
+                equal_weights=equal_weights, metalearner=metalearner,
+                calc_scores=save_scores)
+            self.M_list.append(np.copy(final_m))
+            if save_scores:
+                self.model_scores.append(scores)
+            m = clone(m)
+
+    def create_mgs(self, k=10):
+        """Calculate match groups for each split. Overwrites and populates
+        self.MGs and self.MG_distances.
+
+        Parameters
+        ----------
+        k : int, default=10
+            Matched group size for each treatment. I.e. if there are two
+            treatments, each sample is matched to 10 samples for
+            each treatment for a total of 20 matched units.
+        """
+        self.MGs = []
+        self.MG_distances = []
+
+        i = 0
+        for est_idx, _ in self.split_strategy:
+            df_estimation = self.data.loc[est_idx]
+            mgs, mg_dists = get_match_groups(df_estimation, self.covariates,
+                                             self.treatment, M=self.M_list[i],
+                                             k=k,
+                                             return_original_idx=False,
+                                             check_est_df=False)
+            self.MGs.append(mgs)
+            self.MG_distances.append(mg_dists)
+            i += 1
+
+    def est_cate(self, cate_methods=None, diameter_prune=3,
+                 cov_imp_prune=0.01):
+        """Calculates CATE estimates for each split. Populates self.cate_df
+        with each split estimates and the avg and std of each sample's CATE
+        estimates across all the n_splits-1 estimates.
+
+        Parameters
+        ----------
+        cate_methods : list[str], default=['mean']
+            Methods to use inside match groups to estimate CATEs. Currently
+            accepts 'mean', 'linear', and 'linear_pruned'.
+        diameter_prune : None or numeric, default=None
+            If numeric, prune all MGs for which the diameter is greater than
+            diameter_prune standard deviations from the mean match group
+            diameter.
+        cov_imp_prune : float, default=0.01
+            Minimum relative feature importance to not prune covariate. Only
+            used if method == 'linear_pruned'.
+        """
+        if cate_methods is None:
+            cate_methods = ['mean']
+        cates_list = []
+        i = 0
+        for est_idx, _ in self.split_strategy:
+            df_estimation = self.data.loc[est_idx]
+            cates = []
+            for method in cate_methods:
+                cates.append(get_CATES(df_estimation, self.MGs[i],
+                                       self.MG_distances[i], self.outcome,
+                                       self.covariates, self.M_list[i],
+                                       method, diameter_prune, cov_imp_prune,
+                                       check_est_df=False)
+                             )
+            cates = pd.concat(cates, axis=1).sort_index()
+            cates_list.append(cates.copy(deep=True))
+            i += 1
+        self.cate_df = pd.concat(cates_list, axis=1).sort_index()
+        for col in [c for c in np.unique(self.cate_df.columns) if 'CATE' in c]:
+                self.cate_df[f'avg.{col}'] = self.cate_df[col].mean(axis=1)
+                self.cate_df[f'std.{col}'] = self.cate_df[col].std(axis=1)
+        self.cate_df[self.treatment] = self.data[self.treatment]
+        self.cate_df[self.outcome] = self.data[self.outcome]
+
+    def get_mgs(self, return_distance=False):
+        """Get all match groups."""
+        mg_list = []
+        i = 0
+        for est_idx, train_idx in self.split_strategy:
+            this_mg = {}
+            these_mgs = self.MGs[i]
+            for t, mg in these_mgs.items():
+                this_mg[t] = convert_idx(mg, est_idx)
+            mg_list.append(this_mg)
+            i += 1
+        if return_distance:
+            return mg_list, self.MG_distances
+        else:
+            return mg_list
 
 
 class VIM:
@@ -67,7 +290,8 @@ class VIM:
         self.p -= 2
         self.outcome = outcome
         self.treatment = treatment
-        self.covariates = [c for c in data.columns if c not in [outcome, treatment]]
+        self.covariates = [c for c in data.columns if c not in
+                           [outcome, treatment]]
         self.col_order = [*self.covariates, self.treatment, self.outcome]
         data = data[self.col_order]
         self.binary_outcome = binary_outcome
@@ -129,50 +353,16 @@ class VIM:
         scores
             Only returned it return_scores=True.
         """
-        self.M = None  # overwrite M if class previously fit
-        scores = None
-        if return_scores:
-            scores = {}
-        m, weight_attr = self.config_model(model=model, params=params,
-                                           weight_attr=model_weight_attr)
-        if metalearner or separate_treatments:
-            M = []
-            for t in self.treatment_classes:
-                try:
-                    m.fit(self.X[self.T == t, :], self.Y[self.T == t])
-                    if return_scores:
-                        scores[t] = m.score(self.X[self.T == t, :],
-                                            self.Y[self.T == t])
-                except ValueError as err:
-                    setattr(m, weight_attr, np.zeros(shape=self.p))
-                    warnings.warn(f'Set all weights to zero: {str(err)}')
-                    if return_scores:
-                        scores[t] = 0
-                M.append(get_model_weights(m, weight_attr, equal_weights,
-                                           0, t))
-                m = clone(estimator=m)
-            if metalearner:
-                self.M = dict(zip(self.treatment_classes, M))
-            else:
-                self.M = sum(M) / len(self.treatment_classes)
-        else:
-            t_dummy = pd.get_dummies(self.T, drop_first=True).to_numpy()
-            try:
-                m.fit(np.concatenate([self.X, t_dummy], axis=1),
-                      self.Y)
-                if return_scores:
-                    scores['all'] = m.score(np.concatenate([self.X,
-                                                            t_dummy],
-                                                           axis=1),
-                                            self.Y)
-            except ValueError as err:
-                setattr(m, weight_attr, np.zeros(
-                    shape=self.p +t_dummy.shape[1]))
-                warnings.warn(f'Set all weights to zero: {str(err)}')
-                if return_scores:
-                    scores['all'] = 0
-            self.M = get_model_weights(m, weight_attr, equal_weights,
-                                       t_dummy.shape[1], 'all')
+        m, weight_attr = config_model(model=model, params=params,
+                                      weight_attr=model_weight_attr,
+                                      binary_outcome=self.binary_outcome,
+                                      random_state=self.random_state)
+        final_m, scores = calc_var_imp(
+            self.X, self.T, self.Y, m, weight_attr,
+            separate_treatments=separate_treatments,
+            equal_weights=equal_weights, metalearner=metalearner,
+            calc_scores=return_scores)
+        self.M = np.copy(final_m)
         if return_scores:
             return scores
 
@@ -247,70 +437,3 @@ class VIM:
                          self.outcome, self.covariates, self.M,
                          method=method, diameter_prune=diameter_prune,
                          cov_imp_prune=cov_imp_prune)
-
-    def config_model(self, model='linear', params=None, weight_attr=None):
-        """Configurate the appropriate model to use given the passed args.
-
-        Parameters
-        ----------
-        model : str or sklearn model class, default=False
-            Indicates what type of model to use. If str must be either
-            'linear', 'tree', or 'ensemble'. Otherwise, can pass any sklearn
-            model class as long as the corresponding 'weight_attr' is set to
-            be the appropriate model attribute to retrieve the feature
-            importance weights from.
-        params : None or dict, default=None
-            If None, default sklearn params are used. Otherwise, dict
-            with model parameters.
-        weight_attr : None or str, default=None
-            If None and model == 'linear' then set to coef_
-            If None and model == 'tree' or 'ensemble then set to
-                feature_importances_
-            Otherwise, if model is sklearn model class, must be str specifying
-            the appropriate model attribute to use to retrieve feature
-            importance weights.
-
-        Returns
-        -------
-        m
-            Untrained sklearn model with specified configuration.
-        weight_attr
-            String specifying the attribute to retrieve from m to use as the
-            feature importance weights.
-        """
-        if params is None:
-            if model == 'linear':
-                if self.binary_outcome:
-                    params = {'penalty': 'l1', 'solver': 'saga',
-                              'max_iter': 500}
-                else:
-                    params = {'max_iter': 5000}
-            elif model == 'tree':
-                params = {'max_depth': 4}
-            else:
-                params = {}
-        params['random_state'] = self.random_state
-        if model == 'linear':
-            if weight_attr is None:
-                weight_attr = 'coef_'
-            if self.binary_outcome:
-                m = linear.LogisticRegressionCV(**params)
-            else:
-                m = linear.LassoCV(**params)
-        elif model == 'tree':
-            if weight_attr is None:
-                weight_attr = 'feature_importances_'
-            if self.binary_outcome:
-                m = tree.DecisionTreeClassifier(**params)
-            else:
-                m = tree.DecisionTreeRegressor(**params)
-        elif model == 'ensemble':
-            if weight_attr is None:
-                weight_attr = 'feature_importances_'
-            if self.binary_outcome:
-                m = ensemble.GradientBoostingClassifier(**params)
-            else:
-                m = ensemble.GradientBoostingRegressor(**params)
-        else:
-            m = model.set_params(**params)
-        return m, weight_attr
