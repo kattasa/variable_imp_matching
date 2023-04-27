@@ -48,6 +48,7 @@ rename_methods = {
     'Metalearner\nLCM M_T': "Metalearner\n"+ r"LCM $\mathcal{M}^{(1)*}$"
 }
 
+df_weights.columns = [f'X{i}' for i in range(1, len(df_weights.columns))] + ['Method']
 df_weights['Method'] = df_weights['Method'].replace(rename_methods)
 
 palette = {'LCM\n'+r"$\mathcal{M}^*$": sns.color_palette()[0],

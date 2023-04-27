@@ -132,11 +132,11 @@ sns.set_style("darkgrid")
 sns.set(font_scale=2, font="times")
 fig, axes = plt.subplots(2, 1, figsize=(8, 9))
 sns.pointplot(ax=axes[0], data=samples_times, x="# Samples", y='Time (s)',
-              errorbar='sd', hue='Method',
+              errorbar=None, hue='Method',
               hue_order=method_order, palette=palette, markers=markers,
               scale=2)
 sns.pointplot(ax=axes[1], data=covs_times, x="# Covariates", y='Time (s)',
-              errorbar='sd', hue='Method',
+              errorbar=None, hue='Method',
               hue_order=method_order, palette=palette, markers=markers,
               scale=2)
 handles, labels = axes[0].get_legend_handles_labels()

@@ -11,8 +11,6 @@ print_progress = True
 k_est_mean = 10
 k_est_linear = 40
 
-custom_iters = None
-
 datasets = [
     'dense_continuous',
     # 'sine',

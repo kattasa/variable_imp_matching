@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from datagen.dgp import data_generation_dense_mixed_endo, dgp_exp, dgp_sine, dgp_friedman
+from datagen.dgp import dgp_sine
 from Experiments.helpers import get_errors
 from other_methods import prognostic, pymalts, tlearner, bart, matchit, causalforest
 from src.variable_imp_matching import VIM_CF
@@ -19,28 +19,12 @@ random_state = 0
 k_est = 10
 est_method = 'mean'
 
-n_samples = 1000
+n_samples = 500
 n_splits = 5
-x_imp = 9
-x_unimp = 1
+x_imp = 2
+x_unimp = 8
 
-# preset_weights = [
-#     [0, {'control': 20, 'treated': 0}],
-#     [1, {'control': 0, 'treated': 20}],
-#     [2, {'control': 10, 'treated': 10}]
-# ]
-
-# df_orig, df_true, binary = data_generation_dense_mixed_endo(num_samples=n_samples,
-#                                                        num_cont_imp=x_imp,
-#                                                        num_disc_imp=0,
-#                                                        num_cont_unimp=x_unimp,
-#                                                        num_disc_unimp=0,
-#                                                        weights=preset_weights)
-# df = df_orig.copy(deep=True)
-# x_cols = [c for c in df.columns if 'X' in c]
-# df[x_cols] = StandardScaler().fit_transform(df[x_cols])
-
-X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_friedman(n_samples)
+X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_sine(n_samples, x_unimp)
 
 df_orig = pd.DataFrame(np.concatenate([X, Y, T, Y0, Y1, TE, Y0_true, Y1_true], axis=1))
 x_cols = [f'X{i}' for i in range(X.shape[1])]

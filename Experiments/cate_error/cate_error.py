@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 20 01:31:42 2020
-@author: Harsh
+Script to calculate Relative % CATE Error of various methods on a specified
+dataset.
 """
 
 import json
@@ -14,8 +14,10 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
-from Experiments.helpers import create_folder, get_data, get_acic_data, summarize_warnings, get_errors
-from other_methods import bart, causalforest, prognostic, doubleml, causalforest_dml, pymalts
+from Experiments.helpers import create_folder, get_data, summarize_warnings, \
+    get_errors
+from other_methods import bart, causalforest, prognostic, doubleml, \
+    causalforest_dml, pymalts
 from src.variable_imp_matching import VIM_CF
 
 
@@ -23,13 +25,10 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 random_state = 0
 
-method_order = ['LCM Linear', 'Linear PGM Linear', 'Nonparametric PGM Linear', 'MALTS', 'Causal Forest',
-                'Causal Forest DML', 'Linear DML', 'BART', 'LASSO FS', 'Oracle FS']
-
 
 def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
                     k_est_mean, k_est_linear, print_progress, iters,
-                    custom_iters=None):
+                    method_order):
     save_folder = create_folder(dataset, print_progress)
 
     config = {'n_splits': n_splits, 'n_repeats': iters,
@@ -38,9 +37,6 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
     n_splits = config['n_splits']
     with open(f'{save_folder}/config.txt', 'w') as f:
         json.dump(config, f, indent=2)
-    if custom_iters is not None:
-        with open(f'{save_folder}/custom_iters.txt', 'w') as f:
-            json.dump(custom_iters, f, indent=2)
 
     df_err = pd.DataFrame(columns=['Method', 'True_CATE', 'Est_CATE',
                                    'Relative Error (%)', 'Iter'])
@@ -55,36 +51,12 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
     total_time = time.time()
 
     for iter in range(0, iters):
-        if custom_iters is not None:
-            for k, v in custom_iters[iter].items():
-                dataset_config[k] = v
-
-        if 'acic' in dataset:
-            df_data, df_true, binary, categorical, dummy_cols, categorical_to_dummy = get_acic_data(year=dataset,
-                                                                              file=dataset_config['acic_file'],
-                                                                              n_train=0)
-        else:
-            df_data, df_true, binary = get_data(data=dataset,
-                                                config=dataset_config)
-            categorical = []
-            dummy_cols = []
-
-        df_dummy_data = df_data.copy(deep=True)
-        if dummy_cols is not None:
-            df_data = df_data.drop(columns=dummy_cols)
-            df_dummy_data = df_dummy_data.drop(columns=categorical)
-            with open(f'{save_folder}/dummy_cols.txt', 'w') as f:
-                f.write(str(dummy_cols))
-            df_dummy_data.to_csv(f'{save_folder}/df_dummy_data.csv')
+        df_data, df_true, binary = get_data(data=dataset,
+                                            config=dataset_config)
         df_data.to_csv(f'{save_folder}/df_data.csv')
         with open(f'{save_folder}/binary_cols.txt', 'w') as f:
             f.write(str(binary))
-        with open(f'{save_folder}/categorical_cols.txt', 'w') as f:
-            f.write(str(categorical))
-
-        df_dummy_data = df_dummy_data[
-            df_dummy_data.columns[np.abs(df_dummy_data).sum(axis=0) > 0]] # drop any useless covs
-        print(f'{df_dummy_data.shape[1] - 2} covs')
+        print(f'{df_data.shape[1] - 2} covs')
 
         times = {}
 
@@ -96,7 +68,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'LCM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
+                lcm = VIM_CF(outcome='Y', treatment='T', data=df_data,
                              n_splits=n_splits, n_repeats=n_repeats,
                              random_state=random_state)
                 lcm.fit(model='linear', separate_treatments=True)
@@ -119,7 +91,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'LCM Linear'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                lcm = VIM_CF(outcome='Y', treatment='T', data=df_dummy_data,
+                lcm = VIM_CF(outcome='Y', treatment='T', data=df_data,
                              n_splits=n_splits, n_repeats=n_repeats,
                              random_state=random_state)
                 if split_strategy is not None:
@@ -159,6 +131,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             summarize_warnings(warning_list, method_name)
             print()
 
+        if 'oracle_fs' in methods:
             method_name = 'Oracle FS'
             start = time.time()
             lcm.M_list = [np.concatenate([np.ones(dataset_config['imp_c'],),
@@ -183,7 +156,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 m = pymalts.malts_mf('Y', 'T', data=df_data,
-                                     discrete=binary + categorical,
+                                     discrete=binary,
                                      k_est=k_est_mean,
                                      n_splits=n_splits, estimator='mean',
                                      smooth_cate=False,
@@ -207,7 +180,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
-                                                               df_dummy_data,
+                                                               df_data,
                                                                method='linear',
                                                                double=True,
                                                                k_est=k_est_mean,
@@ -232,7 +205,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
-                                                               df_dummy_data,
+                                                               df_data,
                                                                method='linear',
                                                                double=True,
                                                                k_est=k_est_linear,
@@ -257,7 +230,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
-                                                                     df_dummy_data,
+                                                                     df_data,
                                                                      method='ensemble',
                                                                      double=True,
                                                                      k_est=k_est_mean,
@@ -282,7 +255,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
-                                                                     df_dummy_data,
+                                                                     df_data,
                                                                      method='ensemble',
                                                                      double=True,
                                                                      k_est=k_est_linear,
@@ -306,7 +279,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'Linear DML'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                cate_est_doubleml = doubleml.doubleml('Y', 'T', df_dummy_data,
+                cate_est_doubleml = doubleml.doubleml('Y', 'T', df_data,
                                                       gen_skf=split_strategy,
                                                       random_state=random_state)
             times[method_name] = time.time() - start
@@ -325,7 +298,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'BART'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                cate_est_bart = bart.bart('Y', 'T', df_dummy_data,
+                cate_est_bart = bart.bart('Y', 'T', df_data,
                                           gen_skf=split_strategy,
                                           random_state=random_state)
             times[method_name] = time.time() - start
@@ -344,7 +317,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             method_name = 'Causal Forest'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
-                cate_est_cf = causalforest.causalforest('Y', 'T', df_dummy_data,
+                cate_est_cf = causalforest.causalforest('Y', 'T', df_data,
                                                         gen_skf=split_strategy,
                                                         random_state=random_state)
             times[method_name] = time.time() - start
@@ -364,7 +337,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_cf = causalforest_dml.causalforest_dml('Y', 'T',
-                                                                df_dummy_data,
+                                                                df_data,
                                                                 gen_skf=split_strategy,
                                                                 random_state=random_state)
             times[method_name] = time.time() - start

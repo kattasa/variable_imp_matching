@@ -58,9 +58,6 @@ class Prognostic:
                 else:
                     self.ht = linear.LassoCV(random_state=random_state).fit(Xt, Yt)
 
-        print(self.hc.score(Xc, Yc))
-        print(self.ht.score(Xt, Yt))
-
     def get_sample_cate(self, df_est, sample_idx, k=10):
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
         hat_Y = self.hc.predict(X_est)

@@ -95,13 +95,6 @@ for f in num_covs_folder:
         times['# Covariates'] = int(f.split('/')[-1])
         covs_times = pd.concat([covs_times, times.copy()])
 
-# for k in failed_files:
-#     test, num = k.split('-')
-#     if test == 'num_samples':
-#         samples_times = samples_times.loc[samples_times['# Samples'] != int(num)]
-#     elif test == 'num_covs':
-#         covs_times = covs_times.loc[covs_times['# Covariates'] != int(num)+8]
-
 order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '',  'GenMatch']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 method_order = [c for c in order if c in samples_times['Method'].unique()]
@@ -127,7 +120,7 @@ sns.pointplot(ax=axes[1], data=covs_times, x=r"# Covariates $_{\left(\log_2\righ
 handles, labels = axes[0].get_legend_handles_labels()
 fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(.53, 0.93),
            ncol=3, fontsize=22, handletextpad=0.2,
-           columnspacing=0.5, markerscale=2)
+           columnspacing=0.5, markerscale=1.5)
 for ax in axes:
     ax.get_legend().remove()
     ax.set_yscale('log')
