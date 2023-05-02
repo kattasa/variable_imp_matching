@@ -108,20 +108,20 @@ print(f'Metalearner LCM complete: {time.time() - start}')
 
 split_strategy = lcm.split_strategy
 
-# method_name = 'Linear\nPGM'
-# cate_est_lpgm, lpgm_c_mg, \
-# lpgm_t_mg, lpgm_fi   = prognostic.prognostic_cv('Y', 'T', df,
-#                                                 method='linear', double=True,
-#                                                 k_est=k_est, est_method='mean',
-#                                                 diameter_prune=None,
-#                                                 gen_skf=split_strategy,
-#                                                 return_feature_imp=True,
-#                                                 random_state=random_state)
-# df_err = pd.concat([df_err, get_errors(cate_est_lpgm[['avg.CATE']],
-#                                        df_true[['TE']],
-#                                        method_name=method_name,
-#                                        scale=scaling_factor)])
-# print(f'\n{method_name} method complete')
+method_name = 'Linear\nPGM'
+cate_est_lpgm, lpgm_c_mg, \
+lpgm_t_mg, lpgm_fi   = prognostic.prognostic_cv('Y', 'T', df,
+                                                method='linear', double=True,
+                                                k_est=k_est, est_method='mean',
+                                                diameter_prune=None,
+                                                gen_skf=split_strategy,
+                                                return_feature_imp=True,
+                                                random_state=random_state)
+df_err = pd.concat([df_err, get_errors(cate_est_lpgm[['avg.CATE']],
+                                       df_true[['TE']],
+                                       method_name=method_name,
+                                       scale=scaling_factor)])
+print(f'\n{method_name} method complete')
 
 method_name = 'Nonparametric\nPGM'
 cate_est_epgm, epgm_c_mg, \
@@ -138,42 +138,42 @@ df_err = pd.concat([df_err, get_errors(cate_est_epgm[['avg.CATE']],
                                        scale=scaling_factor)])
 print(f'\n{method_name} method complete')
 
-# method_name = 'GenMatch'
-# ate, t_hat = matchit.matchit(outcome='Y', treatment='T', data=df,
-#                              method='genetic', replace=True)
-# df_err = pd.concat([df_err, get_errors(t_hat[['CATE']],
-#                                        df_true[['TE']],
-#                                        method_name=method_name,
-#                                        scale=scaling_factor)])
-# print(f'\n{method_name} method complete')
-#
-# method_name = 'MALTS'
-# m = pymalts.malts_mf('Y', 'T', data=df,
-#                      discrete=[],
-#                      k_est=k_est,
-#                      n_splits=n_splits, estimator='mean',
-#                      smooth_cate=False,
-#                      split_strategy=split_strategy,
-#                      random_state=random_state)
-# df_err = pd.concat([df_err,
-#                     get_errors(m.CATE_df[['avg.CATE']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete')
+method_name = 'GenMatch'
+ate, t_hat = matchit.matchit(outcome='Y', treatment='T', data=df,
+                             method='genetic', replace=True)
+df_err = pd.concat([df_err, get_errors(t_hat[['CATE']],
+                                       df_true[['TE']],
+                                       method_name=method_name,
+                                       scale=scaling_factor)])
+print(f'\n{method_name} method complete')
 
-# method_name = 'Causal Forest'
-# cate_est_cfor = causalforest.causalforest('Y', 'T', df,
-#                                           gen_skf=split_strategy,
-#                                           random_state=random_state)
-# df_err = pd.concat([df_err,
-#                     get_errors(cate_est_cfor[['avg.CATE']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete')
+method_name = 'MALTS'
+m = pymalts.malts_mf('Y', 'T', data=df,
+                     discrete=[],
+                     k_est=k_est,
+                     n_splits=n_splits, estimator='mean',
+                     smooth_cate=False,
+                     split_strategy=split_strategy,
+                     random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(m.CATE_df[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
+
+method_name = 'Causal Forest'
+cate_est_cfor = causalforest.causalforest('Y', 'T', df,
+                                          gen_skf=split_strategy,
+                                          random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_cfor[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
 
 method_name = 'BART'
 cate_est_bart = bart.bart('Y', 'T', df,
@@ -187,29 +187,29 @@ df_err = pd.concat([df_err,
                     ])
 print(f'\n{method_name} method complete')
 
-# method_name = 'Linear\nTLearner'
-# cate_est_tlearner = tlearner.tlearner('Y', 'T', df, method='linear',
-#                                       gen_skf=split_strategy,
-#                                       random_state=random_state)
-# df_err = pd.concat([df_err,
-#                     get_errors(cate_est_tlearner[['avg.CATE']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete')
-#
-# method_name = 'Nonparametric\nTLearner'
-# cate_est_tlearner = tlearner.tlearner('Y', 'T', df, method='ensemble',
-#                                       gen_skf=split_strategy,
-#                                       random_state=random_state)
-# df_err = pd.concat([df_err,
-#                     get_errors(cate_est_tlearner[['avg.CATE']],
-#                                df_true[['TE']],
-#                                method_name=method_name,
-#                                scale=scaling_factor)
-#                     ])
-# print(f'\n{method_name} method complete')
+method_name = 'Linear\nTLearner'
+cate_est_tlearner = tlearner.tlearner('Y', 'T', df, method='linear',
+                                      gen_skf=split_strategy,
+                                      random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_tlearner[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
+
+method_name = 'Nonparametric\nTLearner'
+cate_est_tlearner = tlearner.tlearner('Y', 'T', df, method='ensemble',
+                                      gen_skf=split_strategy,
+                                      random_state=random_state)
+df_err = pd.concat([df_err,
+                    get_errors(cate_est_tlearner[['avg.CATE']],
+                               df_true[['TE']],
+                               method_name=method_name,
+                               scale=scaling_factor)
+                    ])
+print(f'\n{method_name} method complete')
 
 
 df_true.to_csv('Results/df_true.csv')

@@ -16,20 +16,20 @@ methods = [
     'linear_prog_mean',
 ]
 
-method_order = ['LCM', 'Linear PGM']
+method_order = ['LCM', 'Linear\nPGM']
 
 for data in datasets:
     dataset_config = {'n_train': 0}
     if data == 'sine':
         n_splits = 10
         dataset_config['num_samples'] = 5000
-        dataset_config['imp_c'] = 2
-        dataset_config['unimp_c'] = 98
+        dataset_config['imp_c'] = 4
+        dataset_config['unimp_c'] = 496
     if data == 'exp':
         n_splits = 10
         dataset_config['num_samples'] = 5000
-        dataset_config['imp_c'] = 4
-        dataset_config['unimp_c'] = 96
+        dataset_config['imp_c'] = 8
+        dataset_config['unimp_c'] = 492
 
     cate_error_test(dataset=data, n_splits=n_splits,
                     dataset_config=dataset_config,

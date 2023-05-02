@@ -9,7 +9,7 @@ sine_folder = 'sine_001'
 exp = pd.read_csv(f'Results/{exp_folder}/df_err.csv')
 sine = pd.read_csv(f'Results/{sine_folder}/df_err.csv')
 
-order = ['LCM', 'Linear PGM']
+order = ['LCM', 'Linear\nPGM']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
 
 sns.set_context("paper")

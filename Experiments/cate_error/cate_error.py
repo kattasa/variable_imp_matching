@@ -17,7 +17,7 @@ import seaborn as sns
 from Experiments.helpers import create_folder, get_data, summarize_warnings, \
     get_errors
 from other_methods import bart, causalforest, prognostic, doubleml, \
-    causalforest_dml, pymalts
+    causalforest_dml, pymalts, tlearner
 from src.variable_imp_matching import VIM_CF
 
 
@@ -65,7 +65,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
         split_strategy = None
 
         if 'lcm_mean' in methods:
-            method_name = 'LCM'
+            method_name = 'LCM\nMean'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 lcm = VIM_CF(outcome='Y', treatment='T', data=df_data,
@@ -88,7 +88,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             split_strategy = lcm.split_strategy  # save split strategy to use for all other methods
 
         if 'lcm_linear' in methods:
-            method_name = 'LCM Linear'
+            method_name = 'LCM\nLinear'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 lcm = VIM_CF(outcome='Y', treatment='T', data=df_data,
@@ -114,7 +114,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'lasso fs' in methods:
-            method_name = 'LASSO FS'
+            method_name = 'LASSO\nFS'
             start = time.time()
             lcm.M_list = [np.where(m > 0, 1, 0) for m in lcm.M_list]
             lcm.create_mgs(k=k_est_mean)
@@ -132,7 +132,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'oracle_fs' in methods:
-            method_name = 'Oracle FS'
+            method_name = 'Oracle\nFS'
             start = time.time()
             lcm.M_list = [np.concatenate([np.ones(dataset_config['imp_c'],),
                                           np.zeros(dataset_config['unimp_c'],)])
@@ -157,8 +157,8 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             with warnings.catch_warnings(record=True) as warning_list:
                 m = pymalts.malts_mf('Y', 'T', data=df_data,
                                      discrete=binary,
-                                     k_est=k_est_mean,
-                                     n_splits=n_splits, estimator='mean',
+                                     k_est=k_est_linear,
+                                     n_splits=n_splits, estimator='linear',
                                      smooth_cate=False,
                                      split_strategy=split_strategy,
                                      random_state=random_state)
@@ -176,7 +176,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'linear_prog_mean' in methods:
-            method_name = 'Linear PGM'
+            method_name = 'Linear\nPGM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
@@ -201,7 +201,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'linear_prog_linear' in methods:
-            method_name = 'Linear PGM Linear'
+            method_name = 'Linear\nPGM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, _, _ = prognostic.prognostic_cv('Y', 'T',
@@ -226,7 +226,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'ensemble_prog_mean' in methods:
-            method_name = 'Nonparametric PGM'
+            method_name = 'Nonparametric\nPGM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
@@ -251,7 +251,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'ensemble_prog_linear' in methods:
-            method_name = 'Nonparametric PGM Linear'
+            method_name = 'Nonparametric\nPGM'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_prog, c_mg, t_mg = prognostic.prognostic_cv('Y', 'T',
@@ -276,7 +276,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'doubleml' in methods:
-            method_name = 'Linear DML'
+            method_name = 'Linear\nDML'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_doubleml = doubleml.doubleml('Y', 'T', df_data,
@@ -295,7 +295,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'bart' in methods:
-            method_name = 'BART'
+            method_name = 'BART\nTLearner'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_bart = bart.bart('Y', 'T', df_data,
@@ -314,7 +314,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'causal_forest' in methods:
-            method_name = 'Causal Forest'
+            method_name = 'Causal\nForest'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_cf = causalforest.causalforest('Y', 'T', df_data,
@@ -333,7 +333,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             print()
 
         if 'causal_forest_dml' in methods:
-            method_name = 'Causal Forest DML'
+            method_name = 'Causal\nForest DML'
             start = time.time()
             with warnings.catch_warnings(record=True) as warning_list:
                 cate_est_cf = causalforest_dml.causalforest_dml('Y', 'T',
@@ -343,6 +343,46 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             times[method_name] = time.time() - start
             df_err = pd.concat([df_err,
                                 get_errors(cate_est_cf[['avg.CATE']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
+
+        if 'linear_tlearner' in methods:
+            method_name = 'Linear\nTLearner'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_tlearner = tlearner.tlearner('Y', 'T', df_data,
+                                                      method='linear',
+                                                      gen_skf=split_strategy,
+                                                      random_state=random_state)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(cate_est_tlearner[['avg.CATE']],
+                                           df_true[['TE']],
+                                           method_name=method_name,
+                                           scale=scaling_factor,
+                                           iter=iter)
+                                ])
+            print(f'\n{method_name} method complete: {time.time() - start}')
+            summarize_warnings(warning_list, method_name)
+            print()
+
+        if 'nonparam_tlearner' in methods:
+            method_name = 'Nonparametric\nTLearner'
+            start = time.time()
+            with warnings.catch_warnings(record=True) as warning_list:
+                cate_est_tlearner = tlearner.tlearner('Y', 'T', df_data,
+                                                      method='ensemble',
+                                                      gen_skf=split_strategy,
+                                                      random_state=random_state)
+            times[method_name] = time.time() - start
+            df_err = pd.concat([df_err,
+                                get_errors(cate_est_tlearner[['avg.CATE']],
                                            df_true[['TE']],
                                            method_name=method_name,
                                            scale=scaling_factor,
