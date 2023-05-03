@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Apr 19 14:25:47 2020
-@author: Harsh
-"""
+"""Causal Forest CATE Estimator implemented using R grf package and rpy2."""
 
 import numpy as np
 import pandas as pd
@@ -20,7 +16,9 @@ base = importr('base')
 grf = importr('grf')
 
 
-def causalforest(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None, random_state=0):
+def causalforest(outcome, treatment, data, n_splits=2, result='brief',
+                 gen_skf=None, random_state=0):
+    """Generates CATE estimates with Causal Forest."""
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -50,15 +48,3 @@ def causalforest(outcome, treatment, data, n_splits=2, result='brief', gen_skf=N
     if result == 'full':
         return cate_est, crf
     return cate_est
-
-
-def causalforest_sample(outcome, treatment, df_train, sample, covariates, random_state=None):
-    Ycrf = df_train[outcome]
-    Tcrf = df_train[treatment]
-    X = df_train[covariates]
-
-    crf = grf.causal_forest(X, Ycrf, Tcrf, seed=random_state)
-    tauhat = grf.predict_causal_forest(crf, sample)
-    with localconverter(ro.default_converter + pandas2ri.converter):
-        tauhat = ro.conversion.rpy2py(tauhat)['predictions'][0]
-    return tauhat

@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 18 18:56:18 2020
-@author: Harsh
-"""
+"""BART TLearner CATE Estimator implemented using R dbarts and rpy2."""
 
 import numpy as np
 import pandas as pd
@@ -19,7 +15,9 @@ utils = importr('utils')
 dbarts = importr('dbarts')
 
 
-def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None, random_state=0):
+def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None,
+         random_state=0):
+    """Generates CATE estimates using a BART TLearner"""
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -71,20 +69,3 @@ def bart(outcome, treatment, data, n_splits=2, result='brief', gen_skf=None, ran
     if result == 'full':
         return cate_est, control_preds.sort_index(), treatment_preds.sort_index()
     return cate_est
-
-
-def bart_sample(outcome, treatment, df_train, sample, covariates, binary=False, random_state=0):
-    Xc = np.array(df_train.loc[df_train[treatment] == 0, covariates])
-    Yc = np.array(df_train.loc[df_train[treatment] == 0, outcome])
-
-    Xt = np.array(df_train.loc[df_train[treatment] == 1, covariates])
-    Yt = np.array(df_train.loc[df_train[treatment] == 1, outcome])
-
-    if binary:
-        # for some reason bart can't do one sample inference with binary outcome. so we add a dummy sample
-        sample = np.concatenate([sample, np.zeros(shape=sample.shape)], axis=0)
-        return norm.cdf(dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False,
-                                    seed=random_state)[2][:, 0]).mean() - \
-               norm.cdf(dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, seed=random_state)[2][:, 0]).mean()
-    return dbarts.bart(Xt, Yt, sample, keeptrees=False, verbose=False, seed=random_state)[7][0] - \
-           dbarts.bart(Xc, Yc, sample, keeptrees=False, verbose=False, seed=random_state)[7][0]

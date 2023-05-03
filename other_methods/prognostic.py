@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb 24 15:01:21 2020
-@author: harshparikh
-"""
+"""Prognostic Score Matching CATE Estimator."""
 
 import numpy as np
 import pandas as pd
@@ -16,7 +11,27 @@ from utils import prune_covariates, linear_cate, get_model_weights
 
 
 class Prognostic:
-    def __init__(self, Y, T, df, method='ensemble', double=False, random_state=None):
+    """Fits prognostic score model to df using specified method.
+
+    Parameters
+    ----------
+    Y : str
+        Column label corresponding to the outcome.
+    T : str
+        Column label corresponding to the treatment.
+    df : pandas.DataFrame
+        Data that must include Y and T columns specified above.
+    method : str, default='ensemble'
+        Prognostic score model to fit. Options are 'ensemble' and 'linear'.
+    double: bool, default=False
+        Whether to fit a prognostic score to both the treated and control space
+        (True) or only use a prognostic score model fit on the control space
+        (False).
+    random_state : None or int, default=None
+        Random state to run on.
+    """
+    def __init__(self, Y, T, df, method='ensemble', double=False,
+                 random_state=None):
         self.Y = Y
         self.T = T
         self.cov = [c for c in df.columns if c not in [Y, T]]
@@ -58,20 +73,8 @@ class Prognostic:
                 else:
                     self.ht = linear.LassoCV(random_state=random_state).fit(Xt, Yt)
 
-    def get_sample_cate(self, df_est, sample_idx, k=10):
-        X_est, Y_est, T_est = df_est[self.cov].to_numpy(), df_est[self.Y].to_numpy(), df_est[self.T].to_numpy()
-        hat_Y = self.hc.predict(X_est)
-        control_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
-            hat_Y[T_est == 0].reshape(-1, 1))
-        treatment_nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto', n_jobs=10).fit(
-            hat_Y[T_est == 1].reshape(-1, 1))
-        c_mg = control_nn.kneighbors(hat_Y[sample_idx].reshape(1, -1), return_distance=False).reshape(-1, )
-        yc = df_est[T_est == 0][self.Y].to_numpy()[c_mg].mean()
-        t_mg = treatment_nn.kneighbors(hat_Y[sample_idx].reshape(1, -1), return_distance=False).reshape(-1, )
-        yt = df_est[T_est == 1][self.Y].to_numpy()[t_mg].mean()
-        return yt - yc
-
     def get_matched_group(self, df_est, k=10, method='mean', diameter_prune=3):
+        """Gets match groups for df_est using fitted prognostic score model."""
         X_est, Y_est, T_est = df_est[self.cov].to_numpy(), \
                               df_est[self.Y].to_numpy(), \
                               df_est[self.T].to_numpy()
@@ -147,6 +150,7 @@ def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
                   k_est=1, est_method='mean', n_splits=5, gen_skf=None,
                   diameter_prune=None,
                   return_feature_imp=False, random_state=None):
+    """Generates CATE estimates using prognostic score matching."""
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -177,6 +181,7 @@ def prognostic_cv(outcome, treatment, data, method='ensemble', double=False,
 
 
 def get_feature_imp(prog):
+    """Gets feature importance measures for fitted prognostic score model."""
     if prog.model == 'linear':
         weight_attr = 'coef_'
     elif prog.model == 'ensemble':

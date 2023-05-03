@@ -1,3 +1,5 @@
+"""TLearner CATE Estimator implemented using econml."""
+
 from econml.metalearners import TLearner
 from sklearn.linear_model import LassoCV
 from sklearn.ensemble import GradientBoostingRegressor
@@ -8,6 +10,11 @@ from sklearn.model_selection import StratifiedKFold
 
 def tlearner(outcome, treatment, data, method='linear', n_splits=2,
              gen_skf=None, random_state=None):
+    """Generates CATE estimates from either linear or nonparametric TLearner.
+
+    If method='linear' TLearner model is LassoCV. If method='ensemble' TLearner
+    model is GradientBoostingRegressor.
+    """
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])

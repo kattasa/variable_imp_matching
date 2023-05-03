@@ -1,24 +1,23 @@
-"""
-Created on Sat Apr 18 15:20:12 2020
-@author: Harsh
-"""
+"""Matching CATE Estimator implemented using R matchit and rpy2."""
 
 import pandas as pd
 import numpy as np
 
-import rpy2
 from rpy2.robjects.packages import importr
 from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
 import rpy2.robjects.numpy2ri
 
 rpy2.robjects.numpy2ri.activate()
-from rpy2.robjects import r, pandas2ri
+from rpy2.robjects import pandas2ri
 
 pandas2ri.activate()
 
 
-def matchit(outcome, treatment, data, method='nearest', replace=False,
-            k_est=1):
+def matchit(outcome, treatment, data, method='genetic', replace=False):
+    """
+    Generates CATE estimates using matching method specified by method
+    argument. We use method="genetic" in our experiments.
+    """
     if replace:
         replace = 'TRUE'
     else:
@@ -48,30 +47,9 @@ def matchit(outcome, treatment, data, method='nearest', replace=False,
     names2 <- as.numeric(names(r2$match.matrix[,]))
     mtch2 <- data2[as.numeric(names(r2$match.matrix[,])),]
     hh2 <- data2[as.numeric(r2$match.matrix[,]),'%s'] - data2[as.numeric(names(r2$match.matrix[,])),'%s']
-    """ % (formula_cov, method, replace, outcome, outcome, treatment, treatment, formula_cov, method, replace, outcome,
+    """ % (formula_cov, method, replace, outcome, outcome, treatment,
+           treatment, formula_cov, method, replace, outcome,
            outcome)
-
-    # string = """
-    # library('MatchIt')
-    # data <- read.csv('data.csv')
-    # r <- matchit( %s, method = "%s", data = data, replace = %s, ratio = %d)
-    # matrix <- r$match.matrix[,]
-    # names <- as.numeric(rownames(r$match.matrix[,]))
-    # mtch <- data[names, '%s']
-    # # cmtch <- rowMeans(array(data[as.numeric(matrix), '%s'], dim=dim(matrix)))
-    # # hh <- mtch - cmtch
-    #
-    # data2 <- data
-    # data2$%s <- 1 - data2$%s
-    # r2 <- matchit( %s, method = "%s", data = data2, replace = %s, ratio = %d)
-    # matrix2 <- r2$match.matrix[,]
-    # names2 <- as.numeric(rownames(r2$match.matrix[,]))
-    # mtch2 <- data2[names2, '%s']
-    # # cmtch2 <- rowMeans(array(data2[as.numeric(matrix2), '%s'], dim=dim(matrix2)))
-    # # hh2 <- mtch2 - cmtch2
-    # """ % (
-    # formula_cov, method, replace, k_est, outcome, outcome, treatment, treatment,
-    # formula_cov, method, replace, k_est, outcome, outcome)
 
     psnn = SignatureTranslatedAnonymousPackage(string, "powerpack")
     match = psnn.mtch

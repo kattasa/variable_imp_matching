@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Nov 22 00:43:45 2019
-
-@author: harshparikh
-"""
+"""MALTS Matching CATE Estimator."""
 
 import numpy as np
 import scipy.optimize as opt
@@ -25,7 +19,7 @@ warnings.filterwarnings("ignore")
 class malts:
     def __init__(self, outcome, treatment, data, discrete=[], C=1, k=10,
                  reweight=False):
-        # np.random.seed(0)
+        np.random.seed(0)
         self.C = C  # coefficient to regularozation term
         self.k = k
         self.reweight = reweight

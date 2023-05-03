@@ -1,3 +1,5 @@
+"""Causal Forest DoubleML CATE Estimator implemented using econml."""
+
 from econml.dml import CausalForestDML
 import numpy as np
 import pandas as pd
@@ -7,7 +9,9 @@ from econml.sklearn_extensions.linear_model import WeightedLassoCV
 from sklearn.linear_model import LogisticRegressionCV
 
 
-def causalforest_dml(outcome, treatment, data, n_splits=2, gen_skf=None, random_state=None):
+def causalforest_dml(outcome, treatment, data, n_splits=2, gen_skf=None,
+                     random_state=None):
+    """Generates CATE estimates with Causal Forest DoubleML."""
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
@@ -33,14 +37,3 @@ def causalforest_dml(outcome, treatment, data, n_splits=2, gen_skf=None, random_
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
     return cate_est
-
-
-def causalforest_dml_sample(outcome, treatment, df_train, sample, covariates, random_state=None):
-    X = np.array(df_train.loc[:, covariates])
-    Y = np.array(df_train.loc[:, outcome])
-    T = np.array(df_train.loc[:, treatment])
-    est = CausalForestDML(model_y=WeightedLassoCV(max_iter=5000),
-                          model_t=LogisticRegressionCV(solver='sag', max_iter=500),
-                          featurizer=None, treatment_featurizer=None, random_state=random_state)
-    est.fit(Y=Y, T=T, X=X, W=X)
-    return est.effect(sample)

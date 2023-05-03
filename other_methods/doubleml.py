@@ -1,4 +1,6 @@
-from econml.dml import LinearDML, SparseLinearDML, DML
+"""Linear DoubleML CATE Estimator implemented using econml."""
+
+from econml.dml import LinearDML, DML
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -7,7 +9,12 @@ from econml.sklearn_extensions.linear_model import WeightedLassoCV
 from sklearn.linear_model import LogisticRegressionCV, LassoCV
 
 
-def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None, random_state=None):
+def doubleml(outcome, treatment, data, n_splits=2, gen_skf=None,
+             random_state=None):
+    """
+    Generates CATE estimates with Linear DoubleML using LassoCV as final
+    model.
+    """
     if gen_skf is None:
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data, data[treatment])
