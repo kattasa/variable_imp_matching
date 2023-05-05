@@ -1,14 +1,19 @@
+import os
 import pandas as pd
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 
-exp = pd.read_csv('Results/exp_003/df_err.csv')
-sine = pd.read_csv('Results/sine_003/df_err.csv')
-quad = pd.read_csv('Results/dense_continuous_003/df_err.csv')
+results_folder = os.getenv('RESULTS_FOLDER')
+exp_folder = os.getenv('EXP_FOLDER')
+sine_folder = os.getenv('SINE_FOLDER')
+quadratic_folder = os.getenv('DENSE_CONTINUOUS_FOLDER')
 
-rename = {'LASSO FS': 'LASSO\nFS', 'Oracle FS': 'Oracle\nFS'}
+exp = pd.read_csv(f'{results_folder}/{exp_folder}/df_err.csv')
+sine = pd.read_csv(f'{results_folder}/{sine_folder}/df_err.csv')
+quad = pd.read_csv(f'{results_folder}/{quadratic_folder}/df_err.csv')
+
+rename = {'LCM\nMean': 'LCM'}
 exp['Method'] = exp['Method'].replace(rename)
 sine['Method'] = sine['Method'].replace(rename)
 quad['Method'] = quad['Method'].replace(rename)
@@ -48,4 +53,4 @@ axes[2].yaxis.set_major_formatter(ticker.PercentFormatter())
 axes[1].set_ylabel(ylabel=None)
 axes[2].set_ylabel(ylabel=None)
 fig.tight_layout()
-fig.savefig(f'lcm_vs_fs.png', bbox_inches='tight')
+fig.savefig(f'{results_folder}/lcm_vs_fs.png', bbox_inches='tight')

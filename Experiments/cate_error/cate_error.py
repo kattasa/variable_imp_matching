@@ -113,7 +113,7 @@ def cate_error_test(dataset, n_splits, dataset_config, methods, n_repeats,
             summarize_warnings(warning_list, method_name)
             print()
 
-        if 'lasso fs' in methods:
+        if 'lasso_fs' in methods:
             method_name = 'LASSO\nFS'
             start = time.time()
             lcm.M_list = [np.where(m > 0, 1, 0) for m in lcm.M_list]

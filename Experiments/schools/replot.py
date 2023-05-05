@@ -1,12 +1,13 @@
+"""Replots the results created by run.py script."""
+
 import os
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import matplotlib
 
-results_folder = 'Results'
-save_folder = 'Final_Plots'
+results_folder = os.getenv('RESULTS_FOLDER')
+save_folder = os.getenv('PLOTS_FOLDER')
+
 method_order = ['LCM', 'Linear\nPGM', 'NP\nPGM']
 palette = {method_order[i]: sns.color_palette()[i] for i in range(len(method_order))}
 

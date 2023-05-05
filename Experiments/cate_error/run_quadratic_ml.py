@@ -7,7 +7,6 @@ k_est_mean = 10
 k_est_linear = 40
 
 methods = [
-    # 'malts',
     'lcm_mean',
     'lcm_linear',
     'doubleml',
@@ -16,7 +15,7 @@ methods = [
     'causal_forest_dml',
 ]
 
-method_order = ['LCM\nMean', 'LCM\n:Linear', 'Linear\nDML',
+method_order = ['LCM\nMean', 'LCM\nLinear', 'Linear\nDML',
                 'Causal\nForest DML', 'Causal\nForest', 'BART\nTLearner']
 
 n_splits = 5

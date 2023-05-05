@@ -2,7 +2,6 @@ from glob import glob
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 import seaborn as sns
 
 num_samples_folder = glob(f"{os.getenv('RESULTS_FOLDER')}/num_samples/*", recursive=True)
@@ -105,12 +104,12 @@ for f in num_covs_folder:
         times['# Covariates'] = int(f.split('/')[-1])
         covs_times = pd.concat([covs_times, times.copy()])
 
-# for k in failed_files:
-#     test, num = k.split('-')
-#     if test == 'num_samples':
-#         samples_times = samples_times.loc[samples_times['# Samples'] != int(num)]
-#     elif test == 'num_covs':
-#         covs_times = covs_times.loc[covs_times['# Covariates'] != int(num)+8]
+for k in failed_files:
+    test, num = k.split('-')
+    if test == 'num_samples':
+        samples_times = samples_times.loc[samples_times['# Samples'] != int(num)]
+    elif test == 'num_covs':
+        covs_times = covs_times.loc[covs_times['# Covariates'] != int(num)+8]
 
 order = ['LCM', 'Linear PGM', 'Ensemble PGM', 'MALTS', '', '',  'GenMatch', 'AHB']
 palette = {order[i]: sns.color_palette()[i] for i in range(len(order))}
@@ -119,12 +118,6 @@ markers = ['o', '^', 's', 'p']
 
 samples_times['# Samples'] = samples_times['# Samples'].astype(int)
 covs_times['# Covariates'] = covs_times['# Covariates'].astype(int)
-
-# samples_times[r"# Samples $_{\left(\log_2\right)}$"] = np.log2(samples_times['# Samples'].astype(int))
-# samples_times[r"# Samples $_{\left(\log_2\right)}$"] = samples_times[r"# Samples $_{\left(\log_2\right)}$"].astype(int)
-#
-# covs_times[r"# Covariates $_{\left(\log_2\right)}$"] = np.log2(covs_times['# Covariates'].astype(int))
-# covs_times[r"# Covariates $_{\left(\log_2\right)}$"] = covs_times[r"# Covariates $_{\left(\log_2\right)}$"].astype(int)
 
 
 sns.set_context("paper")
@@ -146,19 +139,5 @@ fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(.55, 0.96),
 for ax in axes:
     ax.get_legend().remove()
     ax.set_yscale('log')
-    # ax.set_xscale('log')
-# axes[1].set_ylabel(ylabel=None)
 fig.tight_layout()
 fig.savefig(f'scaling_all.png', bbox_inches='tight')
-
-# plt.figure(figsize=(9, 6))
-# sns.set_context("paper")
-# sns.set_style("darkgrid")
-# sns.set(font_scale=2, font="times")
-# ax = sns.pointplot(data=samples_times, x=r"# Samples $_{\left(\log_2\right)}$", y='Time (s)',
-#               errorbar='sd', hue='Method',
-#               hue_order=method_order, palette=palette, markers=markers, scale=1.25)
-# sns.move_legend(ax, "lower center", bbox_to_anchor=(.47, 1.02), ncol=3,
-#                 title=None, handletextpad=0.4, columnspacing=0.5, fontsize=20)
-# plt.tight_layout()
-# ax.get_figure().savefig(f'scaling_all.png')

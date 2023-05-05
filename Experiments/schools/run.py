@@ -1,3 +1,8 @@
+"""Run analysis on school dataset.
+
+Runs LCM, Linear Prognostic Score, and Nonparametric Prognostic Score.
+Creates the results shown in the Section 6.1 of the Variable Importance
+Matching paper."""
 
 import pandas as pd
 import seaborn as sns

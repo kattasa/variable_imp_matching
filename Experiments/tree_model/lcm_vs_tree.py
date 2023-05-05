@@ -1,3 +1,5 @@
+"""Runs LCM vs Decision Tree on basic polynomial DGP."""
+
 import numpy as np
 import pandas as pd
 
