@@ -6,6 +6,8 @@ datagen/news
 datagen/schools
 Experiments/dcc_runs
 .idea/
+.RData
+.Rhistory
 **/__pycache__/
 .DS_Store
 Experiments/.DS_Store
