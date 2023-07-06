@@ -31,6 +31,10 @@ def config_model(model='linear', params=None, weight_attr=None,
         Otherwise, if model is sklearn model class, must be str specifying
         the appropriate model attribute to use to retrieve feature
         importance weights.
+    binary_outcome : bool, default=False
+        Whether the outcome is binary or not.
+    random_state : None or int, default=None
+        Random state to use.
 
     Returns
     -------

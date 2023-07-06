@@ -3,13 +3,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 from src.variable_imp_matching import VIM
 from other_methods import prognostic
 from Experiments.helpers import get_data
 import warnings
 import seaborn as sns
-import matplotlib
 
 warnings.filterwarnings("ignore")
 
