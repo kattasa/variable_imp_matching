@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 from datagen.dgp import dgp_poly_basic, dgp_sine, dgp_exp, \
-    data_generation_dense_mixed_endo
+    data_generation_dense_mixed_endo, dgp_nonlinear_mml, dgp_piecewise_mml
 
 np.random.seed(0)
 
@@ -44,6 +44,12 @@ def dgp_df(dgp, n_samples, n_unimp=None, perc_train=None, n_train=None):
         discrete = []
     if dgp == 'exp':
         X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_exp(n_samples, n_unimp)
+        discrete = []
+    if dgp == 'nonlinear_mml':
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_nonlinear_mml(n_samples, n_unimp)
+        discrete = []
+    if dgp == 'piecewise_mml':
+        X, Y, T, Y0, Y1, TE, Y0_true, Y1_true = dgp_piecewise_mml(n_samples, n_unimp)
         discrete = []
     if perc_train:
         train_idx = int(n_samples*perc_train)

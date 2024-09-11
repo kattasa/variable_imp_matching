@@ -7,7 +7,7 @@ import sklearn.linear_model as linear
 from sklearn.neighbors import NearestNeighbors
 import sklearn.tree as tree
 import warnings
-
+from pathlib import Path
 
 def config_model(model='linear', params=None, weight_attr=None,
                  binary_outcome=False, random_state=None):
@@ -280,6 +280,7 @@ def get_CATES(df_estimation, match_groups, match_distances, outcome,
     df_estimation, old_idx = check_mg_indices(df_estimation, match_groups,
                                               match_distances)
     potential_outcomes = []
+    max_dists = []
     for t, mgs in match_groups.items():
         if diameter_prune:
             diameters = match_distances[t].iloc[:, -1]
@@ -314,13 +315,16 @@ def get_CATES(df_estimation, match_groups, match_distances, outcome,
                             f'linear_pruned.')
         potential_outcomes.append(pd.DataFrame(y_pot, index=mgs_idx,
                                                columns=[f'Y{t}_{method}']))
+        max_dists_t = match_distances[t].max(axis = 1)
+        max_dists.append(pd.DataFrame(max_dists_t, index = mgs_idx, columns = [f'dist_{t}']))
     cates = pd.concat(potential_outcomes, axis=1).sort_index()
+    max_dists_df = pd.concat(max_dists, axis = 1).sort_index()
     if len([t for t in list(match_groups.keys()) if t not in [0, 1]]) == 0:
         cates[f'CATE_{method}'] = cates[f'Y1_{method}'] - cates[f'Y0_{method}']
     else:
         for t1, t2 in combinations(list(match_groups.keys()), r=2):
             cates[f'{t2}-{t1}_CATE_{method}'] = cates[f'Y{t2}_{method}'] - cates[f'Y{t1}_{method}']
-    return cates
+    return cates.join(max_dists_df)
 
 
 def linear_cate(mg, sample):
@@ -377,3 +381,16 @@ def get_model_weights(model, weight_attr, equal_weights, t_covs, t):
     if equal_weights:
         weights = np.where(weights > 0, 1, 0)
     return (weights / np.sum(weights)) * len(weights)
+
+
+def save_df_to_csv(df, file_path):
+    """
+    Save a DataFrame to a CSV file, ensuring the directory exists.
+    
+    Parameters:
+    - df: pd.DataFrame, the DataFrame to save
+    - file_path: str or Path, the path to save the CSV file (including directories and filename)
+    """
+    file_path = Path(file_path)  # Convert to Path object if not already
+    file_path.parent.mkdir(parents=True, exist_ok=True)  # Create directories if they do not exist
+    df.to_csv(file_path, index=False)  # Save DataFrame to CSV

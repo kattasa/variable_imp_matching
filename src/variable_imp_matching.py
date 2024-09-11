@@ -366,13 +366,15 @@ class VIM:
         if return_scores:
             return scores
 
-    def create_mgs(self, df_estimation, k=10, return_original_idx=False):
+    def create_mgs(self, df_estimation, query_x, k=10, return_original_idx=False):
         """Get the match groups for a given estimation set.
 
         Parameters
         ----------
         df_estimation : pandas.DataFrame
             Estimation set. Should include same columns as the training set.
+        query_x : pandas.DataFrame
+            Query points. At which Xs should we estimate CATEs
         k : int, default=10
             Matched group size for each treatment. I.e. if there are two
             treatments, each sample is matched to 10 samples for

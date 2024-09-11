@@ -24,3 +24,7 @@ Experiments/schools/Results*
 Experiments/schools/Testing*
 Experiments/acic_mg
 *data.csv
+*.png
+**/*.out
+**/*.err
+Experiments/variance/output_files
