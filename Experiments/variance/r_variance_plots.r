@@ -6,20 +6,42 @@ library(ggplot2)
 setwd('/usr/project/xtmp/sk787/variable_imp_matching/')
 
 # Function to read CSV with error handling
-read_df_w_error <- function(file) {
+read_df_w_error <- function(file, counter) {
   tryCatch(
     {
-      read_csv(file, show_col_types = FALSE)
+      read_csv(file, show_col_types = FALSE) %>%
+      mutate(Y0_mean = as.numeric(Y0_mean),
+             Y1_mean = as.numeric(Y1_mean),
+             dist_0 = as.numeric(dist_0),
+             dist_1 = as.numeric(dist_1),
+             CATE_mean = as.numeric(CATE_mean),
+             seed = as.numeric(seed),
+             n_train = as.numeric(n_train)
+      ) %>%
+      # mutate(index = row.names()) %>%
+      return()
     },
     error = function(e) {
-      message(paste("oops. file not found:", file))
+      message(paste("oops. file not found:", counter, file))
+      # message(e)
       return(NULL)
     }
   )
 }
 
 # Read the args CSV file
-args_df <- read_csv('./Experiments/variance/args.csv')
+args_df <- read_csv('./Experiments/variance/args.csv') %>% mutate(row = row.names(.))
+# fit_add_list <- c('bias_corr', 'bias_corr_betting', 'boost_bias_corr', 'mml_bart', 'causal_forest_r', 'mml_cf', 'conformal')#, 'xlearner_r', 'slearner_r', 'tlearner_r')
+fit_add_list <- c('bias_corr_betting')#, 'xlearner_r', 'slearner_r', 'tlearner_r')
+if(!('fit' %in% colnames(args_df))) {
+  args_df$fit = NA
+}
+for(fit_add in fit_add_list) {
+  args_df_fit_add <- unique(args_df[, c('dgp', 'n_train', 'n_est', 'n_imp', 'n_unimp', 'k', 'seed', 'row')])
+  args_df_fit_add$fit <- fit_add
+  args_df <- rbind(args_df, args_df_fit_add)
+}
+args_df <- args_df %>% filter(!is.na(fit))
 
 # Create a list of dataframes
 list_df <- pmap(args_df, function(...) {
@@ -27,82 +49,82 @@ list_df <- pmap(args_df, function(...) {
   file_path <- paste0(
     './Experiments/variance/output_files/dgp_', args$dgp,
     '/n_train_', args$n_train,
+    '/n_est_', args$n_est,
     '/n_imp_', args$n_imp,
     '/n_unimp_', args$n_unimp,
     '/k_', args$k,
     '/seed_', args$seed,
     '/', args$fit, '.csv'
   )
-  read_df_w_error(file_path)
+  read_df_w_error(file_path, args$row)
 })
-
 # Remove NULL elements (if any files were not found)
 list_df <- compact(list_df)
 
 # Combine all dataframes
-overall_df <- bind_rows(list_df) %>%
+overall_df <- list_df  %>%
+bind_rows() %>%
   # filter(fit != 'naive') %>%
-  filter(fit != 'nn') %>%
+  # filter(fit != 'nn') %>%
   mutate(vim_or_not = ifelse(grepl(pattern = 'vim', x = fit), 'VIM', 'Not VIM'))
 
 # Group by and calculate mean
 gb_df <- overall_df %>%
-  group_by(dgp, seed, fit, vim_or_not) %>%
-  summarise(across(everything(), mean), .groups = 'drop')
-
-# If you need labels (commented out in the original code)
-# labels <- unique(gb_df$fit)
+  group_by(n_train, n_est, dgp, fit, vim_or_not) %>%
+  summarise(across(everything(), mean), n = n(), .groups = 'drop')
 
 
-png("trash2.png", width = 1500, height = 1000, res = 300, units = 'px')
-ggplot(gb_df) +
-    geom_point(aes(x = CATE_error_bound, y = contains_true_cate, color = fit, shape = vim_or_not), alpha = 0.7, size = 5) +
+png("trash4.png", width = 1500, height = 1000, res = 100, units = 'px')
+ggplot(gb_df %>% filter(fit != 'mml_cf')) +
+    geom_line(aes(x = n_train, y = contains_true_cate, color = fit), alpha = 0.7, linewidth = 1.5) +
     geom_hline(yintercept = 0.95, linetype = 'dashed') +
-    facet_wrap(~dgp,  scales = 'free_x') +
-    xlab('Radius of confidence interval') +
-    ylab('Coverage')
-dev.off()
-
-png("trash2_fit_v_coverage.png", width = 1500, height = 1000, res = 300, units = 'px')
-ggplot(gb_df) +
-    geom_col(aes(x = fit, y = contains_true_cate), alpha = 0.7, size = 5) +
-    geom_hline(yintercept = 0.95, linetype = 'dashed') +
-    facet_grid(vim_or_not~dgp,  scales = 'free_y') +
-    ylab('Coverage') +
-    xlab('Estimator') +
-    coord_flip()
-dev.off()
-
-png("trash2_fit_v_width.png", width = 1500, height = 1000, res = 300, units = 'px')
-ggplot(gb_df) +
-    geom_col(aes(x = fit, y = CATE_error_bound, fill = (contains_true_cate >= 0.95)), alpha = 0.7, size = 5) +
-    facet_grid(vim_or_not~dgp,  scales = 'free_y') +
-    xlab('Estimator') +
-    ylab('Radius of confidence interval') +
-    coord_flip()
-dev.off()
-
-# Group by and calculate mean
-gb_df <- overall_df %>%
-  group_by(n_train, dgp, fit, vim_or_not) %>%
-  summarise(across(everything(), mean), .groups = 'drop')
-
-
-png("trash4.png", width = 1500, height = 1000, res = 300, units = 'px')
-ggplot(gb_df) +
-    geom_line(aes(x = n_train, y = contains_true_cate, color = fit), alpha = 0.7) +
-    geom_hline(yintercept = 0.95, linetype = 'dashed') +
-    facet_wrap(~dgp+vim_or_not,  scales = 'free_x') +
+    facet_grid(n_est~dgp+vim_or_not,  scales = 'free_x') +
     xlab('#Training observations') +
-    ylab('Coverage')
+    ylab('Coverage') +
+    scale_color_brewer(palette = 'Dark2') +
+    theme_bw() +
+    theme(text = element_text(size = 20))
 dev.off()
 
-png("trash5.png", width = 1500, height = 1000, res = 300, units = 'px')
-ggplot(gb_df) +
-    geom_line(aes(x = n_train, y = CATE_error_bound, color = fit), alpha = 0.7) +
-    # geom_hline(yintercept = 0.95, linetype = 'dashed') +
-    facet_wrap(~dgp+vim_or_not,  scales = 'free_x') +
-    xlab('Training set size') +
+png("trash4_est.png", width = 1500, height = 1000, res = 300, units = 'px')
+ggplot(gb_df %>% filter(dgp == 'exp')) +
+    geom_line(aes(x = n_est, y = contains_true_cate, color = fit), alpha = 0.7, linewidth = 1.5) +
+    geom_hline(yintercept = 0.95, linetype = 'dashed') +
+    facet_grid(n_train~dgp+vim_or_not,  scales = 'free_x') +
+    xlab('#Matching observations') +
     ylab('Coverage') +
-    ylim(0, 80)
+    scale_color_brewer(palette = 'Dark2') +
+    theme_bw() +
+    theme(text = element_text(size = 20),  axis.text.x = element_text(angle = 45, hjust = 1))
 dev.off()
+
+png("trash5.png", width = 1500, height = 1000, res = 100, units = 'px')
+ggplot(gb_df) +
+    geom_line(aes(x = n_est, y = CATE_error_bound, color = fit), alpha = 0.7, linewidth = 1.5) +
+    # geom_hline(yintercept = 0.95, linetype = 'dashed') +
+    facet_grid(n_train~dgp+vim_or_not) +
+    xlab('Training set size') +
+    ylab('Interval Half-width') +
+    theme_bw() +
+    theme(text = element_text(size = 20),  axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_color_brewer(palette = 'Dark2')
+dev.off()
+
+p <- overall_df %>%
+  group_by(n_train, dgp, fit, vim_or_not) %>%
+  summarise(mse = mean(se))
+ggplot(p) +
+  geom_line(aes(x = n_train, y = mse, color = fit), alpha = 0.5, linewidth = 1.5) +
+  facet_grid(~dgp+vim_or_not) +
+    scale_color_brewer(palette = 'Set3')
+
+
+ggplot(gb_df) +
+    geom_line(aes(x = n_train, y = se, color = fit), alpha = 0.7, linewidth = 1.5) +
+    geom_hline(yintercept = 0.95, linetype = 'dashed') +
+    facet_grid(n_est~dgp+vim_or_not) +
+    xlab('Training set size') +
+    ylab('Mean squared error') +
+    theme_bw() +
+    theme(text = element_text(size = 20), axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_color_brewer(palette = 'Dark2')

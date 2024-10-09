@@ -366,7 +366,7 @@ class VIM:
         if return_scores:
             return scores
 
-    def create_mgs(self, df_estimation, query_x, k=10, return_original_idx=False):
+    def create_mgs(self, df_estimation, query_x = None, k=10, return_original_idx=False):
         """Get the match groups for a given estimation set.
 
         Parameters
@@ -396,9 +396,9 @@ class VIM:
         """
         return get_match_groups(df_estimation, self.covariates,
                                 self.treatment, M=self.M, k=k,
-                                return_original_idx=return_original_idx)
+                                return_original_idx=return_original_idx, query_x = query_x)
 
-    def est_cate(self, df_estimation, match_groups=None, match_distances=None,
+    def est_cate(self, df_estimation, query_x = None, match_groups=None, match_distances=None,
                  k=10, method='mean', diameter_prune=None, cov_imp_prune=0.01):
         """Get CATE estimates for each sample in an estimation set.
 
@@ -434,8 +434,8 @@ class VIM:
         """
         if (match_groups is None) or (match_distances is None):
             match_groups, match_distances = self.create_mgs(
-                df_estimation=df_estimation, k=k, return_original_idx=False)
+                df_estimation=df_estimation, k=k, return_original_idx=False, query_x = query_x)
         return get_CATES(df_estimation, match_groups, match_distances,
                          self.outcome, self.covariates, self.M,
                          method=method, diameter_prune=diameter_prune,
-                         cov_imp_prune=cov_imp_prune)
+                         cov_imp_prune=cov_imp_prune,query_x=query_x)

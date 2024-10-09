@@ -96,9 +96,9 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp,
     return df, df_true, binary
 
 
-def dgp_sine(n_samples, n_unimp):
+def dgp_sine(n_samples, n_unimp, n_imp = 2):
     """Sine DGP"""
-    x = np.random.uniform(-np.pi, np.pi, size=(n_samples, 2))
+    x = np.random.uniform(-np.pi, np.pi, size=(n_samples, n_imp))
     y0 = np.sin(x[:, 0])
     y1 = y0 + np.sin(-x[:, 1])
     y0_errors = np.random.normal(0, 0.1, size=n_samples)
@@ -164,7 +164,7 @@ def set_t(x, t_imp, centered=1, overlap=1):
         T.append(t)
     return np.array(T)
 
-def dgp_nonlinear_mml(n_samples, n_unimp):
+def dgp_nonlinear_mml(n_samples, n_unimp, coef_seed, data_seed):
     def interact(X, d):
         p = X.shape[1]
         val = np.zeros(X.shape[0])
@@ -173,6 +173,7 @@ def dgp_nonlinear_mml(n_samples, n_unimp):
                 val += X[:, col] * X[:, col2] * d[col, col2]
         return val
     n_imp = 20
+    np.random.seed(coef_seed)
 
     lambda_vec = np.random.uniform(low = -4, high = 4, size=n_imp)
     beta_lin = lambda_vec
@@ -181,7 +182,7 @@ def dgp_nonlinear_mml(n_samples, n_unimp):
     delta = np.random.uniform(low = 0, high = 1, size = n_imp)
     delta_int = np.random.uniform(low = -.5, high = .5, size = [n_imp, n_imp])
     
-    
+    np.random.seed(data_seed)
     X = np.random.normal(loc = 0, scale = 1, size = [n_samples, n_imp])
     X_unimp = np.random.normal(loc = 0, scale = 1, size = [n_samples, n_unimp])
     sigma_i = np.random.uniform(low = 1, high = 2, size = n_samples)
@@ -201,17 +202,21 @@ def dgp_nonlinear_mml(n_samples, n_unimp):
            y1.reshape(-1, 1), te.reshape(-1, 1), \
            (y0 - error).reshape(-1, 1), (y1 - error).reshape(-1, 1)
 
-def dgp_piecewise_mml(n_samples, n_unimp):
+
+def dgp_piecewise_mml(n_samples, n_unimp, coef_seed = 42, data_seed = 42):
     n_imp = 20
 
+    np.random.seed(coef_seed)
     lambda_vec = np.random.uniform(low = -4, high = 4, size=n_imp)
     beta_lin = lambda_vec
     delta = np.random.uniform(low = 0, high = 1, size = n_imp)
     
+    np.random.seed(data_seed)
     X = np.random.normal(loc = 0, scale = 1, size = [n_samples, n_imp])
     X_gr_0 = (X > 0)
     X_unimp = np.random.normal(loc = 0, scale = 1, size = [n_samples, n_unimp])
     X_unimp_gr_0 = (X_unimp > 0)
+    
     sigma_i = np.random.uniform(low = 1, high = 2, size = n_samples)
     error = np.random.normal(loc = 0, scale = sigma_i)
     y1 = 5 + 5 + X_gr_0.dot(beta_lin) + X_gr_0.dot(delta) + error

@@ -164,12 +164,14 @@ def calc_var_imp(x_train, t_train, y_train, m, weight_attr,
 
 def get_match_groups(df_estimation, covariates, treatment, M, k=None,
                      return_original_idx=True,
-                     check_est_df=True):
+                     check_est_df=True, query_x = None):
     """Calculate match groups for an estimation dataset.
 
     Parameters
     ----------
     df_estimation : pd.DataFrame
+        Estimation dataset.
+    query_x : pd.DataFrame
         Estimation dataset.
     covariates : list[str]
         Covariate names. Used to make sure that df_estimation has the
@@ -204,6 +206,8 @@ def get_match_groups(df_estimation, covariates, treatment, M, k=None,
     df_estimation = df_estimation.reset_index(drop=True)
     X = df_estimation[covariates].to_numpy()
     T = df_estimation[treatment].to_numpy()
+    if query_x is not None:
+        query_x = query_x.reset_index(drop=True)[covariates].to_numpy()
     match_groups = {}
     match_distances = {}
     for t in np.unique(T):
@@ -212,7 +216,11 @@ def get_match_groups(df_estimation, covariates, treatment, M, k=None,
         else:
             weights = M
         this_X = weights[weights > 0] * X[:, weights > 0]
-        this_dist, this_mg = get_nn(this_X, T, treatment=t, k=k)
+        if query_x is not None:
+            this_query_x = weights[weights > 0] * query_x[:, weights > 0]
+        else:
+            this_query_x = None
+        this_dist, this_mg = get_nn(this_X, T, treatment=t, k=k, query_x = this_query_x)
         match_groups[t] = this_mg
         match_distances[t] = this_dist
     for t in np.unique(T):
@@ -224,11 +232,14 @@ def get_match_groups(df_estimation, covariates, treatment, M, k=None,
     return match_groups, match_distances
 
 
-def get_nn(X, T, treatment, k=None):
+def get_nn(X, T, treatment, k=None,  query_x = None):
     """Get the k nn of a particular treatment for each sample."""
     nn = NearestNeighbors(n_neighbors=k, leaf_size=50, algorithm='auto',
                           metric='cityblock', n_jobs=10).fit(X[T == treatment])
-    return nn.kneighbors(X, return_distance=True)
+    if query_x is None:
+        return nn.kneighbors(X, return_distance=True)
+    else:
+        return nn.kneighbors(query_x, return_distance=True)
 
 
 def convert_idx(mg, idx):
@@ -238,7 +249,7 @@ def convert_idx(mg, idx):
 
 def get_CATES(df_estimation, match_groups, match_distances, outcome,
               covariates, M, method='mean', diameter_prune=None,
-              cov_imp_prune=0.01, check_est_df=True):
+              cov_imp_prune=0.01, check_est_df=True,query_x=None):
     """Calculate match groups for an estimation dataset.
 
     Parameters
@@ -277,8 +288,9 @@ def get_CATES(df_estimation, match_groups, match_distances, outcome,
     """
     if check_est_df:
         check_df_estimation(df_cols=df_estimation.columns, necessary_cols=covariates + [outcome])
+    print('291: query_x is None:', query_x is None)
     df_estimation, old_idx = check_mg_indices(df_estimation, match_groups,
-                                              match_distances)
+                                              match_distances,query_x=query_x)
     potential_outcomes = []
     max_dists = []
     for t, mgs in match_groups.items():
@@ -339,22 +351,38 @@ def check_df_estimation(df_cols, necessary_cols):
         raise Exception(f'df_estimation missing necessary column(s) {missing_cols}')
 
 
-def check_mg_indices(df_estimation, match_groups, match_distances):
+def check_mg_indices(df_estimation, match_groups, match_distances, query_x = None):
     """Check that all the samples in a match groups dataframe are in
     the estimation dataframe."""
-    old_idx = df_estimation.index
-    df_estimation = df_estimation.reset_index(drop=True)
-    est_nrows = df_estimation.shape[0]
-    if not np.all([len(mg) == est_nrows for mg in match_groups.values()]):
-        raise Exception(
-            f'Match group dataframe sizes do not match size of df_estimation')
-    if match_distances is not None:
-        if not np.all([len(mg) == est_nrows for mg in
-                       match_distances.values()]):
+    if query_x is None:
+        old_idx = df_estimation.index
+        df_estimation = df_estimation.reset_index(drop=True)
+        est_nrows = df_estimation.shape[0]
+        if not np.all([len(mg) == est_nrows for mg in match_groups.values()]):
             raise Exception(
-                f'Match distances dataframe sizes do not match size of '
-                f'df_estimation')
-    return df_estimation, old_idx
+                f'Match group dataframe sizes do not match size of df_estimation')
+        if match_distances is not None:
+            if not np.all([len(mg) == est_nrows for mg in
+                        match_distances.values()]):
+                raise Exception(
+                    f'Match distances dataframe sizes do not match size of '
+                    f'df_estimation')
+        return df_estimation, old_idx
+    else:
+        old_idx = query_x.index
+        df_estimation = df_estimation.reset_index(drop=True)
+        query_x_nrows = query_x.shape[0]
+        if not np.all([len(mg) == query_x_nrows for mg in match_groups.values()]):
+            raise Exception(
+                f'Match group dataframe sizes do not match size of query_x')
+        if match_distances is not None:
+            if not np.all([len(mg) == query_x_nrows for mg in
+                        match_distances.values()]):
+                raise Exception(
+                    f'Match distances dataframe sizes do not match size of '
+                    f'query_x')
+        return df_estimation, old_idx
+
 
 
 def prune_covariates(covariates, M, prune_level=0.01):
