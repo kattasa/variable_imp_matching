@@ -27,4 +27,7 @@ Experiments/acic_mg
 *.png
 **/*.out
 **/*.err
-Experiments/variance/output_files
+Experiments/variance/*/
+Experiments/variance/*/*
+
+

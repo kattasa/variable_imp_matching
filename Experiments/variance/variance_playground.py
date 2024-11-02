@@ -3,9 +3,11 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.preprocessing import minmax_scale
 from datagen.dgp_df import dgp_poly_basic_df, dgp_df
 from src.variable_imp_matching import VIM
 from scipy.spatial.distance import pdist
+import scipy.stats as stats
 import warnings
 from utils import save_df_to_csv
 from collections import namedtuple
@@ -14,6 +16,8 @@ from econml.dml import CausalForestDML, KernelDML
 from econml.dr import DRLearner
 from econml.metalearners import XLearner, TLearner, SLearner
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, HistGradientBoostingRegressor
+
+from bias_corr_betting import calib_bias, get_CATE_bias_betting_bound, get_CATE_weighted_bias_betting_bound
 
 def estimate_calibration_distance(df, treatment_col, outcome_col, M, metric = 'cityblock'):
     # scale df by M
@@ -81,107 +85,6 @@ def get_CATE_error_bound(dist_vec_T, dist_vec_C, k, model_dict, T, C, min_y, max
     b_min_a = 2 * max(np.abs(max_y), np.abs(min_y))
 
     return b_min_a/2 * np.sqrt( np.log( 2 / (alpha) ) / k ) + T_uq + C_uq
-
-def calib_bias(df, treatment, outcome, sklearn_model, T = 1, C = 0, args = {}):
-    model_T = sklearn_model(**args)
-    X_T = df.loc[df[treatment] == T].drop([outcome, treatment], axis = 1)
-    Y_T = df.loc[df[treatment] == T][outcome]
-    model_T.fit(X_T, Y_T)
-
-    model_C = sklearn_model(**args)
-    X_C = df.loc[df[treatment] == C].drop([outcome, treatment], axis = 1)
-    Y_C = df.loc[df[treatment] == C][outcome]
-    model_C.fit(X_C, Y_C)
-
-    return {T : model_T, C : model_C}
-
-def get_CATE_bias_bound(X_NN_T, X_NN_C, query_x, k, model_dict, T, C, min_y, max_y, alpha = 0.05):
-    T_uq = []
-    C_uq = []
-    for i in range(k):
-        T_uq.append(model_dict[T].predict(X_NN_T[i]))
-        C_uq.append(model_dict[C].predict(X_NN_C[i]))
-
-    T_uq = np.array(T_uq).mean(axis = 0)
-    T_query = model_dict[T].predict(query_x)
-    # T_uq = np.abs(T_query - T_uq)
-    print('T_uq shape:', T_uq.shape)
-
-    C_uq = np.array(C_uq).mean(axis = 0)
-    C_query = model_dict[C].predict(query_x)
-    # C_uq = np.abs(C_query - C_uq)
-    print('C_uq shape:', C_uq.shape)
-
-    bias = np.abs(T_query - T_uq + C_uq - C_query)
-
-    # delta_a = np.maximum(T_uq, C_uq)
-    
-    b_min_a = 2 * max(np.abs(max_y), np.abs(min_y))
-
-    return b_min_a/2 * np.sqrt( np.log( 2 / (alpha) ) / k ) + bias
-
-from confseq.betting import hedged_cs, betting_ci
-def get_betting_bounds(df_est, Y, tx, mgs, T, C, alpha):
-    def make_betting_ci(samples, alpha):
-        y_min = samples.min()
-        y_max = samples.max() 
-        
-        samples_normalized = (samples - y_min)/(y_max - y_min)
-
-        betting_cs_result = betting_ci(samples_normalized, alpha = alpha)
-        betting_lb = betting_cs_result[0]
-        betting_ub = betting_cs_result[1]
-
-        betting_lb = betting_lb * (y_max - y_min) + y_min
-        betting_ub = betting_ub * (y_max - y_min) + y_min
-        
-        return betting_lb, betting_ub
-
-    # df_est[Y] = (df_est[Y].values  - df_est[Y].min())/(df_est[Y].max() - df_est[Y].min())
-    df_est[Y + '_normalized'] = df_est[Y].values * (df_est[tx].values) - df_est[Y].values * (1 - df_est[tx].values)
-    # y_max = df_est[Y + '_normalized'].max()
-    # y_min = df_est[Y + '_normalized'].min()
-    # df_est[Y + '_normalized'] = (df_est[Y + '_normalized'].values  - y_min)/(y_max - y_min)
-    Y_T = df_est[Y + '_normalized'].values[mgs[T]]
-    Y_C = df_est[Y + '_normalized'].values[mgs[C]] 
-    Y_stack = np.hstack([Y_T, Y_C])
-    # get confidence intervals from hedging by betting sequences...
-    # lb = np.apply_along_axis(arr = Y_stack, func1d = lambda x: hedged_cs(x, alpha=alpha)[0][-1], axis = 1)
-    # ub = np.apply_along_axis(arr = Y_stack, func1d = lambda x: hedged_cs(x, alpha=alpha)[1][-1], axis = 1)
-
-    lb = np.apply_along_axis(arr = Y_stack, func1d = lambda x: make_betting_ci(x, alpha=alpha)[0], axis = 1)
-    ub = np.apply_along_axis(arr = Y_stack, func1d = lambda x: make_betting_ci(x, alpha=alpha)[1], axis = 1)
-
-    ## un-normalize the bounds
-    # lb = lb * (y_max - y_min) + y_min
-    # ub = ub * (y_max - y_min) + y_min
-    return lb, ub
-    
-def get_CATE_bias_betting_bound(X_NN_T, X_NN_C, query_x, k, model_dict, T, C, df_est, Y, tx, mgs, alpha = 0.05):
-    T_uq = []
-    C_uq = []
-    for i in range(k):
-        T_uq.append(model_dict[T].predict(X_NN_T[i], T = 1))
-        C_uq.append(model_dict[C].predict(X_NN_C[i], T = 0))
-
-    T_uq = np.array(T_uq).mean(axis = 0)
-    T_query = model_dict[T].predict(query_x, T = 1)
-    # T_uq = np.abs(T_query - T_uq)
-    print('T_uq shape:', T_uq.shape)
-
-    C_uq = np.array(C_uq).mean(axis = 0)
-    C_query = model_dict[C].predict(query_x, T = 0)
-    # C_uq = np.abs(C_query - C_uq)
-    print('C_uq shape:', C_uq.shape)
-
-    bias = np.abs(T_uq - T_query - C_uq + T_query)
-
-    lb, ub = get_betting_bounds(df_est = df_est, Y = Y, tx = tx, mgs = mgs, T = T, C = C, alpha = alpha)
-    lb, ub = lb - bias, ub + bias
-    
-    return lb, ub
-
-    
 
 
 def get_mml_CATE_error_bound(df_est, treatment_col, outcome_col, mgs, alpha, T = 1, C = 0):
@@ -256,44 +159,53 @@ def get_method_CATE_error_bound(df_train, df_est, treatment_col, outcome_col, al
 # k = 50
 def get_est_set(dgp, n_imp, n_unimp):
     try:
-        est_df = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/est.csv')
+        query_x = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_imp_{n_imp}/n_unimp_{n_unimp}/query_x.csv')
+        cate_true = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_imp_{n_imp}/n_unimp_{n_unimp}/cate_true.csv')[['TE']].values
+        # query_x['CATE_true'] = cate_true
     except FileNotFoundError:
         np.random.seed(42069)
-        df_train, est_df, df_true, x_cols, discrete = dgp_df(dgp = dgp, n_samples = 100, n_imp = n_imp, n_unimp=n_unimp, perc_train=None, n_train=0)
-        est_df['CATE_true'] = df_true['TE']
-        save_df_to_csv(est_df, f'./Experiments/variance/output_files/dgp_{dgp}/est.csv')
-    return est_df
+        df_train, query_x, df_true, x_cols, discrete, ymin, ymax = dgp_df(dgp = dgp, n_samples = 100, n_imp = n_imp, n_unimp=n_unimp, perc_train=None, n_train=0)
+        cate_true = df_true['TE'].values
+        save_df_to_csv(query_x, f'./Experiments/variance/output_files/dgp_{dgp}/n_imp_{n_imp}/n_unimp_{n_unimp}/query_x.csv')
+        save_df_to_csv(df_true, f'./Experiments/variance/output_files/dgp_{dgp}/n_imp_{n_imp}/n_unimp_{n_unimp}/cate_true.csv')
+    return query_x, cate_true
 
 
 def get_data(dgp, n_train : int, n_est : int, n_imp : int, n_unimp : int, k : int, seed : int):
     try:
         print('Trying to find data.')
-        df_train_sub = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_train.csv').dropna(axis = 0)
+        df_train_sub = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_train_sub.csv').dropna(axis = 0)
         df_calib = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_calib.csv').dropna(axis = 0)
         df_est = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_est.csv').dropna(axis = 0)
         x_cols = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/x_cols.csv')['x_cols'].tolist()
+        summaries = pd.read_csv(f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/summaries.csv')
+        ymin = summaries.ymin.values[0]
+        ymax = summaries.ymax.values[0]
+
         print('Found data. Read in...')
     except FileNotFoundError:
         print('Files not found. Recreating...')
         np.random.seed(seed)
-        df_train, df_est, df_true, x_cols, discrete = dgp_df(dgp = dgp, n_samples = n_train + n_est, n_imp = n_imp, n_unimp=n_unimp, perc_train=None, n_train=n_train)
+        df_train, df_est, df_true, x_cols, discrete, ymin, ymax = dgp_df(dgp = dgp, n_samples = n_train + n_est, n_imp = n_imp, n_unimp=n_unimp, perc_train=None, n_train=n_train)
 
         ## split into train, calibrate, and estimation
         df_train_sub, df_calib = train_test_split(df_train, test_size = 0.4, stratify = df_train['T'].values, random_state = 42)
         print('Calib treatment:', df_calib['T'].unique())
 
-        save_df_to_csv(df_train_sub, f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_train.csv')
+        save_df_to_csv(df_train_sub, f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_train_sub.csv')
         save_df_to_csv(df_calib, f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_calib.csv')
         save_df_to_csv(df_est, f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/df_est.csv')
         save_df_to_csv(pd.DataFrame({'x_cols' : x_cols}), f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/x_cols.csv')
-    return df_train_sub, df_calib, df_est, x_cols
+        save_df_to_csv(pd.DataFrame({'ymin' : [ymin], 'ymax' : [ymax]}), f'./Experiments/variance/output_files/dgp_{dgp}/n_train_{n_train}/n_est_{n_est}/n_imp_{n_imp}/n_unimp_{n_unimp}/k_{k}/seed_{seed}/summaries.csv')
+        
+    return df_train_sub, df_calib, df_est, x_cols, ymin, ymax
 
 def check_variance(dgp, n_train : int, n_est : int, n_imp : int, n_unimp : int, k : int, seed : int, fit : str):
     ## make data
     # df_train, df_est, df_true, x_cols = dgp_poly_basic_df(n_samples, n_imp, n_unimp, powers=[2], perc_train=None, n_train=None)
-    query_x = get_est_set(dgp, n_imp, n_unimp)
-    query_x_true = query_x['CATE_true']
-    query_x = query_x.drop('CATE_true', axis = 1)
+    query_x, query_x_true = get_est_set(dgp, n_imp, n_unimp)
+    # query_x_true = query_x['CATE_true']
+    # query_x = query_x.drop('CATE_true', axis = 1)
 
     np.random.seed(seed)
     # df_train, df_est, df_true, x_cols, discrete = dgp_df(dgp = dgp, n_samples = n_train + n_est, n_imp = n_imp, n_unimp=n_unimp, perc_train=None, n_train=n_train)
@@ -302,7 +214,7 @@ def check_variance(dgp, n_train : int, n_est : int, n_imp : int, n_unimp : int, 
     # df_train_sub, df_calib = train_test_split(df_train, test_size = 0.4, stratify = df_train['T'].values, random_state = 42)
     # print('Calib treatment:', df_calib['T'].unique())
 
-    df_train_sub, df_calib, df_est, x_cols = get_data(dgp, n_train, n_est, n_imp, n_unimp, k, seed)
+    df_train_sub, df_calib, df_est, x_cols, ymin, ymax = get_data(dgp, n_train, n_est, n_imp, n_unimp, k, seed)
     df_train = pd.concat([df_train_sub, df_calib], axis = 0)
 
     if fit == 'gen_data':
@@ -467,33 +379,72 @@ def check_variance(dgp, n_train : int, n_est : int, n_imp : int, n_unimp : int, 
         lcm = VIM(outcome = 'Y', treatment = 'T', data = df_train_sub, binary_outcome=False, random_state=None)
         lcm.fit(return_scores = False, model = 'linear')
 
+        model_dict = calib_bias(df = df_calib, treatment = 'T', outcome = 'Y', sklearn_model = RandomForestRegressor, T = 1, C = 0)
+
+        X_NN_T = {j : df_est.loc[mgs[1][j].values].drop(['T', 'Y'], axis = 1) for j in range(k)}
+        X_NN_C = {j : df_est.loc[mgs[1][j].values].drop(['T', 'Y'], axis = 1) for j in range(k)}
+        
+        lb, ub = get_CATE_bias_betting_bound(X_NN_T = X_NN_T, X_NN_C = X_NN_C, query_x = query_x.drop(['T', 'Y'], axis = 1), k = k, model_dict = model_dict, T = 1, C = 0, df_est = df_est, Y = 'Y', tx = 'T', mgs = mgs, ymin = ymin, ymax = ymax, alpha = 0.05)
+        cate['CATE_lb'] = lb
+        cate['CATE_ub'] = ub
+        cate['CATE_error_bound'] = np.abs(cate['CATE_ub'] - cate['CATE_lb'])/2
+    elif fit == 'bias_corr_betting_ensemble':
+        lcm = VIM(outcome = 'Y', treatment = 'T', data = df_train_sub, binary_outcome=False, random_state=None)
+        lcm.fit(return_scores = False, model = 'ensemble')
+
+        model_dict = calib_bias(df = df_calib, treatment = 'T', outcome = 'Y', sklearn_model = RandomForestRegressor, T = 1, C = 0)
+
+        X_NN_T = {j : df_est.loc[mgs[1][j].values].drop(['T', 'Y'], axis = 1) for j in range(k)}
+        X_NN_C = {j : df_est.loc[mgs[1][j].values].drop(['T', 'Y'], axis = 1) for j in range(k)}
+        
+        lb, ub = get_CATE_bias_betting_bound(X_NN_T = X_NN_T, X_NN_C = X_NN_C, query_x = query_x.drop(['T', 'Y'], axis = 1), k = k, model_dict = model_dict, T = 1, C = 0, df_est = df_est, Y = 'Y', tx = 'T', mgs = mgs, ymin = ymin, ymax = ymax, alpha = 0.05)
+        cate['CATE_lb'] = lb
+        cate['CATE_ub'] = ub
+        cate['CATE_error_bound'] = np.abs(cate['CATE_ub'] - cate['CATE_lb'])/2
+    elif fit == 'weighted_bias_corr_betting':
+        lcm = VIM(outcome = 'Y', treatment = 'T', data = df_train_sub, binary_outcome=False, random_state=None)
+        lcm.fit(return_scores = False, model = 'ensemble')
+
         class dgp_model:
-            def __init__(self, dgp):
-                self.dgp = dgp
+            def __init__(self):
+                return None
             
             def fit(self, X_train, y_train):
                 return None
             
             def predict(self, X_est, T):
-                if self.dgp == 'linear':
-                    n_imp = 2
-                    n_unimp = X_est.shape[1] - n_imp
-                    coef = np.array(list(range(n_imp)) + [0] * n_unimp)
-                    Y0_true = X_est.dot(coef)
-                    Y1_true = Y0_true + 1 + X_est.dot(coef)
-                elif 'lihua' in self.dgp:
-                    def f(X): # bounded by [0,2]
+                X_est = np.array(X_est)
+                def f(X): # bounded by [0,2]
                         return 2/(1 + np.exp(-12 * (X - 0.5)))
-                    Y0_true = 0
-                    Y1_true = f(X_est[:, 0]) * f(X_est[:, 1])
+                Y0_true = 0
+                Y1_true = f(X_est[:, 0]) * f(X_est[:, 1])
                 return Y1_true * T + Y0_true * (1 - T)
         
-        model_dict = calib_bias(df = df_calib, treatment = 'T', outcome = 'Y', sklearn_model = dgp_model, T = 1, C = 0, args = {'dgp' : dgp})
+
+        model_dict = calib_bias(df = df_calib, treatment = 'T', outcome = 'Y', sklearn_model = dgp_model, T = 1, C = 0)
 
         X_NN_T = {j : df_est.loc[mgs[1][j].values].drop(['T', 'Y'], axis = 1) for j in range(k)}
         X_NN_C = {j : df_est.loc[mgs[1][j].values].drop(['T', 'Y'], axis = 1) for j in range(k)}
-        
-        lb, ub = get_CATE_bias_betting_bound(X_NN_T = X_NN_T, X_NN_C = X_NN_C, query_x = query_x.drop(['T', 'Y'], axis = 1), k = k, model_dict = model_dict, T = 1, C = 0, df_est = df_est, Y = 'Y', tx = 'T', mgs = mgs, alpha = 0.05)
+
+        if 'lihua' in dgp and 'random' not in dgp:
+            def get_prop_score(X):
+                X_stdized = minmax_scale(X[:, 0], feature_range = (0.25, 0.75))
+                prop = stats.beta.cdf(x = X_stdized, a = 3, b = 3)
+                return prop
+            max_prop = stats.beta.cdf(0.75, a = 3, b = 3)
+            min_prop = stats.beta.cdf(0.25, a = 3, b = 3)
+        elif 'linear' in dgp:
+            def get_prop_score(X):
+                return minmax_scale(X[:,0] + 3 * X[:, 1], feature_range=(0.25, 0.75))
+            max_prop = 0.75
+            min_prop = 0.25
+        elif 'random' in dgp:
+            def get_prop_score(X):
+                return 0.5
+            max_prop = 0.5
+            min_prop = 0.5
+
+        lb, ub = get_CATE_weighted_bias_betting_bound(X_NN_T = X_NN_T, X_NN_C = X_NN_C, query_x = query_x.drop(['T', 'Y'], axis = 1), k = k, model_dict = model_dict, T = 1, C = 0, df_est = df_est, Y = 'Y', tx = 'T', mgs = mgs, ymin = ymin, ymax = ymax, prop_score = get_prop_score, min_prop = min_prop, max_prop = max_prop, alpha = 0.05)
         cate['CATE_lb'] = lb
         cate['CATE_ub'] = ub
         cate['CATE_error_bound'] = np.abs(cate['CATE_ub'] - cate['CATE_lb'])/2
@@ -509,12 +460,11 @@ def check_variance(dgp, n_train : int, n_est : int, n_imp : int, n_unimp : int, 
     cate['dgp'] = dgp
     cate['n_train'] = n_train
     cate['n_est'] = n_est
-    
-    df_est['cate'] = cate['CATE_true']
+    cate['CATE_full_width'] = cate['CATE_ub'] - cate['CATE_lb']
 
     print('Sq Error', cate['se'].mean())
     print('Coverage', cate['contains_true_cate'].mean())
-    print('1/2 width:', cate['CATE_error_bound'].mean())
+    print('1/2 width:', cate['CATE_full_width'].mean())
 
     return df_train_sub, df_calib, df_est, cate, query_x #[seed, fit, cate['contains_true_cate'].mean(), cate['se'].mean()]
 

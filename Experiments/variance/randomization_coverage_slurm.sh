@@ -17,8 +17,7 @@ export PYTHONPATH=/usr/project/xtmp/sk787/variable_imp_matching/
 echo "Starting task ID: $SLURM_ARRAY_TASK_ID"
 
 # Run your command or script here, using $SLURM_ARRAY_TASK_ID if needed
-# srun python3 /usr/project/xtmp/sk787/variable_imp_matching/Experiments/variance/variance_playground.py --task_id $SLURM_ARRAY_TASK_ID --fit gen_data
-srun python3 /usr/project/xtmp/sk787/variable_imp_matching/Experiments/variance/variance_playground.py --task_id $SLURM_ARRAY_TASK_ID --fit bias_corr_betting
-srun python3 /usr/project/xtmp/sk787/variable_imp_matching/Experiments/variance/variance_playground.py --task_id $SLURM_ARRAY_TASK_ID --fit weighted_bias_corr_betting
+srun python3 /usr/project/xtmp/sk787/variable_imp_matching/Experiments/variance/randomization_coverage_exp.py --task_id $SLURM_ARRAY_TASK_ID
+
 # srun Rscript /usr/project/xtmp/sk787/variable_imp_matching/Experiments/variance/mml_fixed.r --task_id $SLURM_ARRAY_TASK_ID
         
